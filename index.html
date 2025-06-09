@@ -841,7 +841,13 @@
                     const parts = lines[i].trim().split(/\s+/);
                     if (parts.length >= 4) {
                         const originalName = parts[0];
-                        const elementSymbol = originalName.replace(/\d+/g, ''); // Remove numbers for JSmol
+                        let elementSymbol = originalName.replace(/\d+/g, ''); // Remove numbers for JSmol
+                        
+                        // Capitalize the first letter and make the rest lowercase for proper element recognition
+                        if (elementSymbol.length > 0) {
+                            elementSymbol = elementSymbol.charAt(0).toUpperCase() + elementSymbol.slice(1).toLowerCase();
+                        }
+                        
                         extractedNames.push(originalName);
                         modifiedXYZ += `${elementSymbol}  ${parts[1]}  ${parts[2]}  ${parts[3]}\n`;
                     }
@@ -1321,10 +1327,17 @@
                     const parts = lines[i].trim().split(/\s+/);
                     if (parts.length >= 4) {
                         const atomName = parts[0];
+                        let elementSymbol = atomName.replace(/\d+/g, ''); // Extract element symbol
+                        
+                        // Capitalize the first letter and make the rest lowercase for proper element recognition
+                        if (elementSymbol.length > 0) {
+                            elementSymbol = elementSymbol.charAt(0).toUpperCase() + elementSymbol.slice(1).toLowerCase();
+                        }
+                        
                         newOriginalNames.push(atomName);
                         atomsData.push({
                             name: atomName,
-                            element: atomName.replace(/\d+/g, ''), // Extract element symbol
+                            element: elementSymbol,
                             x: parseFloat(parts[1]),
                             y: parseFloat(parts[2]),
                             z: parseFloat(parts[3])
