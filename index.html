@@ -816,6 +816,70 @@
 
         // Add variable to store XYZ data
         var lastXYZData = null;
+        var originalAtomNames = null; // Store original numbered atom names
+        var originalXYZContent = null; // Store original XYZ file content
+
+        // Custom XYZ loader that preserves numbered atom names
+        function loadXYZWithNumberedAtoms(xyzContent) {
+            try {
+                // Parse the XYZ content to extract atom names
+                const lines = xyzContent.trim().split('\n');
+                if (lines.length < 3) {
+                    throw new Error('Invalid XYZ format');
+                }
+                
+                const atomCount = parseInt(lines[0]);
+                if (isNaN(atomCount) || atomCount <= 0) {
+                    throw new Error('Invalid atom count');
+                }
+                
+                // Extract original atom names and prepare modified content
+                const extractedNames = [];
+                let modifiedXYZ = lines[0] + '\n' + lines[1] + '\n';
+                
+                for (let i = 2; i < atomCount + 2 && i < lines.length; i++) {
+                    const parts = lines[i].trim().split(/\s+/);
+                    if (parts.length >= 4) {
+                        const originalName = parts[0];
+                        const elementSymbol = originalName.replace(/\d+/g, ''); // Remove numbers for JSmol
+                        extractedNames.push(originalName);
+                        modifiedXYZ += `${elementSymbol}  ${parts[1]}  ${parts[2]}  ${parts[3]}\n`;
+                    }
+                }
+                
+                // Store the original data
+                originalAtomNames = extractedNames;
+                originalXYZContent = xyzContent;
+                
+                // Load the structure with element symbols only
+                Jmol.script(jmolApplet0, `load inline "${modifiedXYZ}"`);
+                
+                // Apply original atom names after a short delay to ensure structure is loaded
+                setTimeout(() => {
+                    applyOriginalAtomNames();
+                }, 100);
+                
+            } catch (error) {
+                console.error('Error loading XYZ with numbered atoms:', error);
+                // Fallback to normal loading
+                Jmol.script(jmolApplet0, `load inline "${xyzContent}"`);
+            }
+        }
+        
+        // Apply the original numbered atom names to the loaded structure
+        function applyOriginalAtomNames() {
+            if (!originalAtomNames) return;
+            
+            try {
+                for (let i = 0; i < originalAtomNames.length; i++) {
+                    const atomName = originalAtomNames[i];
+                    Jmol.script(jmolApplet0, `{atomIndex=${i}}.atomName = "${atomName}"`);
+                }
+                document.getElementById('status').innerHTML = 'Structure loaded with preserved numbered atom names';
+            } catch (error) {
+                console.error('Error applying atom names:', error);
+            }
+        }
 
         $(document).ready(function() {
             Jmol.setDocument(0);
@@ -892,8 +956,17 @@
                 var reader = new FileReader();
                 reader.onload = function(e) {
                     try {
-                        Jmol.script(jmolApplet0, 'load inline "' + e.target.result + '" filter "NOSORT"');
-                        document.getElementById('status').innerHTML = 'File loaded successfully';
+                        const fileContent = e.target.result;
+                        const fileName = file.name.toLowerCase();
+                        
+                        // Check if it's an XYZ file and use custom loader
+                        if (fileName.endsWith('.xyz')) {
+                            loadXYZWithNumberedAtoms(fileContent);
+                        } else {
+                            // Use normal loading for other file types
+                            Jmol.script(jmolApplet0, 'load inline "' + fileContent + '" filter "NOSORT"');
+                            document.getElementById('status').innerHTML = 'File loaded successfully';
+                        }
                     } catch (err) {
                         document.getElementById('status').innerHTML = 'Error loading file: ' + err.message;
                     }
@@ -910,6 +983,8 @@
                 document.getElementById('status').innerHTML = 'Error loading sample: ' + err.message;
             }
         }
+
+
 
         var currentOrbitalIndex = 1;
         var orbitalsVisible = false;
@@ -1109,20 +1184,57 @@
             editorPanel.style.display = 'block';
             
             try {
-                // Get current XYZ data from JSmol
-                const currentXYZData = Jmol.evaluateVar(jmolApplet0, 'write("xyz")');
+                // Get atom count first
+                const atomCount = Jmol.evaluateVar(jmolApplet0, '{*}.length');
                 
-                // Always use the current data from JSmol to ensure we're in sync with the actual structure
-                lastXYZData = currentXYZData;
-                
-                if (!lastXYZData) {
+                if (!atomCount || atomCount === 0) {
                     document.getElementById('status').innerHTML = 'No structure data available';
                     return;
                 }
                 
-                // Parse the XYZ data
-                const lines = lastXYZData.split('\n');
-                const atomCount = parseInt(lines[0]);
+                // Build XYZ data with preserved atom names
+                let xyzData = atomCount + '\n';
+                xyzData += 'Structure with preserved atom names\n';
+                
+                // Get atom data individually to preserve numbered names
+                const atomsData = [];
+                for (let i = 0; i < atomCount; i++) {
+                    let atomName;
+                    
+                    // First try to use stored original names if available
+                    if (originalAtomNames && i < originalAtomNames.length) {
+                        atomName = originalAtomNames[i];
+                    } else {
+                        // Get atom name from JSmol (may be just element symbol)
+                        atomName = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.atomName`);
+                        
+                        // If atomName is null or just element symbol, use element with index
+                        if (!atomName || atomName.length <= 2) {
+                            const element = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.element`);
+                            atomName = element ? `${element}${i + 1}` : `X${i + 1}`;
+                        }
+                    }
+                    
+                    // Get coordinates
+                    const x = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.x`);
+                    const y = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.y`);
+                    const z = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.z`);
+                    
+                    const atomData = {
+                        name: atomName,
+                        x: parseFloat(x).toFixed(6),
+                        y: parseFloat(y).toFixed(6),
+                        z: parseFloat(z).toFixed(6)
+                    };
+                    
+                    atomsData.push(atomData);
+                    xyzData += `${atomName}  ${atomData.x}  ${atomData.y}  ${atomData.z}\n`;
+                }
+                
+                // Store the XYZ data with preserved names
+                lastXYZData = xyzData;
+                
+                // Create the visual editor interface
                 const xyzContent = document.getElementById('xyz-content');
                 xyzContent.innerHTML = '';
                 
@@ -1137,18 +1249,18 @@
                 `;
                 xyzContent.appendChild(headerRow);
                 
-                // Add atom rows
-                for (let i = 2; i < atomCount + 2; i++) {
-                    const [atom, x, y, z] = lines[i].trim().split(/\s+/);
+                // Add atom rows with preserved names
+                for (let i = 0; i < atomsData.length; i++) {
+                    const atomData = atomsData[i];
                     const row = document.createElement('div');
                     row.className = 'xyz-row';
                     row.innerHTML = `
-                        <div class="xyz-cell atom-symbol">${atom}</div>
-                        <div class="xyz-cell coordinate">${x}</div>
-                        <div class="xyz-cell coordinate">${y}</div>
-                        <div class="xyz-cell coordinate">${z}</div>
+                        <div class="xyz-cell atom-symbol">${atomData.name}</div>
+                        <div class="xyz-cell coordinate">${atomData.x}</div>
+                        <div class="xyz-cell coordinate">${atomData.y}</div>
+                        <div class="xyz-cell coordinate">${atomData.z}</div>
                     `;
-                    row.dataset.atomIndex = i - 2;
+                    row.dataset.atomIndex = i;
                     row.onclick = function() {
                         toggleAtomSelection(this);
                     };
@@ -1190,8 +1302,58 @@
         function updateStructure() {
             const editView = document.getElementById('xyz-content-edit');
             try {
-                Jmol.script(jmolApplet0, 'load inline "' + editView.value + '"');
-                document.getElementById('status').innerHTML = 'Structure updated successfully';
+                const xyzData = editView.value.trim();
+                const lines = xyzData.split('\n');
+                
+                if (lines.length < 3) {
+                    throw new Error('Invalid XYZ format');
+                }
+                
+                const atomCount = parseInt(lines[0]);
+                if (isNaN(atomCount) || atomCount <= 0) {
+                    throw new Error('Invalid atom count');
+                }
+                
+                // Parse the atom data to extract names and coordinates
+                const atomsData = [];
+                const newOriginalNames = [];
+                for (let i = 2; i < atomCount + 2 && i < lines.length; i++) {
+                    const parts = lines[i].trim().split(/\s+/);
+                    if (parts.length >= 4) {
+                        const atomName = parts[0];
+                        newOriginalNames.push(atomName);
+                        atomsData.push({
+                            name: atomName,
+                            element: atomName.replace(/\d+/g, ''), // Extract element symbol
+                            x: parseFloat(parts[1]),
+                            y: parseFloat(parts[2]),
+                            z: parseFloat(parts[3])
+                        });
+                    }
+                }
+                
+                // Load the structure with coordinates only first (using element symbols)
+                let tempXyzData = atomCount + '\n' + lines[1] + '\n';
+                for (const atom of atomsData) {
+                    tempXyzData += `${atom.element}  ${atom.x}  ${atom.y}  ${atom.z}\n`;
+                }
+                
+                // Load the structure
+                Jmol.script(jmolApplet0, 'load inline "' + tempXyzData + '"');
+                
+                // Update stored original names
+                originalAtomNames = newOriginalNames;
+                originalXYZContent = xyzData;
+                
+                // Apply the numbered atom names after a short delay
+                setTimeout(() => {
+                    for (let i = 0; i < atomsData.length; i++) {
+                        const atomName = atomsData[i].name;
+                        Jmol.script(jmolApplet0, `{atomIndex=${i}}.atomName = "${atomName}"`);
+                    }
+                    document.getElementById('status').innerHTML = 'Structure updated successfully with preserved atom names';
+                }, 100);
+                
                 showXYZEditor(); // Refresh the selection view with updated data
             } catch (err) {
                 document.getElementById('status').innerHTML = 'Error updating structure: ' + err.message;
@@ -1663,6 +1825,43 @@
             // Update the input text
             updateElemCoInput();
         }
+        // Function to generate XYZ content with numbered atoms if available
+        function getXYZDataWithNumberedAtoms() {
+            // If we have preserved numbered atom names, use them
+            if (window.originalAtomNames && window.originalAtomNames.length > 0) {
+                try {
+                    const atomCount = Jmol.evaluateVar(jmolApplet0, '{*}.length');
+                    
+                    if (atomCount !== window.originalAtomNames.length) {
+                        console.warn('Atom count mismatch, falling back to standard XYZ');
+                        return Jmol.evaluateVar(jmolApplet0, 'write("xyz")');
+                    }
+                    
+                    let xyzContent = atomCount + '\n\n';
+                    
+                    for (let i = 0; i < atomCount; i++) {
+                        // Get atom coordinates from JSmol
+                        const x = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.x`);
+                        const y = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.y`);
+                        const z = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.z`);
+                        
+                        // Use the preserved numbered atom name
+                        const atomName = window.originalAtomNames[i];
+                        
+                        xyzContent += `${atomName} ${x.toFixed(6)} ${y.toFixed(6)} ${z.toFixed(6)}\n`;
+                    }
+                    
+                    return xyzContent;
+                } catch (error) {
+                    console.error('Error generating numbered XYZ data:', error);
+                    return Jmol.evaluateVar(jmolApplet0, 'write("xyz")');
+                }
+            }
+            
+            // Fall back to standard XYZ if no numbered atoms are preserved
+            return Jmol.evaluateVar(jmolApplet0, 'write("xyz")');
+        }
+
         function updateElemCoInput() {
             const dfEnabled = document.getElementById('elemco-df').checked;
             const method = document.getElementById('elemco-method').value;
@@ -1672,8 +1871,8 @@
             const charge = parseInt(document.getElementById('elemco-charge').value) || 0;
             const multiplicity = parseInt(document.getElementById('elemco-multiplicity').value) || 0;
 
-            // Get current molecular structure from JSmol
-            const xyzData = Jmol.evaluateVar(jmolApplet0, 'write("xyz")');
+            // Get current molecular structure from JSmol (with numbered atoms if available)
+            const xyzData = getXYZDataWithNumberedAtoms();
             if (!xyzData) {
                 document.getElementById('elemco-input').value = '# Please load a molecule first';
                 return;
