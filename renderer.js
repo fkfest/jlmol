@@ -1,10 +1,10 @@
 // Check version immediately when script loads
 (function checkVersion() {
     const versionElement = document.getElementById('version-number');
-    if (versionElement) {
-        versionElement.textContent = window.appVersion || '1.0.1';
+    if (versionElement && window.appVersion) {
+        versionElement.textContent = window.appVersion;
     } else {
-        // If element isn't ready yet, retry in 100ms
+        // If element isn't ready yet or version not loaded, retry in 100ms
         setTimeout(checkVersion, 100);
     }
 })();
@@ -57,8 +57,8 @@ document.addEventListener('DOMContentLoaded', () => {
 window.addEventListener('load', () => {
     // Display version number
     const versionElement = document.getElementById('version-number');
-    if (versionElement) {
-        versionElement.textContent = window.appVersion || '1.0.1';
+    if (versionElement && window.appVersion) {
+        versionElement.textContent = window.appVersion;
     }
 
     // Ensure JSME is properly initialized in Electron context

@@ -1,6 +1,6 @@
 {
   "name": "jlmol",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "jlmol - A Molecular Viewer Desktop App",
   "main": "main.js",
   "scripts": {
@@ -8,7 +8,8 @@
     "build": "electron-builder -mwl",
     "build:windows": "electron-builder --win",
     "build:mac": "electron-builder --mac",
-    "build:linux": "electron-builder --linux"
+    "build:linux": "electron-builder --linux",
+    "check-version": "node build-version.js"
   },
   "build": {
     "appId": "com.jlmol.viewer",
