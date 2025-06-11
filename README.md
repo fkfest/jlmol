@@ -52,63 +52,7 @@ Download: [Latest Release Executables](https://github.com/fkfest/jlmol/releases/
 
 ## Troubleshooting
 
-### System-wide Graphics Issues (Windows 11)
-
-If you experience system-wide graphics problems or other Electron apps start blinking after running jlmol, try these solutions:
-
-#### Option 1: Disable Hardware Acceleration
-
-```bash
-npm run start-safe
-```
-
-or run with command line flag:
-
-```bash
-jlmol.exe --disable-hardware-acceleration
-```
-
-#### Option 2: Update Graphics Drivers
-
-- Update your graphics card drivers to the latest version
-- Consider switching between integrated and discrete graphics
-
-#### Option 3: Run GPU Debug Tool
-
-For comprehensive system analysis:
-
-```bash
-npm run debug-gpu
-```
-
-This will generate a detailed report of your GPU capabilities and test different configurations.
-
-#### Option 4: Run in Safe Mode
-
-For debugging issues:
-
-```bash
-npm run start-safe-debug
-```
-
-#### Option 5: Check System Resources
-
-- Close other graphics-intensive applications
-- Monitor memory usage (Task Manager)
-- Restart your computer if issues persist
-
-### Performance Issues
-
-- Disable spin animation when not needed
-- Close unused panels (Orbitals, XYZ Editor)
-- Use wireframe mode for large molecules
-- Limit window size for complex structures
-
-### File Loading Issues
-
-- Ensure file format is supported (.xyz, .pdb, .mol, .cif, .molden)
-- Check file encoding (UTF-8 recommended)
-- Verify file structure and syntax
+For troubleshooting guides and solutions to common issues, see [Troubleshooting.md](Troubleshooting.md).
 
 ## Advanced Features
 
