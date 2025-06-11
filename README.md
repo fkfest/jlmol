@@ -49,10 +49,68 @@ Download: [Latest Release Executables](https://github.com/fkfest/jlmol/releases/
 - Support for common quantum chemistry methods (HF, MP2, CCSD, etc.)
 - Basis set selection
 - Density fitting toggle for supported methods
-- Direct text editing of generated input
-- Copy input directly to clipboard for use with ElemCo.jl
 
-### Advanced Features
+## Troubleshooting
+
+### System-wide Graphics Issues (Windows 11)
+
+If you experience system-wide graphics problems or other Electron apps start blinking after running jlmol, try these solutions:
+
+#### Option 1: Disable Hardware Acceleration
+
+```bash
+npm run start-safe
+```
+
+or run with command line flag:
+
+```bash
+jlmol.exe --disable-hardware-acceleration
+```
+
+#### Option 2: Update Graphics Drivers
+
+- Update your graphics card drivers to the latest version
+- Consider switching between integrated and discrete graphics
+
+#### Option 3: Run GPU Debug Tool
+
+For comprehensive system analysis:
+
+```bash
+npm run debug-gpu
+```
+
+This will generate a detailed report of your GPU capabilities and test different configurations.
+
+#### Option 4: Run in Safe Mode
+
+For debugging issues:
+
+```bash
+npm run start-safe-debug
+```
+
+#### Option 5: Check System Resources
+
+- Close other graphics-intensive applications
+- Monitor memory usage (Task Manager)
+- Restart your computer if issues persist
+
+### Performance Issues
+
+- Disable spin animation when not needed
+- Close unused panels (Orbitals, XYZ Editor)
+- Use wireframe mode for large molecules
+- Limit window size for complex structures
+
+### File Loading Issues
+
+- Ensure file format is supported (.xyz, .pdb, .mol, .cif, .molden)
+- Check file encoding (UTF-8 recommended)
+- Verify file structure and syntax
+
+## Advanced Features
 
 - Orbital visualization:
   - Advanced orbital visualization with HOMO/LUMO identification
@@ -141,7 +199,7 @@ The application includes a draggable XYZ structure editor that allows you to:
 - Switch between selection and edit modes
 - Select individual atoms in the structure
 - Optimize molecular geometry using JSmol's built-in minimization
-- Preview changes in real-time in the 3D viewer 
+- Preview changes in real-time in the 3D viewer
 - Save edited structures to XYZ files
 - Move the editor window anywhere on screen by dragging its header
 - Resize the editor window by dragging its bottom-right corner
@@ -245,7 +303,7 @@ This feature complements the XYZ editor and 2D JSME editor, providing a complete
 
 The application includes built-in support for generating ElemCo.jl input files for quantum chemistry calculations:
 
-### Features
+### ElemCo.jl Features
 
 - Direct conversion of molecular structures to ElemCo.jl input format
 - Support for common quantum chemistry methods:

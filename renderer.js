@@ -69,17 +69,27 @@ window.addEventListener('load', () => {
     // Initialize ElemCo panel after a delay to ensure DOM is ready
     setTimeout(() => {
         if (typeof initElemCoPanel === 'function') {
-            initElemCoPanel();
-            initializeElemCoListeners();
+            try {
+                initElemCoPanel();
+                initializeElemCoListeners();
+            } catch (e) {
+                console.error('Error initializing ElemCo panel:', e);
+            }
         }
     }, 1000);
 
-    // Re-initialize on visibility changes
+    // Re-initialize on visibility changes (but only once per change)
+    let isHidden = false;
     document.addEventListener('visibilitychange', () => {
-        if (!document.hidden && typeof initElemCoPanel === 'function') {
-            initElemCoPanel();
-            initializeElemCoListeners();
+        if (!document.hidden && isHidden && typeof initElemCoPanel === 'function') {
+            try {
+                initElemCoPanel();
+                initializeElemCoListeners();
+            } catch (e) {
+                console.error('Error re-initializing ElemCo panel:', e);
+            }
         }
+        isHidden = document.hidden;
     });
 });
 

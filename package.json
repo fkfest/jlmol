@@ -5,6 +5,10 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
+    "start-safe": "electron . --disable-hardware-acceleration",
+    "start-debug": "electron . --enable-logging --log-level=0",
+    "start-safe-debug": "electron . --disable-hardware-acceleration --enable-logging --log-level=0",
+    "debug-gpu": "electron debug-gpu.js",
     "build": "electron-builder -mwl",
     "build:windows": "electron-builder --win",
     "build:mac": "electron-builder --mac",

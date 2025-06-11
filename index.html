@@ -842,6 +842,21 @@
         var lastXYZData = null;
         var originalAtomNames = null; // Store original numbered atom names
         var originalXYZContent = null; // Store original XYZ file content
+        
+        // Add frame rate limiting to prevent excessive GPU usage
+        var lastFrameTime = 0;
+        var frameRateLimit = 60; // Max 60 FPS
+        var minFrameInterval = 1000 / frameRateLimit;
+        
+        function throttledRepaint(callback) {
+            var now = Date.now();
+            if (now - lastFrameTime >= minFrameInterval) {
+                lastFrameTime = now;
+                if (typeof callback === 'function') {
+                    callback();
+                }
+            }
+        }
 
         // Custom XYZ loader that preserves numbered atom names
         function loadXYZWithNumberedAtoms(xyzContent) {
@@ -911,21 +926,95 @@
             }
         }
 
+        // Add initialization with better error handling and cleanup
         $(document).ready(function() {
-            Jmol.setDocument(0);
-            // Create inner container for JSmol
-            $("#viewer").html('<div id="viewer-inner"></div>');
-            $("#viewer-inner").html(Jmol.getAppletHtml("jmolApplet0", Info));
-            initDraggable();
-            initResizeObserver();
-            setTimeout(initElemCoPanel, 500); // Add initialization here too
+            try {
+                console.log('Initializing JSmol...');
+                console.log('User Agent:', navigator.userAgent);
+                console.log('WebGL Support:', !!window.WebGLRenderingContext);
+                console.log('Hardware Concurrency:', navigator.hardwareConcurrency);
+                console.log('Memory:', navigator.deviceMemory || 'unknown');
+                
+                // Check for graphics capabilities
+                if (window.WebGLRenderingContext) {
+                    const canvas = document.createElement('canvas');
+                    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+                    if (gl) {
+                        console.log('WebGL Renderer:', gl.getParameter(gl.RENDERER));
+                        console.log('WebGL Vendor:', gl.getParameter(gl.VENDOR));
+                        console.log('WebGL Version:', gl.getParameter(gl.VERSION));
+                    }
+                }
+                
+                Jmol.setDocument(0);
+                // Create inner container for JSmol
+                $("#viewer").html('<div id="viewer-inner"></div>');
+                $("#viewer-inner").html(Jmol.getAppletHtml("jmolApplet0", Info));
+                initDraggable();
+                initResizeObserver();
+                setTimeout(initElemCoPanel, 500); // Add initialization here too
+                
+                // Add performance monitoring
+                let frameCount = 0;
+                let lastTime = performance.now();
+                function monitorPerformance() {
+                    frameCount++;
+                    const currentTime = performance.now();
+                    if (currentTime - lastTime >= 5000) { // Every 5 seconds
+                        const fps = (frameCount * 1000) / (currentTime - lastTime);
+                        console.log(`Performance: ${fps.toFixed(1)} FPS, Memory: ${(performance.memory?.usedJSHeapSize/1024/1024 || 0).toFixed(1)}MB`);
+                        frameCount = 0;
+                        lastTime = currentTime;
+                    }
+                    requestAnimationFrame(monitorPerformance);
+                }
+                if (window.performance && window.performance.memory) {
+                    monitorPerformance();
+                }
+                
+                // Add window focus/blur handling for resource management
+                window.addEventListener('focus', function() {
+                    // Resume any paused operations when window gains focus
+                    if (jmolApplet0 && jmolApplet0._ready) {
+                        throttledRepaint(() => {
+                            // Minimal repaint on focus
+                        });
+                    }
+                });
+                
+                window.addEventListener('blur', function() {
+                    // Pause intensive operations when window loses focus
+                    isSpinning = false;
+                    if (jmolApplet0 && jmolApplet0._ready) {
+                        try {
+                            Jmol.script(jmolApplet0, 'spin off');
+                            const spinButton = document.getElementById('spinButton');
+                            if (spinButton) {
+                                spinButton.textContent = 'Spin';
+                            }
+                        } catch (e) {
+                            console.error('Error stopping spin on blur:', e);
+                        }
+                    }
+                });
+                
+            } catch (e) {
+                console.error('Error during initialization:', e);
+                document.getElementById('status').innerHTML = 'Error during initialization: ' + e.message;
+            }
         });
 
-        // Add toggle spin function
+        // Add toggle spin function with proper cleanup
         function toggleSpin() {
             isSpinning = !isSpinning;
-            Jmol.script(jmolApplet0, isSpinning ? 'spin on' : 'spin off');
-            document.getElementById('spinButton').textContent = isSpinning ? 'Stop' : 'Spin';
+            try {
+                Jmol.script(jmolApplet0, isSpinning ? 'spin on' : 'spin off');
+                document.getElementById('spinButton').textContent = isSpinning ? 'Stop' : 'Spin';
+            } catch (e) {
+                console.error('Error toggling spin:', e);
+                isSpinning = false;
+                document.getElementById('spinButton').textContent = 'Spin';
+            }
         }
 
         // Add function to set display mode
@@ -1532,17 +1621,26 @@
             document.getElementById('dragMinButton').textContent = '3D';
         }
 
-        // Add resize observer for JSmol viewer
+        // Add resize observer for JSmol viewer with throttling
         function initResizeObserver() {
+            let resizeTimeout;
             const resizeObserver = new ResizeObserver(entries => {
-                for (const entry of entries) {
-                    const width = entry.contentRect.width;
-                    const height = entry.contentRect.height;
-                    // Update JSmol viewer size
-                    if (jmolApplet0 && jmolApplet0._ready) {
-                        Jmol.resizeApplet(jmolApplet0, [width, height]);
+                // Throttle resize events to prevent excessive GPU calls
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(() => {
+                    for (const entry of entries) {
+                        const width = entry.contentRect.width;
+                        const height = entry.contentRect.height;
+                        // Update JSmol viewer size
+                        if (jmolApplet0 && jmolApplet0._ready) {
+                            try {
+                                Jmol.resizeApplet(jmolApplet0, [width, height]);
+                            } catch (e) {
+                                console.error('Error resizing JSmol:', e);
+                            }
+                        }
                     }
-                }
+                }, 100); // Throttle to 100ms
             });
 
             // Start observing the viewer container
@@ -1622,20 +1720,30 @@
             return jsmeInstance;
         }
 
-        // Cleanup function for JSME
+        // Cleanup function for JSME with better resource management
         function cleanupJSME() {
             if (jsmeApplet) {
-                if (jsmeApplet.options) {
-                    jsmeApplet.options.onChange = null;
+                try {
+                    if (jsmeApplet.options) {
+                        jsmeApplet.options.onChange = null;
+                    }
+                    if (jsmeApplet._changeHandler) {
+                        delete jsmeApplet._changeHandler;
+                    }
+                    // More thorough cleanup
+                    if (typeof jsmeApplet.destroy === 'function') {
+                        jsmeApplet.destroy();
+                    }
+                } catch (e) {
+                    console.error('Error cleaning up JSME:', e);
                 }
-                if (jsmeApplet._changeHandler) {
-                    delete jsmeApplet._changeHandler;
-                }
+                
                 // Clear the container
                 const container = document.getElementById('jsmeContainer');
                 if (container) {
                     container.innerHTML = '';
                 }
+                jsmeApplet = null;
             }
         }
 
@@ -1971,9 +2079,11 @@ ${xyzData.trim()}
 
         // Initialize ElemCo panel elements
         function initElemCoPanel() {
-            // Add the DF toggle
+            // Clean up any existing elements first
             const dfLabel = document.querySelector('.df-toggle-label');
             if (dfLabel) {
+                // Remove existing content to prevent memory leaks
+                dfLabel.innerHTML = '';
                 dfLabel.innerHTML = `
                     <input type="checkbox" id="elemco-df" onchange="updateMethodOptions()">
                     <span>Use DF</span>
