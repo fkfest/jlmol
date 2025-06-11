@@ -799,9 +799,76 @@
             readyFunction: function(applet) {
                 jmolApplet0._ready = true;
                 console.log('JSmol initialization complete');
+                
+                // Set initial display mode after JSmol is ready
+                setTimeout(() => {
+                    if (displayMode === undefined || displayMode === null) {
+                        displayMode = 'default';
+                        lastDisplayMode = 'default';
+                    }
+                    console.log('JSmol ready: Setting initial display mode to', displayMode);
+                    setDisplayMode(displayMode);
+                }, 500);
             },
             script: "set debugScript off; set antialiasDisplay; set zoomLarge false; set picking ON"
         };
+
+        /*
+         * FIXES FOR ELEMCO.JL INTEGRATION WITH NUMBERED ATOMS
+         * 
+         * Problem: After using the XYZ editor with numbered atoms (N1, C2, C3, etc.), 
+         * the ElemCo integration button shows "# Please load a molecule first" instead 
+         * of generating proper Julia input code.
+         * 
+         * Root Cause: The getXYZDataWithNumberedAtoms() function was not properly 
+         * handling the case where numbered atom names were used after XYZ editor operations.
+         * 
+         * Implemented Fixes:
+         * 
+         * 1. Enhanced getXYZDataWithNumberedAtoms() function:
+         *    - Added comprehensive error handling and detailed logging
+         *    - Implemented multiple fallback strategies (4 different approaches)
+         *    - Added validation of coordinates and atom data at each step
+         *    - Proper handling of window.originalAtomNames variable
+         * 
+         * 2. Improved updateElemCoInput() function:
+         *    - Added detailed validation checks for XYZ data completeness
+         *    - Enhanced error messages for different failure scenarios
+         *    - Better logging for debugging molecular data issues
+         *    - Validation of atom count vs actual data lines
+         * 
+         * 3. Updated showElemCoPanel() function:
+         *    - Added multiple delayed molecular data refresh attempts
+         *    - Integrated forceRefreshMolecularData() for comprehensive refresh
+         *    - Enhanced diagnostic capabilities for troubleshooting
+         *    - Better error reporting for different failure modes
+         * 
+         * 4. Added refreshAtomNames() function:
+         *    - Maintains numbered atom names across operations
+         *    - Detects and preserves numbered atom patterns
+         *    - Reapplies atom names when needed
+         * 
+         * 5. Added forceRefreshMolecularData() function:
+         *    - Comprehensive molecular data refresh capability
+         *    - Combines atom name refresh with XYZ data retrieval
+         *    - Enhanced debugging and diagnostic information
+         * 
+         * 6. Fixed variable scope issues:
+         *    - Ensured originalAtomNames is accessible as window.originalAtomNames
+         *    - Maintained consistency between local and global variables
+         * 
+         * 7. Enhanced XYZ editor integration:
+         *    - updateStructure() now calls refreshAtomNames() after changes
+         *    - loadXYZWithNumberedAtoms() maintains atom names properly
+         *    - showXYZEditor() refreshes atom names before display
+         * 
+         * Test Workflow:
+         * 1. Load a molecule with numbered atoms (e.g., caffeine with N1, C2, C3, etc.)
+         * 2. Use the XYZ editor to modify coordinates
+         * 3. Apply changes in the XYZ editor
+         * 4. Open the ElemCo.jl integration panel
+         * 5. Verify that proper Julia code is generated with numbered atom names
+         */
 
         // Function to export the current view as an image
         function exportImage() {
@@ -841,6 +908,7 @@
         // Add variable to store XYZ data
         var lastXYZData = null;
         var originalAtomNames = null; // Store original numbered atom names
+        window.originalAtomNames = null; // Make sure it's accessible globally
         var originalXYZContent = null; // Store original XYZ file content
         
         // Add frame rate limiting to prevent excessive GPU usage
@@ -894,7 +962,11 @@
                 
                 // Store the original data
                 originalAtomNames = extractedNames;
+                window.originalAtomNames = extractedNames; // Make sure it's globally accessible
                 originalXYZContent = xyzContent;
+                
+                // Save current display mode
+                const currentDisplayMode = displayMode || 'default';
                 
                 // Load the structure with element symbols only
                 Jmol.script(jmolApplet0, `load inline "${modifiedXYZ}"`);
@@ -902,12 +974,32 @@
                 // Apply original atom names after a short delay to ensure structure is loaded
                 setTimeout(() => {
                     applyOriginalAtomNames();
+                    // Also refresh atom names to ensure they're properly maintained
+                    setTimeout(() => {
+                        refreshAtomNames();
+                        console.log('loadXYZWithNumberedAtoms: Atom names refreshed after loading');
+                        
+                        // Restore display mode after everything is loaded
+                        setTimeout(() => {
+                            console.log('loadXYZWithNumberedAtoms: Restoring display mode:', currentDisplayMode);
+                            setDisplayMode(currentDisplayMode);
+                        }, 100);
+                    }, 100);
                 }, 100);
                 
             } catch (error) {
                 console.error('Error loading XYZ with numbered atoms:', error);
+                // Save current display mode
+                const currentDisplayMode = displayMode || 'default';
+                
                 // Fallback to normal loading
                 Jmol.script(jmolApplet0, `load inline "${xyzContent}"`);
+                
+                // Restore display mode after fallback loading
+                setTimeout(() => {
+                    console.log('loadXYZWithNumberedAtoms fallback: Restoring display mode:', currentDisplayMode);
+                    setDisplayMode(currentDisplayMode);
+                }, 200);
             }
         }
         
@@ -923,6 +1015,92 @@
                 document.getElementById('status').innerHTML = 'Structure loaded with preserved numbered atom names';
             } catch (error) {
                 console.error('Error applying atom names:', error);
+            }
+        }
+
+        // Function to refresh and maintain numbered atom names
+        function refreshAtomNames() {
+            console.log('refreshAtomNames: Starting atom name refresh');
+            
+            try {
+                const atomCount = Jmol.evaluateVar(jmolApplet0, '{*}.length');
+                if (!atomCount || atomCount === 0) {
+                    console.warn('refreshAtomNames: No atoms found');
+                    return false;
+                }
+                
+                // If we have preserved atom names, reapply them
+                if (window.originalAtomNames && window.originalAtomNames.length === atomCount) {
+                    console.log('refreshAtomNames: Reapplying preserved atom names');
+                    for (let i = 0; i < atomCount; i++) {
+                        const atomName = window.originalAtomNames[i];
+                        Jmol.script(jmolApplet0, `{atomIndex=${i}}.atomName = "${atomName}"`);
+                    }
+                    return true;
+                } else {
+                    // Try to extract current atom names and preserve them if they look numbered
+                    console.log('refreshAtomNames: Extracting current atom names');
+                    const currentNames = [];
+                    let hasNumberedNames = false;
+                    
+                    for (let i = 0; i < atomCount; i++) {
+                        let atomName = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.atomName`);
+                        if (!atomName || atomName === 'null' || atomName === '') {
+                            const element = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.element`) || 'X';
+                            atomName = element + (i + 1);
+                        }
+                        
+                        currentNames.push(atomName);
+                        
+                        // Check if this looks like a numbered atom name (element + number)
+                        if (/^[A-Z][a-z]?\d+$/.test(atomName)) {
+                            hasNumberedNames = true;
+                        }
+                    }
+                    
+                    if (hasNumberedNames) {
+                        console.log('refreshAtomNames: Found numbered names, preserving them');
+                        originalAtomNames = currentNames;
+                        window.originalAtomNames = currentNames;
+                        return true;
+                    }
+                }
+                
+                return false;
+            } catch (error) {
+                console.error('refreshAtomNames: Error refreshing atom names:', error);
+                return false;
+            }
+        }
+
+        // Function to force a complete refresh of molecular data
+        function forceRefreshMolecularData() {
+            console.log('forceRefreshMolecularData: Starting complete molecular data refresh');
+            
+            try {
+                // Refresh atom names first
+                const atomNamesRefreshed = refreshAtomNames();
+                console.log('forceRefreshMolecularData: Atom names refreshed:', atomNamesRefreshed);
+                
+                // Try to get fresh XYZ data using multiple approaches
+                const xyzData = getXYZDataWithNumberedAtoms();
+                console.log('forceRefreshMolecularData: XYZ data retrieved:', xyzData ? 'Success' : 'Failed');
+                
+                if (xyzData) {
+                    console.log('forceRefreshMolecularData: XYZ data preview:', xyzData.substring(0, 200) + '...');
+                    
+                    // Update ElemCo input with fresh data
+                    updateElemCoInput();
+                    
+                    return true;
+                } else {
+                    console.warn('forceRefreshMolecularData: Could not retrieve XYZ data');
+                    return false;
+                }
+                
+            } catch (error) {
+                console.error('forceRefreshMolecularData: Error during refresh:', error);
+                return false;
             }
         }
 
@@ -1019,37 +1197,87 @@
 
         // Add function to set display mode
         function setDisplayMode(mode) {
-            switch(mode) {
-                case 'wireframe':
-                    Jmol.script(jmolApplet0, 'wireframe');
-                    document.getElementById('displayButton').textContent = 'Wireframe';
-                    break;
-                case 'spacefill':
-                    Jmol.script(jmolApplet0, 'spacefill');
-                    document.getElementById('displayButton').textContent = 'Spacefill';
-                    break;
-                case 'default':
-                default:
-                    Jmol.script(jmolApplet0, 'wireframe off; spacefill 23%; wireframe 0.15');
-                    document.getElementById('displayButton').textContent = 'Ball & Stick';
-                    break;
+            try {
+                console.log('setDisplayMode: Setting display mode to', mode);
+                
+                // Check if JSmol applet is ready
+                if (!jmolApplet0 || typeof Jmol === 'undefined') {
+                    console.error('setDisplayMode: JSmol applet not ready');
+                    document.getElementById('status').innerHTML = 'JSmol not ready';
+                    return;
+                }
+                
+                // First check if there are any atoms loaded
+                const atomCount = Jmol.evaluateVar(jmolApplet0, '{*}.length');
+                if (!atomCount || atomCount === 0) {
+                    console.warn('setDisplayMode: No atoms loaded');
+                    document.getElementById('status').innerHTML = 'No molecule loaded';
+                    return;
+                }
+                
+                let script = '';
+                let buttonText = '';
+                
+                switch(mode) {
+                    case 'wireframe':
+                        script = 'spacefill off; wireframe only; wireframe 0.1';
+                        buttonText = 'Wireframe';
+                        break;
+                    case 'spacefill':
+                        script = 'wireframe off; spacefill only; spacefill 100%';
+                        buttonText = 'Spacefill';
+                        break;
+                    case 'default':
+                    default:
+                        script = 'spacefill 23%; wireframe 0.15';
+                        buttonText = 'Ball & Stick';
+                        mode = 'default';
+                        break;
+                }
+                
+                console.log('setDisplayMode: Executing script:', script);
+                Jmol.script(jmolApplet0, script);
+                
+                // Update button text and store mode
+                const displayButton = document.getElementById('displayButton');
+                if (displayButton) {
+                    displayButton.textContent = buttonText;
+                }
+                
+                displayMode = mode;
+                lastDisplayMode = mode;
+                
+                console.log('setDisplayMode: Successfully set to', mode);
+                
+            } catch (error) {
+                console.error('setDisplayMode: Error setting display mode:', error);
+                document.getElementById('status').innerHTML = 'Error changing display mode';
             }
-            displayMode = mode;
-            lastDisplayMode = mode;
         }
 
         // Update toggleDisplayMode to use setDisplayMode
         function toggleDisplayMode() {
-            switch(displayMode) {
-                case 'default':
-                    setDisplayMode('wireframe');
-                    break;
-                case 'wireframe':
-                    setDisplayMode('spacefill');
-                    break;
-                case 'spacefill':
-                    setDisplayMode('default');
-                    break;
+            try {
+                console.log('toggleDisplayMode: Current mode:', displayMode);
+                
+                switch(displayMode) {
+                    case 'default':
+                        setDisplayMode('wireframe');
+                        break;
+                    case 'wireframe':
+                        setDisplayMode('spacefill');
+                        break;
+                    case 'spacefill':
+                        setDisplayMode('default');
+                        break;
+                    default:
+                        // If mode is undefined or unknown, start with default
+                        setDisplayMode('default');
+                        break;
+                }
+            } catch (error) {
+                console.error('toggleDisplayMode: Error toggling display mode:', error);
+                document.getElementById('status').innerHTML = 'Error toggling display mode';
             }
         }
 
@@ -1075,6 +1303,9 @@
                 var reader = new FileReader();
                 reader.onload = function(e) {
                     try {
+                        // Save current display mode
+                        const currentDisplayMode = displayMode || 'default';
+                        
                         const fileContent = e.target.result;
                         const fileName = file.name.toLowerCase();
                         
@@ -1086,6 +1317,13 @@
                             Jmol.script(jmolApplet0, 'load inline "' + fileContent + '" filter "NOSORT"');
                             document.getElementById('status').innerHTML = 'File loaded successfully';
                         }
+                        
+                        // Restore display mode after loading with a delay
+                        setTimeout(() => {
+                            console.log('handleFileSelect: Restoring display mode:', currentDisplayMode);
+                            setDisplayMode(currentDisplayMode);
+                        }, 300);
+                        
                     } catch (err) {
                         document.getElementById('status').innerHTML = 'Error loading file: ' + err.message;
                     }
@@ -1096,8 +1334,18 @@
 
         function loadSample(filename) {
             try {
+                // Save current display mode
+                const currentDisplayMode = displayMode || 'default';
+                
                 Jmol.script(jmolApplet0, 'load "jsmol/data/' + filename + '"');
                 document.getElementById('status').innerHTML = 'Sample loaded successfully';
+                
+                // Restore display mode after loading with a delay
+                setTimeout(() => {
+                    console.log('loadSample: Restoring display mode:', currentDisplayMode);
+                    setDisplayMode(currentDisplayMode);
+                }, 200);
+                
             } catch (err) {
                 document.getElementById('status').innerHTML = 'Error loading sample: ' + err.message;
             }
@@ -1303,6 +1551,9 @@
             editorPanel.style.display = 'block';
             
             try {
+                // Refresh atom names to ensure they're properly maintained
+                refreshAtomNames();
+                
                 // Get atom count first
                 const atomCount = Jmol.evaluateVar(jmolApplet0, '{*}.length');
                 
@@ -1469,6 +1720,7 @@
                 
                 // Update stored original names
                 originalAtomNames = newOriginalNames;
+                window.originalAtomNames = newOriginalNames; // Make sure it's globally accessible
                 originalXYZContent = xyzData;
                 
                 // Apply the numbered atom names after a short delay
@@ -1477,6 +1729,13 @@
                         const atomName = atomsData[i].name;
                         Jmol.script(jmolApplet0, `{atomIndex=${i}}.atomName = "${atomName}"`);
                     }
+                    
+                    // Refresh atom names to ensure they're properly maintained
+                    setTimeout(() => {
+                        refreshAtomNames();
+                        console.log('updateStructure: Atom names refreshed after update');
+                    }, 100);
+                    
                     document.getElementById('status').innerHTML = 'Structure updated successfully with preserved atom names';
                 }, 100);
                 
@@ -1886,12 +2145,62 @@
         };
 
         function showElemCoPanel() {
+            console.log('showElemCoPanel: Opening ElemCo panel');
             const panel = document.getElementById('elemcoPanel');
             if (panel) {
                 panel.style.display = 'block';
+                
                 // Reinitialize panel elements to ensure they're set up properly
+                console.log('showElemCoPanel: Initializing panel elements');
                 initElemCoPanel();
-                initializeElemCoListeners();
+                
+                // Force refresh molecular data detection with multiple attempts
+                console.log('showElemCoPanel: Starting molecular data refresh sequence');
+                
+                // Immediate attempt
+                updateElemCoInput();
+                
+                // Delayed attempt 1 - sometimes JSmol needs time to update
+                setTimeout(() => {
+                    console.log('showElemCoPanel: First delayed attempt');
+                    updateElemCoInput();
+                }, 100);
+                
+                // Delayed attempt 2 - final fallback with force refresh
+                setTimeout(() => {
+                    console.log('showElemCoPanel: Second delayed attempt with force refresh');
+                    
+                    // Check if we still have the error message
+                    const inputArea = document.getElementById('elemco-input');
+                    if (inputArea && inputArea.value.includes('Please load a molecule first')) {
+                        console.warn('showElemCoPanel: Still showing "Please load a molecule first", trying force refresh');
+                        
+                        const refreshSuccess = forceRefreshMolecularData();
+                        
+                        if (!refreshSuccess) {
+                            // Try to diagnose the issue
+                            try {
+                                const atomCount = Jmol.evaluateVar(jmolApplet0, '{*}.length');
+                                console.log('showElemCoPanel: Diagnostic - JSmol atom count:', atomCount);
+                                
+                                if (atomCount > 0) {
+                                    console.log('showElemCoPanel: Atoms exist but data retrieval failed. This suggests a JSmol communication issue.');
+                                    inputArea.value = '# Molecular data detected but could not be retrieved.\n# Try closing and reopening the ElemCo panel, or reload the molecule.';
+                                } else {
+                                    console.log('showElemCoPanel: No atoms detected in JSmol');
+                                    inputArea.value = '# No molecular structure detected.\n# Please load a molecule first.';
+                                }
+                            } catch (e) {
+                                console.error('showElemCoPanel: Diagnostic failed:', e);
+                                inputArea.value = '# Error communicating with molecular viewer.\n# Please reload the page and try again.';
+                            }
+                        }
+                    } else {
+                        console.log('showElemCoPanel: ElemCo input appears to be working correctly');
+                    }
+                }, 300);
+            } else {
+                console.error('showElemCoPanel: Could not find elemcoPanel element');
             }
         }
 
@@ -1972,42 +2281,170 @@
         }
         // Function to generate XYZ content with numbered atoms if available
         function getXYZDataWithNumberedAtoms() {
-            // If we have preserved numbered atom names, use them
-            if (window.originalAtomNames && window.originalAtomNames.length > 0) {
-                try {
-                    const atomCount = Jmol.evaluateVar(jmolApplet0, '{*}.length');
-                    
-                    if (atomCount !== window.originalAtomNames.length) {
-                        console.warn('Atom count mismatch, falling back to standard XYZ');
-                        return Jmol.evaluateVar(jmolApplet0, 'write("xyz")');
-                    }
-                    
-                    let xyzContent = atomCount + '\n\n';
-                    
-                    for (let i = 0; i < atomCount; i++) {
-                        // Get atom coordinates from JSmol
-                        const x = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.x`);
-                        const y = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.y`);
-                        const z = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.z`);
-                        
-                        // Use the preserved numbered atom name
-                        const atomName = window.originalAtomNames[i];
-                        
-                        xyzContent += `${atomName} ${x.toFixed(6)} ${y.toFixed(6)} ${z.toFixed(6)}\n`;
-                    }
-                    
-                    return xyzContent;
-                } catch (error) {
-                    console.error('Error generating numbered XYZ data:', error);
-                    return Jmol.evaluateVar(jmolApplet0, 'write("xyz")');
-                }
-            }
+            console.log('getXYZDataWithNumberedAtoms: Starting data retrieval');
             
-            // Fall back to standard XYZ if no numbered atoms are preserved
-            return Jmol.evaluateVar(jmolApplet0, 'write("xyz")');
+            try {
+                // First check if there are any atoms at all
+                const atomCount = Jmol.evaluateVar(jmolApplet0, '{*}.length');
+                console.log('getXYZDataWithNumberedAtoms: Atom count from JSmol:', atomCount);
+                
+                if (!atomCount || atomCount === 0) {
+                    console.warn('No atoms found in JSmol');
+                    return null;
+                }
+                
+                // Strategy 1: Try to use preserved numbered atom names
+                if (window.originalAtomNames && window.originalAtomNames.length > 0) {
+                    console.log('getXYZDataWithNumberedAtoms: Found preserved atom names, count:', window.originalAtomNames.length);
+                    try {
+                        if (atomCount === window.originalAtomNames.length) {
+                            let xyzContent = atomCount + '\nStructure with numbered atoms\n';
+                            
+                            for (let i = 0; i < atomCount; i++) {
+                                // Get atom coordinates from JSmol
+                                const x = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.x`);
+                                const y = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.y`);
+                                const z = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.z`);
+                                
+                                // Validate coordinates
+                                if (isNaN(x) || isNaN(y) || isNaN(z)) {
+                                    console.warn('Invalid coordinates for atom', i, 'falling back');
+                                    break;
+                                }
+                                
+                                // Use the preserved numbered atom name
+                                const atomName = window.originalAtomNames[i];
+                                xyzContent += `${atomName} ${x.toFixed(6)} ${y.toFixed(6)} ${z.toFixed(6)}\n`;
+                            }
+                            
+                            // Validate the generated content
+                            const lines = xyzContent.trim().split('\n');
+                            if (lines.length >= atomCount + 2) {
+                                console.log('getXYZDataWithNumberedAtoms: Successfully generated numbered XYZ data');
+                                return xyzContent;
+                            }
+                        } else {
+                            console.warn('Atom count mismatch: JSmol has', atomCount, 'but preserved names has', window.originalAtomNames.length);
+                        }
+                    } catch (error) {
+                        console.error('Error generating numbered XYZ data:', error);
+                        // Continue to next strategy
+                    }
+                }
+                
+                // Strategy 2: Try to get current atom names from JSmol and build XYZ
+                console.log('getXYZDataWithNumberedAtoms: Trying to get current atom names from JSmol');
+                try {
+                    let xyzContent = atomCount + '\nGenerated from current JSmol state\n';
+                    let validData = true;
+                    
+                    for (let i = 0; i < atomCount && validData; i++) {
+                        try {
+                            // Try to get current atom name from JSmol
+                            let atomName = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.atomName`);
+                            if (!atomName || atomName === 'null' || atomName === '') {
+                                // Fallback to element symbol with index
+                                const element = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.element`) || 'X';
+                                atomName = element + (i + 1);
+                            }
+                            
+                            const x = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.x`);
+                            const y = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.y`);
+                            const z = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.z`);
+                            
+                            // Validate coordinates
+                            if (isNaN(x) || isNaN(y) || isNaN(z)) {
+                                console.warn('Invalid coordinates for atom', i);
+                                validData = false;
+                                break;
+                            }
+                            
+                            xyzContent += `${atomName} ${x.toFixed(6)} ${y.toFixed(6)} ${z.toFixed(6)}\n`;
+                        } catch (atomError) {
+                            console.warn('Error getting data for atom', i, ':', atomError);
+                            validData = false;
+                            break;
+                        }
+                    }
+                    
+                    if (validData) {
+                        console.log('getXYZDataWithNumberedAtoms: Successfully generated XYZ from current JSmol state');
+                        return xyzContent;
+                    }
+                } catch (error) {
+                    console.error('Error building XYZ from current JSmol state:', error);
+                }
+                
+                // Strategy 3: Try JSmol's built-in write function
+                console.log('getXYZDataWithNumberedAtoms: Trying JSmol write function');
+                try {
+                    const xyzData = Jmol.evaluateVar(jmolApplet0, 'write("xyz")');
+                    if (xyzData && xyzData.trim().length > 0) {
+                        const lines = xyzData.trim().split('\n');
+                        if (lines.length >= 3 && !isNaN(parseInt(lines[0]))) {
+                            console.log('getXYZDataWithNumberedAtoms: Successfully got XYZ from JSmol write function');
+                            return xyzData;
+                        }
+                    }
+                } catch (error) {
+                    console.error('JSmol write function failed:', error);
+                }
+                
+                // Strategy 4: Manual XYZ building with element symbols
+                console.log('getXYZDataWithNumberedAtoms: Building manual XYZ with element symbols');
+                try {
+                    let manualXYZ = atomCount + '\nManually generated from JSmol\n';
+                    let validManualData = true;
+                    
+                    for (let i = 0; i < atomCount && validManualData; i++) {
+                        try {
+                            const element = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.element`) || 'X';
+                            const x = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.x`) || 0;
+                            const y = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.y`) || 0;
+                            const z = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.z`) || 0;
+                            
+                            manualXYZ += `${element}${i+1} ${parseFloat(x).toFixed(6)} ${parseFloat(y).toFixed(6)} ${parseFloat(z).toFixed(6)}\n`;
+                        } catch (atomError) {
+                            console.warn('Error in manual XYZ generation for atom', i, ':', atomError);
+                            validManualData = false;
+                            break;
+                        }
+                    }
+                    
+                    if (validManualData) {
+                        console.log('getXYZDataWithNumberedAtoms: Successfully generated manual XYZ');
+                        return manualXYZ;
+                    }
+                } catch (error) {
+                    console.error('Manual XYZ generation failed:', error);
+                }
+                
+                console.error('All XYZ generation strategies failed');
+                return null;
+                
+            } catch (error) {
+                console.error('Error in getXYZDataWithNumberedAtoms:', error);
+                
+                // Last resort: try to get any molecular data
+                try {
+                    console.log('getXYZDataWithNumberedAtoms: Last resort fallback attempt');
+                    const fallbackData = Jmol.evaluateVar(jmolApplet0, 'write("xyz")');
+                    if (fallbackData && fallbackData.trim().length > 0) {
+                        console.log('getXYZDataWithNumberedAtoms: Fallback successful');
+                        return fallbackData;
+                    }
+                } catch (fallbackError) {
+                    console.error('Fallback XYZ generation also failed:', fallbackError);
+                }
+                
+                console.error('All molecular data retrieval attempts failed');
+                return null;
+            }
         }
 
         function updateElemCoInput() {
+            console.log('updateElemCoInput: Starting input generation');
+            
             const dfEnabled = document.getElementById('elemco-df').checked;
             const method = document.getElementById('elemco-method').value;
             const aoBasis = document.getElementById('elemco-basis').value;
@@ -2017,11 +2454,62 @@
             const multiplicity = parseInt(document.getElementById('elemco-multiplicity').value) || 0;
 
             // Get current molecular structure from JSmol (with numbered atoms if available)
+            console.log('updateElemCoInput: Calling getXYZDataWithNumberedAtoms');
             const xyzData = getXYZDataWithNumberedAtoms();
-            if (!xyzData) {
+            
+            if (!xyzData || xyzData.trim().length === 0) {
+                console.warn('updateElemCoInput: No XYZ data received');
                 document.getElementById('elemco-input').value = '# Please load a molecule first';
                 return;
             }
+            
+            console.log('updateElemCoInput: Received XYZ data, length:', xyzData.length);
+            
+            // Double-check that we have valid XYZ data
+            const lines = xyzData.trim().split('\n');
+            if (lines.length < 3) {
+                console.warn('updateElemCoInput: XYZ data has insufficient lines:', lines.length);
+                document.getElementById('elemco-input').value = '# Invalid molecular structure - please reload molecule';
+                return;
+            }
+            
+            // Check if first line contains atom count
+            const atomCount = parseInt(lines[0]);
+            if (isNaN(atomCount) || atomCount <= 0) {
+                console.warn('updateElemCoInput: Invalid atom count in first line:', lines[0]);
+                document.getElementById('elemco-input').value = '# Invalid molecular structure - please reload molecule';
+                return;
+            }
+            
+            // Verify we have enough data lines for all atoms
+            const dataLines = lines.slice(2); // Skip atom count and comment lines
+            if (dataLines.length < atomCount) {
+                console.warn('updateElemCoInput: Insufficient atom data lines. Expected:', atomCount, 'Found:', dataLines.length);
+                document.getElementById('elemco-input').value = '# Incomplete molecular structure - please reload molecule';
+                return;
+            }
+            
+            // Validate that atom data lines have proper format
+            let validAtomLines = 0;
+            for (let i = 0; i < Math.min(dataLines.length, atomCount); i++) {
+                const parts = dataLines[i].trim().split(/\s+/);
+                if (parts.length >= 4) {
+                    const x = parseFloat(parts[1]);
+                    const y = parseFloat(parts[2]);
+                    const z = parseFloat(parts[3]);
+                    if (!isNaN(x) && !isNaN(y) && !isNaN(z)) {
+                        validAtomLines++;
+                    }
+                }
+            }
+            
+            if (validAtomLines < atomCount) {
+                console.warn('updateElemCoInput: Not all atom lines are valid. Valid:', validAtomLines, 'Expected:', atomCount);
+                document.getElementById('elemco-input').value = '# Malformed molecular structure - please reload molecule';
+                return;
+            }
+            
+            console.log('updateElemCoInput: XYZ data validation passed. Atoms:', atomCount, 'Valid lines:', validAtomLines);
         
             // Format ElemCo.jl input with complete XYZ specification
             let elemcoInput = `using ElemCo
@@ -2072,10 +2560,11 @@ ${xyzData.trim()}
             const inputArea = document.getElementById('elemco-input');
             if (inputArea) {
                 inputArea.value = elemcoInput;
+                console.log('updateElemCoInput: Successfully generated ElemCo input');
+            } else {
+                console.error('updateElemCoInput: Could not find elemco-input textarea');
             }
         }
-
-
 
         // Initialize ElemCo panel elements
         function initElemCoPanel() {
