@@ -60,6 +60,59 @@ npm run start-safe-debug
 - Check file encoding (UTF-8 recommended)
 - Verify file structure and syntax
 
+## Database Search
+
+jlmol supports loading structures directly from the PubChem database:
+
+### PubChem Database
+
+- **By Compound ID (CID)**: `:1983`, `:5280343`
+- **By Name**: `:caffeine`, `:aspirin`, `:glucose`
+- **By SMILES**: `:smiles:CC/C=C/CC`, `:smiles:C6H6`
+- **Search Type Control**: Use the dropdown to force specific search types
+- Loads 3D structures when available
+
+### Usage Tips
+
+- Enter the compound identifier in the search box and click "Load"
+- Press Enter after typing to load quickly
+- Click the search type selector on the right side of the input to override auto-detection:
+  - **Auto-detect**: Smart detection (default)
+  - **CID**: Force CID search
+  - **Name**: Force name search  
+  - **SMILES**: Force SMILES search (recommended for SMILES queries)
+- Use the example buttons for common structures
+- Check the status message for loading confirmation or errors
+
+### Troubleshooting Database Loading
+
+- Ensure internet connection is active
+- Some structures may take time to download
+- If loading fails, try alternative search terms or identifiers
+- For SMILES issues, try clicking the search type selector and choosing "SMILES" instead of auto-detection
+- Large molecules may require more memory
+
+## Database Search Issues
+
+### Connection Problems
+
+- Check internet connection for database searches
+- PubChem may be temporarily unavailable
+- Try different search terms if one fails
+
+### Search Tips
+
+- **PubChem**: Search by CID number, chemical name, or SMILES string
+- Use common chemical names (e.g., "aspirin" instead of "acetylsalicylic acid")
+- For SMILES searches, ensure proper formatting
+
+### Common Database Search Errors
+
+- Chemical name not found in PubChem database
+- Network timeout (try again)
+- SMILES syntax errors (check for proper formatting)
+- CID number does not exist
+
 ## Additional Support
 
 For more detailed troubleshooting information and platform-specific fixes, see:

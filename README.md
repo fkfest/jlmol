@@ -17,6 +17,18 @@ Download: [Latest Release Executables](https://github.com/fkfest/jlmol/releases/
   - Spin animation
   - Drag and drop file loading
 
+### Database Search
+
+- **PubChem Database Integration**: Direct access to molecular structures from PubChem without needing to download files locally
+  - **Combined Search Interface**: Modern unified input field with integrated search type selector
+  - **Compound ID (CID)**: Search by PubChem compound identifier (e.g., `1983` for caffeine)
+  - **Chemical Name**: Search by common or systematic names (e.g., `caffeine`, `aspirin`, `glucose`)
+  - **SMILES**: Search using SMILES notation (e.g., `C6H6` for benzene, `CC=O` for acetaldehyde)
+  - **Search Type Enforcement**: Click selector to force specific search types (CID, Name, SMILES)
+  - **Auto-detection**: Intelligent query type detection based on input format
+  - **Enter Key Support**: Quick loading by pressing Enter in the search field
+  - **Network Error Handling**: Robust error handling for connection issues
+
 ### Structure Editing
 
 - Integrated JSME 2D structure editor:
@@ -285,3 +297,89 @@ The application includes built-in support for generating ElemCo.jl input files f
 6. Use the input with ElemCo.jl for calculations
 
 The integration provides a convenient way to prepare quantum chemistry calculations while visualizing the molecular structure. For more information about ElemCo.jl and its capabilities, visit [elem.co.il](https://elem.co.il).
+
+## Database Search and Molecule Loading
+
+The application includes comprehensive database search functionality for loading molecular structures directly from online databases.
+
+### PubChem Database
+
+PubChem integration allows direct access to over 100 million chemical structures without requiring local file downloads.
+
+#### Search Methods
+
+1. **Compound ID (CID) Search**
+   - Enter numeric PubChem compound identifier
+   - Example: `1983` (loads caffeine)
+   - Most reliable method for known compounds
+
+2. **Chemical Name Search**
+   - Search by common names, systematic names, or trade names
+   - Examples: `caffeine`, `aspirin`, `benzene`, `glucose`
+   - Case-insensitive matching
+
+3. **SMILES Search**
+   - Use SMILES notation for precise structure specification
+   - Examples: `C6H6` (benzene), `CC=O` (acetaldehyde), `CC(=O)OC1=CC=CC=C1C(=O)O` (aspirin)
+   - Useful for specific structural queries
+
+#### Quick Access Buttons
+
+The application provides one-click access to common molecules:
+
+- **Educational Examples**: Caffeine, aspirin, glucose, benzene, ethanol
+- **Research Compounds**: Quercetin (flavonoid)
+- **SMILES Examples**: C6H6 (benzene), CC=O (acetaldehyde)
+- **Reliable CID Examples**: 1983 (caffeine), 2244 (aspirin), 5793 (glucose)
+
+#### Using Database Search
+
+1. **Locate the Database Search Section** in the control panel
+2. **Select Search Method** (optional):
+   - Click the search type selector on the right side of the input field
+   - Choose from: **Auto-detect** (default), **CID**, **Name**, or **SMILES**
+   - The input placeholder text will update to show relevant examples
+3. **Enter Query** in the input field
+4. **Execute Search**:
+   - Click "Load from PubChem" button
+   - Or press Enter for quick loading
+5. **Quick Examples**: Click any example button for instant loading
+
+#### Search Tips
+
+- **Search Type Selection**: Click the selector on the right side of the input field to override auto-detection:
+  - **Auto-detect**: Smart detection based on input patterns (default)
+  - **CID**: Force search by compound identifier (most reliable)
+  - **Name**: Force search by chemical name (reliable for common names)
+  - **SMILES**: Force SMILES search (useful when auto-detection fails or for complex SMILES)
+- **Auto-Detection**: When using auto-detect mode, the application automatically detects query type:
+  - Pure numbers are treated as CIDs
+  - Text with chemical patterns is treated as names
+  - Strings with SMILES-specific characters are detected as SMILES
+- **Reliability**: For best results, use this order of preference:
+  1. **CID numbers** (most reliable - unique identifiers)
+  2. **Chemical names** (reliable - use common or systematic names)
+  3. **SMILES** (least reliable for auto-detection - use explicit SMILES mode for better results)
+- **Error Handling**: Network issues and invalid queries show helpful error messages
+- **Display Mode**: Loaded structures automatically use your current display mode preference
+- **Integration**: Database-loaded structures work with all editing and analysis features
+
+#### Troubleshooting Database Search
+
+- **Connection Issues**: Check internet connectivity if searches fail
+- **Name Not Found**: Try alternative names or systematic nomenclature
+- **SMILES Issues**: 
+  - Auto-detected SMILES searches may return unexpected compounds due to database indexing
+  - **Solution**: Click the search type selector on the right and choose "SMILES" for more predictable results
+  - Multiple compounds may match the same SMILES pattern
+  - For ethanol, use the name `ethanol` instead of SMILES `CCO`
+  - Use chemical names or CID numbers for more predictable results
+- **Invalid SMILES**: Verify SMILES syntax using online validators
+- **Slow Loading**: Large molecules may take longer to load and render
+
+The database search feature enhances jlmol's educational and research capabilities by providing instant access to PubChem's vast molecular database, making it ideal for:
+
+- **Educational Use**: Quick access to textbook molecules
+- **Research Planning**: Loading known compounds for analysis
+- **Structure Comparison**: Loading reference structures
+- **Method Development**: Testing with diverse molecular structures

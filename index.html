@@ -200,25 +200,160 @@
         h3 {
             margin: 16px 0 2px 0;  /* Increased top margin from 8px to 16px */
         }
-        .toggle-button {
-            background-color: #f0f0f0;
+        
+        /* Database search styles */
+        .database-section {
+            margin: 10px 0;
+        }
+        .database-group {
+            margin: 8px 0;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #f9f9f9;
+        }
+        .database-group input {
+            width: 100%;
+            padding: 8px;
             border: 1px solid #ccc;
-            padding: 5px 10px;
+            border-radius: 3px;
+            font-size: 12px;
+            box-sizing: border-box;
         }
-        .toggle-button.active {
-            background-color: #e0e0ff;
+        .database-group input:focus {
+            outline: none;
+            border-color: #4CAF50;
+            box-shadow: 0 0 3px rgba(76, 175, 80, 0.3);
         }
-        .control-line {
-            margin: 4px 0;  /* Reduced margin from 8px to 4px */
+
+        /* Combined search input container */
+        .search-input-container {
+            position: relative;
             display: flex;
             align-items: center;
-            gap: 8px;
         }
-        .control-line span {
-            min-width: 20px;  /* Reduced from 70px since we only have an icon now */
+        
+        .search-input-container input {
+            flex: 1;
+            padding: 8px 30px 8px 8px; /* Reduced right padding for smaller selector */
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            font-size: 12px;
+            margin: 0;
+        }
+        
+        .search-input-container input:focus {
+            outline: none;
+            border-color: #4CAF50;
+            box-shadow: 0 0 3px rgba(76, 175, 80, 0.3);
+        }
+        
+        .search-type-selector {
+            position: absolute;
+            right: 1px;
+            top: 1px;
+            bottom: 1px;
+            width: 25px;
+            background: linear-gradient(to bottom, #f8f8f8 0%, #e8e8e8 100%);
+            border-left: 1px solid #ccc;
+            border-radius: 0 2px 2px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 12px;
+            color: #666;
+            transition: background 0.2s ease;
+        }
+        
+        .search-type-selector:hover {
+            background: linear-gradient(to bottom, #f0f0f0 0%, #d8d8d8 100%);
+        }
+        
+        .search-type-selector.active {
+            background: linear-gradient(to bottom, #e0e0e0 0%, #d0d0d0 100%);
+        }
+        
+        .dropdown-arrow {
+            font-size: 12px;
+        }
+        
+        .search-type-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            width: 160px;
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            z-index: 10000;
+            display: none;
+            margin-top: 2px;
+        }
+        
+        .search-type-option {
+            padding: 8px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+            transition: background 0.15s ease;
+        }
+        
+        .search-type-option:last-child {
+            border-bottom: none;
+        }
+        
+        .search-type-option:hover {
+            background: #f5f5f5;
+        }
+        
+        .search-type-option.selected {
+            background: #e8f5e8;
+            color: #2e7d32;
+        }
+        
+        .option-label {
             font-weight: bold;
-            text-align: center;
+            display: block;
+            font-size: 12px;
         }
+        
+        .option-description {
+            font-size: 10px;
+            color: #666;
+            margin-top: 2px;
+            display: block;
+        }
+
+        /* Database search help styles */
+        .database-help {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 8px;
+            margin: 8px 0;
+            font-size: 11px;
+            color: #666;
+        }
+        .database-help h4 {
+            margin: 0 0 4px 0;
+            font-size: 12px;
+            color: #333;
+        }
+        .database-help ul {
+            margin: 4px 0;
+            padding-left: 16px;
+        }
+        .database-help li {
+            margin: 2px 0;
+        }
+        .database-help code {
+            background: #fff;
+            padding: 1px 3px;
+            border-radius: 2px;
+            font-family: monospace;
+        }
+
         #jsmeContainer { 
             flex: 1; 
             min-height: 400px;
@@ -910,6 +1045,7 @@
         var originalAtomNames = null; // Store original numbered atom names
         window.originalAtomNames = null; // Make sure it's accessible globally
         var originalXYZContent = null; // Store original XYZ file content
+        var shouldUseNumberedAtoms = false; // Flag to track if numbered atoms should be used (only for XYZ files)
         
         // Add frame rate limiting to prevent excessive GPU usage
         var lastFrameTime = 0;
@@ -943,12 +1079,18 @@
                 // Extract original atom names and prepare modified content
                 const extractedNames = [];
                 let modifiedXYZ = lines[0] + '\n' + lines[1] + '\n';
+                let hasNumberedAtoms = false;
                 
                 for (let i = 2; i < atomCount + 2 && i < lines.length; i++) {
                     const parts = lines[i].trim().split(/\s+/);
                     if (parts.length >= 4) {
                         const originalName = parts[0];
                         let elementSymbol = originalName.replace(/\d+/g, ''); // Remove numbers for JSmol
+                        
+                        // Check if this atom name contains numbers (indicating numbered atoms)
+                        if (originalName !== elementSymbol && /\d/.test(originalName)) {
+                            hasNumberedAtoms = true;
+                        }
                         
                         // Capitalize the first letter and make the rest lowercase for proper element recognition
                         if (elementSymbol.length > 0) {
@@ -964,6 +1106,13 @@
                 originalAtomNames = extractedNames;
                 window.originalAtomNames = extractedNames; // Make sure it's globally accessible
                 originalXYZContent = xyzContent;
+                
+                // Clear database metadata since this is not a database load
+                window.databaseMetadata = null;
+                
+                // Set the flag to indicate numbered atoms should be used
+                shouldUseNumberedAtoms = hasNumberedAtoms;
+                console.log('loadXYZWithNumberedAtoms: Detected numbered atoms:', hasNumberedAtoms, 'Setting shouldUseNumberedAtoms to:', shouldUseNumberedAtoms);
                 
                 // Save current display mode
                 const currentDisplayMode = displayMode || 'default';
@@ -1019,7 +1168,30 @@
         }
 
         // Function to refresh and maintain numbered atom names
+        let refreshAtomNamesTimeout = null;
+        let lastRefreshTime = 0;
+        const REFRESH_THROTTLE_MS = 1000; // Don't refresh more than once per second
+        
         function refreshAtomNames() {
+            // Throttle the function to prevent excessive calls
+            const now = Date.now();
+            if (now - lastRefreshTime < REFRESH_THROTTLE_MS) {
+                // Clear any pending refresh and schedule a new one
+                if (refreshAtomNamesTimeout) {
+                    clearTimeout(refreshAtomNamesTimeout);
+                }
+                refreshAtomNamesTimeout = setTimeout(() => {
+                    refreshAtomNamesImmediate();
+                    lastRefreshTime = Date.now();
+                }, REFRESH_THROTTLE_MS - (now - lastRefreshTime));
+                return false;
+            }
+            
+            lastRefreshTime = now;
+            return refreshAtomNamesImmediate();
+        }
+        
+        function refreshAtomNamesImmediate() {
             console.log('refreshAtomNames: Starting atom name refresh');
             
             try {
@@ -1047,7 +1219,15 @@
                         let atomName = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.atomName`);
                         if (!atomName || atomName === 'null' || atomName === '') {
                             const element = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.element`) || 'X';
-                            atomName = element + (i + 1);
+                            // Only generate numbered names if the flag indicates we should
+                            atomName = shouldUseNumberedAtoms ? (element + (i + 1)) : element;
+                        } else if (!shouldUseNumberedAtoms && /^[A-Z][a-z]?\d+$/.test(atomName)) {
+                            // Atom name has numbers but we don't want numbered atoms - extract just the element
+                            const element = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.element`) || 'X';
+                            atomName = element;
+                        } else if (shouldUseNumberedAtoms && atomName.length <= 2 && !/\d/.test(atomName)) {
+                            // Atom name is just element symbol but we want numbered atoms
+                            atomName = atomName + (i + 1);
                         }
                         
                         currentNames.push(atomName);
@@ -1060,6 +1240,28 @@
                     
                     if (hasNumberedNames) {
                         console.log('refreshAtomNames: Found numbered names, preserving them');
+                        originalAtomNames = currentNames;
+                        window.originalAtomNames = currentNames;
+                        return true;
+                    } else {
+                        // Apply the corrected non-numbered names back to JSmol if needed
+                        let needsUpdate = false;
+                        for (let i = 0; i < atomCount; i++) {
+                            const currentJSmolName = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.atomName`);
+                            if (currentJSmolName !== currentNames[i]) {
+                                needsUpdate = true;
+                                break;
+                            }
+                        }
+                        
+                        if (needsUpdate) {
+                            console.log('refreshAtomNames: Applying corrected non-numbered names to JSmol');
+                            for (let i = 0; i < atomCount; i++) {
+                                Jmol.script(jmolApplet0, `{atomIndex=${i}}.atomName = "${currentNames[i]}"`);
+                            }
+                        }
+                        
+                        // Store the corrected names
                         originalAtomNames = currentNames;
                         window.originalAtomNames = currentNames;
                         return true;
@@ -1175,6 +1377,11 @@
                         }
                     }
                 });
+
+                // Initialize database input handlers with retry
+                setTimeout(() => {
+                    setupDatabaseInputHandlers();
+                }, 100);
                 
             } catch (e) {
                 console.error('Error during initialization:', e);
@@ -1311,11 +1518,28 @@
                         
                         // Check if it's an XYZ file and use custom loader
                         if (fileName.endsWith('.xyz')) {
+                            // Don't automatically set shouldUseNumberedAtoms to true
+                            // Instead, let loadXYZWithNumberedAtoms detect if numbered atoms are present
                             loadXYZWithNumberedAtoms(fileContent);
                         } else {
+                            // Clear numbered atom names for non-XYZ files
+                            originalAtomNames = null;
+                            window.originalAtomNames = null;
+                            originalXYZContent = null;
+                            shouldUseNumberedAtoms = false; // Non-XYZ files should not use numbered atoms
+                            
+                            // Clear database metadata since this is not a database load
+                            window.databaseMetadata = null;
+                            
                             // Use normal loading for other file types
                             Jmol.script(jmolApplet0, 'load inline "' + fileContent + '" filter "NOSORT"');
                             document.getElementById('status').innerHTML = 'File loaded successfully';
+                            
+                            // Refresh atom names to remove any numbered indices for non-XYZ files
+                            setTimeout(() => {
+                                refreshAtomNames();
+                                console.log('handleFileSelect: Atom names refreshed for non-XYZ file');
+                            }, 100);
                         }
                         
                         // Restore display mode after loading with a delay
@@ -1337,6 +1561,15 @@
                 // Save current display mode
                 const currentDisplayMode = displayMode || 'default';
                 
+                // Clear any existing numbered atom names since this is a sample load
+                originalAtomNames = null;
+                window.originalAtomNames = null;
+                originalXYZContent = null;
+                shouldUseNumberedAtoms = false; // Sample loads should not use numbered atoms
+                
+                // Clear database metadata since this is not a database load
+                window.databaseMetadata = null;
+                
                 Jmol.script(jmolApplet0, 'load "jsmol/data/' + filename + '"');
                 document.getElementById('status').innerHTML = 'Sample loaded successfully';
                 
@@ -1344,6 +1577,12 @@
                 setTimeout(() => {
                     console.log('loadSample: Restoring display mode:', currentDisplayMode);
                     setDisplayMode(currentDisplayMode);
+                    
+                    // Refresh atom names to remove any numbered indices
+                    setTimeout(() => {
+                        refreshAtomNames();
+                        console.log('loadSample: Atom names refreshed to remove numbered indices');
+                    }, 100);
                 }, 200);
                 
             } catch (err) {
@@ -1351,7 +1590,419 @@
             }
         }
 
+        // Database loading functions
+        async function loadFromDatabase(identifier) {
+            try {
+                // Handle PubChem database queries
+                let statusMessage = 'Loading from PubChem...';
+                let loadCommand = identifier;
+                
+                // Store database metadata for XYZ generation
+                let dbMetadata = {
+                    source: 'PubChem',
+                    originalQuery: identifier,
+                    queryType: null,
+                    cid: null,
+                    name: null,
+                    smiles: null,
+                    formula: null
+                };
+                
+                if (identifier.startsWith(':smiles:')) {
+                    const smiles = identifier.substring(8);
+                    statusMessage = `Loading SMILES "${smiles}" from PubChem...`;
+                    dbMetadata.queryType = 'SMILES';
+                    dbMetadata.smiles = smiles;
+                } else if (identifier.startsWith(':formula:')) {
+                    const formula = identifier.substring(9);
+                    statusMessage = `Loading molecular formula "${formula}" from PubChem...`;
+                    dbMetadata.queryType = 'Formula';
+                    dbMetadata.formula = formula;
+                    
+                    // Two-step process for formula searches:
+                    // Step 1: Get CIDs for the formula
+                    document.getElementById('status').innerHTML = `Step 1: Finding compounds with formula "${formula}"...`;
+                    
+                    try {
+                        const cidUrl = `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/fastformula/${encodeURIComponent(formula)}/cids/TXT`;
+                        console.log('Fetching CIDs from:', cidUrl);
+                        
+                        const cidResponse = await fetch(cidUrl);
+                        if (!cidResponse.ok) {
+                            throw new Error(`No compounds found for formula "${formula}" (Status: ${cidResponse.status})`);
+                        }
+                        
+                        const cidText = await cidResponse.text();
+                        const cids = cidText.trim().split('\n').filter(line => line.trim());
+                        
+                        if (cids.length === 0) {
+                            throw new Error(`No compounds found for formula "${formula}"`);
+                        }
+                        
+                        const firstCid = cids[0];
+                        console.log(`Found ${cids.length} compounds for formula "${formula}", using CID: ${firstCid}`);
+                        dbMetadata.cid = firstCid;
+                        
+                        // Step 2: Get SDF for the first CID (try 3D first, fallback to 2D)
+                        document.getElementById('status').innerHTML = `Step 2: Loading structure for CID ${firstCid}...`;
+                        
+                        // Try 3D first
+                        let sdfUrl = `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/${firstCid}/SDF?record_type=3d`;
+                        try {
+                            const sdfTest = await fetch(sdfUrl);
+                            if (!sdfTest.ok) {
+                                // Fallback to 2D if 3D not available
+                                console.log(`3D structure not available for CID ${firstCid}, using 2D structure`);
+                                sdfUrl = `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/${firstCid}/SDF`;
+                            }
+                        } catch (e) {
+                            // Fallback to 2D if 3D fails
+                            console.log(`3D structure test failed for CID ${firstCid}, using 2D structure`);
+                            sdfUrl = `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/${firstCid}/SDF`;
+                        }
+                        
+                        loadCommand = sdfUrl;
+                        statusMessage = `Loading molecular formula "${formula}" (CID: ${firstCid}) from PubChem...`;
+                        
+                    } catch (formulaError) {
+                        console.error('Formula search error:', formulaError);
+                        document.getElementById('status').innerHTML = `Error: ${formulaError.message}`;
+                        return;
+                    }
+                } else if (identifier.startsWith(':')) {
+                    const query = identifier.substring(1);
+                    // Check if it's a number (CID) or name
+                    if (/^\d+$/.test(query)) {
+                        statusMessage = `Loading CID ${query} from PubChem...`;
+                        dbMetadata.queryType = 'CID';
+                        dbMetadata.cid = query;
+                    } else {
+                        statusMessage = `Loading "${query}" by name from PubChem...`;
+                        dbMetadata.queryType = 'Name';
+                        dbMetadata.name = query;
+                    }
+                }
+                
+                document.getElementById('status').innerHTML = statusMessage;
+                
+                // Save current display mode
+                const currentDisplayMode = displayMode || 'default';
+                
+                // Clear any existing numbered atom names since this is a database load
+                originalAtomNames = null;
+                window.originalAtomNames = null;
+                originalXYZContent = null;
+                shouldUseNumberedAtoms = false; // Database loads should not use numbered atoms
+                console.log('loadFromDatabase: Set shouldUseNumberedAtoms to false for database load');
+                
+                // Store metadata globally for XYZ generation
+                window.databaseMetadata = dbMetadata;
+                console.log('Stored database metadata:', dbMetadata);
+                
+                console.log('Loading with command:', loadCommand);
+                Jmol.script(jmolApplet0, 'load "' + loadCommand + '"');
+                
+                // Restore display mode after loading with a delay
+                setTimeout(() => {
+                    setDisplayMode(currentDisplayMode);
+                    document.getElementById('status').innerHTML = 'Structure loaded successfully from PubChem';
+                    
+                    // Refresh atom names to remove any numbered indices
+                    setTimeout(() => {
+                        refreshAtomNames();
+                        console.log('loadFromDatabase: Atom names refreshed to remove numbered indices');
+                    }, 100);
+                }, 1000);
+                
+            } catch (err) {
+                console.error('loadFromDatabase error:', err);
+                document.getElementById('status').innerHTML = 'Error loading from PubChem: ' + err.message;
+            }
+        }
 
+        // Helper function to detect if a string looks like a molecular formula
+        function isMolecularFormula(str) {
+            // Molecular formula pattern: starts with capital letter, contains only element symbols and numbers
+            // Examples: H2O, C6H12O6, NaCl, C8H10N4O2, CH4, CO2, LiH, BeH2, MgO
+            const formulaPattern = /^[A-Z][a-z]?\d*([A-Z][a-z]?\d*)*$/;
+            
+            // Must match the pattern and contain at least one element symbol
+            if (!formulaPattern.test(str)) {
+                return false;
+            }
+            
+            // Additional check: should not contain SMILES-specific characters
+            if (/[=@#\[\]()]/.test(str)) {
+                return false;
+            }
+            
+            // Check if it contains valid element symbols
+            // Common elements include H, He, Li, Be, B, C, N, O, F, Ne, Na, Mg, Al, Si, P, S, Cl, Ar, K, Ca, etc.
+            const validElements = [
+                'H', 'He', 'Li', 'Be', 'B', 'C', 'N', 'O', 'F', 'Ne',
+                'Na', 'Mg', 'Al', 'Si', 'P', 'S', 'Cl', 'Ar', 'K', 'Ca',
+                'Sc', 'Ti', 'V', 'Cr', 'Mn', 'Fe', 'Co', 'Ni', 'Cu', 'Zn',
+                'Ga', 'Ge', 'As', 'Se', 'Br', 'Kr', 'Rb', 'Sr', 'Y', 'Zr',
+                'Nb', 'Mo', 'Tc', 'Ru', 'Rh', 'Pd', 'Ag', 'Cd', 'In', 'Sn',
+                'Sb', 'Te', 'I', 'Xe', 'Cs', 'Ba', 'La', 'Ce', 'Pr', 'Nd',
+                'Pm', 'Sm', 'Eu', 'Gd', 'Tb', 'Dy', 'Ho', 'Er', 'Tm', 'Yb',
+                'Lu', 'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au', 'Hg',
+                'Tl', 'Pb', 'Bi', 'Po', 'At', 'Rn'
+            ];
+            
+            // Extract all element symbols from the formula
+            const elements = str.match(/[A-Z][a-z]?/g) || [];
+            
+            // Check if all extracted elements are valid
+            for (const element of elements) {
+                if (!validElements.includes(element)) {
+                    return false;
+                }
+            }
+            
+            // Must contain at least one element
+            if (elements.length === 0) {
+                return false;
+            }
+            
+            // If it looks like a molecular formula and contains valid elements, treat it as a formula
+            return true;
+        }
+
+        async function loadFromPubChem() {
+            const query = document.getElementById('pubchemInput').value.trim();
+            if (!query) {
+                document.getElementById('status').innerHTML = 'Please enter a search term';
+                return;
+            }
+            
+            const searchType = getCurrentSearchType();
+            let prefix = ':';
+            
+            // Use explicit search type if selected, otherwise auto-detect
+            if (searchType === 'cid') {
+                prefix = ':';
+            } else if (searchType === 'name') {
+                prefix = ':';
+            } else if (searchType === 'formula') {
+                prefix = ':formula:';
+            } else if (searchType === 'smiles') {
+                prefix = ':smiles:';
+            } else if (searchType === 'auto') {
+                // Auto-detect query type based on input (existing logic)
+                // Check if it's a pure number (CID)
+                if (/^\d+$/.test(query)) {
+                    prefix = ':';
+                }
+                // Check if it's a molecular formula
+                else if (isMolecularFormula(query)) {
+                    prefix = ':formula:';
+                }
+                // Check if it's a SMILES string (more specific patterns)
+                else if (/[=@#]|[\[\]()]|[cC][cC]|[nN][oO]|[sS][iI]|[pP][hH]|\d[nNcCoOsS]|[nNcCoOsS]\d|\+|-/.test(query) && 
+                         !/^[a-zA-Z\s\-_()]+$/.test(query)) {
+                    prefix = ':smiles:';
+                }
+                // Otherwise treat as name (default)
+                else {
+                    prefix = ':';
+                }
+            }
+            
+            await            await loadFromDatabase(prefix + query);
+        }
+
+        // Test function for molecular formula search
+        function testFormulaSearch(formula) {
+            const input = document.getElementById('pubchemInput');
+            input.value = formula;
+            
+            // Set search type to formula
+            currentSearchType = 'formula';
+            updateInputPlaceholder();
+            
+            // Update dropdown UI to show formula is selected
+            const options = document.querySelectorAll('.search-type-option');
+            options.forEach(option => option.classList.remove('selected'));
+            const formulaOption = document.querySelector('.search-type-option[data-value="formula"]');
+            if (formulaOption) {
+                formulaOption.classList.add('selected');
+            }
+            
+            // Perform the search
+            loadFromPubChem();
+        }
+
+        // Debug function to test dropdown (can be called from console)
+        window.testDropdown = function() {
+            console.log('Testing dropdown...');
+            const button = document.getElementById('searchTypeSelectorButton');
+            const dropdown = document.getElementById('searchTypeDropdown');
+            
+            console.log('Elements:', { button: !!button, dropdown: !!dropdown });
+            
+            if (button && dropdown) {
+                console.log('Button click listeners:', button.onclick, button.addEventListener ? 'has addEventListener' : 'no addEventListener');
+                console.log('Attempting to toggle dropdown...');
+                toggleSearchTypeDropdown();
+                return 'Dropdown toggle attempted';
+            } else {
+                return 'Elements not found';
+            }
+        };
+
+        // Add keyboard event handlers for database inputs
+        function setupDatabaseInputHandlers() {
+            console.log('setupDatabaseInputHandlers called');
+            
+            const pubchemInput = document.getElementById('pubchemInput');
+            const searchTypeButton = document.getElementById('searchTypeSelectorButton');
+            const dropdown = document.getElementById('searchTypeDropdown');
+            
+            // Check if elements exist
+            if (!pubchemInput || !searchTypeButton || !dropdown) {
+                console.error('Database input elements not found:', {
+                    pubchemInput: !!pubchemInput,
+                    searchTypeButton: !!searchTypeButton,
+                    dropdown: !!dropdown
+                });
+                // Retry after a short delay
+                setTimeout(() => {
+                    console.log('Retrying setupDatabaseInputHandlers...');
+                    setupDatabaseInputHandlers();
+                }, 500);
+                return;
+            }
+            
+            // Check if already initialized to prevent duplicate listeners
+            if (pubchemInput._handlersInitialized) {
+                console.log('Database input handlers already initialized, skipping...');
+                return;
+            }
+            
+            console.log('Setting up event handlers...');
+            
+            // Enter key handler
+            const keypressHandler = function(e) {
+                if (e.key === 'Enter') {
+                    loadFromPubChem();
+                }
+            };
+            pubchemInput.addEventListener('keypress', keypressHandler);
+            
+            // Search type selector click handler (remove onclick to avoid conflicts)
+            searchTypeButton.removeAttribute('onclick');
+            const clickHandler = function(e) {
+                console.log('Search type button clicked via event listener!');
+                e.stopPropagation();
+                toggleSearchTypeDropdown();
+            };
+            searchTypeButton.addEventListener('click', clickHandler);
+            
+            // Store handlers for cleanup if needed
+            searchTypeButton._clickHandler = clickHandler;
+            pubchemInput._keypressHandler = keypressHandler;
+            
+            // Dropdown option click handlers
+            const options = dropdown.querySelectorAll('.search-type-option');
+            options.forEach(option => {
+                option.addEventListener('click', function() {
+                    const value = this.getAttribute('data-value');
+                    const label = this.querySelector('.option-label').textContent;
+                    selectSearchType(value, label);
+                    hideSearchTypeDropdown();
+                    updateInputPlaceholder();
+                });
+            });
+            
+            // Close dropdown when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!searchTypeButton.contains(e.target) && !dropdown.contains(e.target)) {
+                    hideSearchTypeDropdown();
+                }
+            });
+            
+            // Mark as initialized
+            pubchemInput._handlersInitialized = true;
+            console.log('Database input handlers initialized successfully');
+            
+            // Initialize selected state
+            updateSelectedOption();
+        }
+        
+        let currentSearchType = 'auto';
+        
+        function getCurrentSearchType() {
+            return currentSearchType;
+        }
+        
+        function selectSearchType(value, label) {
+            currentSearchType = value;
+            updateSelectedOption();
+        }
+        
+        function updateSelectedOption() {
+            const options = document.querySelectorAll('.search-type-option');
+            options.forEach(option => {
+                option.classList.remove('selected');
+                if (option.getAttribute('data-value') === currentSearchType) {
+                    option.classList.add('selected');
+                }
+            });
+        }
+        
+        function toggleSearchTypeDropdown() {
+            console.log('toggleSearchTypeDropdown called!'); // Debug log
+            const dropdown = document.getElementById('searchTypeDropdown');
+            const button = document.getElementById('searchTypeSelectorButton');
+            
+            if (dropdown.style.display === 'block') {
+                hideSearchTypeDropdown();
+            } else {
+                showSearchTypeDropdown();
+            }
+        }
+        
+        function showSearchTypeDropdown() {
+            const dropdown = document.getElementById('searchTypeDropdown');
+            const button = document.getElementById('searchTypeSelectorButton');
+            
+            dropdown.style.display = 'block';
+            button.classList.add('active');
+            updateSelectedOption();
+        }
+        
+        function hideSearchTypeDropdown() {
+            const dropdown = document.getElementById('searchTypeDropdown');
+            const button = document.getElementById('searchTypeSelectorButton');
+            
+            dropdown.style.display = 'none';
+            button.classList.remove('active');
+        }
+        
+        function updateInputPlaceholder() {
+            const searchType = getCurrentSearchType();
+            const input = document.getElementById('pubchemInput');
+            
+            switch(searchType) {
+                case 'cid':
+                    input.placeholder = 'Enter PubChem CID (e.g., 1983 for caffeine)';
+                    break;
+                case 'name':
+                    input.placeholder = 'Enter chemical name (e.g., caffeine, aspirin, benzene)';
+                    break;
+                case 'formula':
+                    input.placeholder = 'Enter molecular formula (e.g., C8H10N4O2, H2O, C6H12O6)';
+                    break;
+                case 'smiles':
+                    input.placeholder = 'Enter SMILES string (e.g., C6H6, CC=O, CCO)';
+                    break;
+                case 'auto':
+                default:
+                    input.placeholder = 'PubChem: CID, name, formula, or SMILES (e.g., 1983, aspirin, H2O, CC=O)';
+                    break;
+            }
+        }
 
         var currentOrbitalIndex = 1;
         var orbitalsVisible = false;
@@ -1578,10 +2229,22 @@
                         // Get atom name from JSmol (may be just element symbol)
                         atomName = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.atomName`);
                         
-                        // If atomName is null or just element symbol, use element with index
-                        if (!atomName || atomName.length <= 2) {
+                        // Check if we need to modify the atom name based on shouldUseNumberedAtoms flag
+                        if (!atomName || atomName === 'null' || atomName === '') {
+                            // No atom name from JSmol, generate one
                             const element = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.element`);
-                            atomName = element ? `${element}${i + 1}` : `X${i + 1}`;
+                            if (shouldUseNumberedAtoms) {
+                                atomName = element ? `${element}${i + 1}` : `X${i + 1}`;
+                            } else {
+                                atomName = element || 'X';
+                            }
+                        } else if (!shouldUseNumberedAtoms && /^[A-Z][a-z]?\d+$/.test(atomName)) {
+                            // Atom name has numbers but we don't want numbered atoms - extract just the element
+                            const element = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.element`);
+                            atomName = element || atomName.replace(/\d+/g, '');
+                        } else if (shouldUseNumberedAtoms && atomName.length <= 2 && !/\d/.test(atomName)) {
+                            // Atom name is just element symbol but we want numbered atoms
+                            atomName = `${atomName}${i + 1}`;
                         }
                     }
                     
@@ -2279,9 +2942,59 @@
             // Update the input text
             updateElemCoInput();
         }
+        
+        // Function to generate meaningful comment line for XYZ files
+        function generateXYZCommentLine() {
+            // Check if we have database metadata
+            if (window.databaseMetadata && window.databaseMetadata.source === 'PubChem') {
+                const metadata = window.databaseMetadata;
+                let commentParts = [];
+                
+                // Add PubChem source
+                commentParts.push('PubChem');
+                
+                // Add CID if available
+                if (metadata.cid) {
+                    commentParts.push(`CID:${metadata.cid}`);
+                }
+                
+                // Add compound name if available
+                if (metadata.name) {
+                    commentParts.push(`Name:"${metadata.name}"`);
+                }
+                
+                // Add SMILES if available (truncate if too long)
+                if (metadata.smiles) {
+                    const smiles = metadata.smiles.length > 50 ? 
+                        metadata.smiles.substring(0, 47) + '...' : 
+                        metadata.smiles;
+                    commentParts.push(`SMILES:${smiles}`);
+                }
+                
+                // Add query info if different from what's already shown
+                if (metadata.originalQuery && metadata.queryType) {
+                    if (metadata.queryType === 'CID' && metadata.originalQuery !== metadata.cid) {
+                        commentParts.push(`Query:${metadata.originalQuery}`);
+                    } else if (metadata.queryType === 'Name' && metadata.originalQuery !== metadata.name) {
+                        commentParts.push(`Query:"${metadata.originalQuery}"`);
+                    } else if (metadata.queryType === 'SMILES' && metadata.originalQuery !== metadata.smiles) {
+                        commentParts.push(`Query:${metadata.originalQuery}`);
+                    } else if (metadata.queryType === 'Formula') {
+                        commentParts.push(`Formula:${metadata.originalQuery}`);
+                    }
+                }
+                
+                return commentParts.join(', ');
+            }
+            
+            // Fallback to original comment if no database metadata
+            return 'Structure with numbered atoms';
+        }
+        
         // Function to generate XYZ content with numbered atoms if available
         function getXYZDataWithNumberedAtoms() {
             console.log('getXYZDataWithNumberedAtoms: Starting data retrieval');
+            console.log('getXYZDataWithNumberedAtoms: shouldUseNumberedAtoms flag is:', shouldUseNumberedAtoms);
             
             try {
                 // First check if there are any atoms at all
@@ -2298,7 +3011,7 @@
                     console.log('getXYZDataWithNumberedAtoms: Found preserved atom names, count:', window.originalAtomNames.length);
                     try {
                         if (atomCount === window.originalAtomNames.length) {
-                            let xyzContent = atomCount + '\nStructure with numbered atoms\n';
+                            let xyzContent = atomCount + '\n' + generateXYZCommentLine() + '\n';
                             
                             for (let i = 0; i < atomCount; i++) {
                                 // Get atom coordinates from JSmol
@@ -2335,7 +3048,7 @@
                 // Strategy 2: Try to get current atom names from JSmol and build XYZ
                 console.log('getXYZDataWithNumberedAtoms: Trying to get current atom names from JSmol');
                 try {
-                    let xyzContent = atomCount + '\nGenerated from current JSmol state\n';
+                    let xyzContent = atomCount + '\n' + generateXYZCommentLine() + '\n';
                     let validData = true;
                     
                     for (let i = 0; i < atomCount && validData; i++) {
@@ -2343,9 +3056,10 @@
                             // Try to get current atom name from JSmol
                             let atomName = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.atomName`);
                             if (!atomName || atomName === 'null' || atomName === '') {
-                                // Fallback to element symbol with index
+                                // Fallback based on whether we should use numbered atoms
                                 const element = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.element`) || 'X';
-                                atomName = element + (i + 1);
+                                atomName = shouldUseNumberedAtoms ? `${element}${i + 1}` : element;
+                                console.log(`getXYZDataWithNumberedAtoms: Strategy 2 - Generated atom name for atom ${i}: ${atomName} (shouldUseNumberedAtoms: ${shouldUseNumberedAtoms})`);
                             }
                             
                             const x = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.x`);
@@ -2390,10 +3104,10 @@
                     console.error('JSmol write function failed:', error);
                 }
                 
-                // Strategy 4: Manual XYZ building with element symbols
+                // Strategy 4: Manual XYZ building with element symbols (numbered only if appropriate)
                 console.log('getXYZDataWithNumberedAtoms: Building manual XYZ with element symbols');
                 try {
-                    let manualXYZ = atomCount + '\nManually generated from JSmol\n';
+                    let manualXYZ = atomCount + '\n' + generateXYZCommentLine() + '\n';
                     let validManualData = true;
                     
                     for (let i = 0; i < atomCount && validManualData; i++) {
@@ -2403,7 +3117,10 @@
                             const y = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.y`) || 0;
                             const z = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.z`) || 0;
                             
-                            manualXYZ += `${element}${i+1} ${parseFloat(x).toFixed(6)} ${parseFloat(y).toFixed(6)} ${parseFloat(z).toFixed(6)}\n`;
+                            // Use numbered atoms only if this came from an XYZ file
+                            const atomName = shouldUseNumberedAtoms ? `${element}${i+1}` : element;
+                            console.log(`getXYZDataWithNumberedAtoms: Strategy 4 - Generated atom name for atom ${i}: ${atomName} (shouldUseNumberedAtoms: ${shouldUseNumberedAtoms})`);
+                            manualXYZ += `${atomName} ${parseFloat(x).toFixed(6)} ${parseFloat(y).toFixed(6)} ${parseFloat(z).toFixed(6)}\n`;
                         } catch (atomError) {
                             console.warn('Error in manual XYZ generation for atom', i, ':', atomError);
                             validManualData = false;
@@ -2590,6 +3307,8 @@ ${xyzData.trim()}
         if (typeof window !== 'undefined') {
             window.addEventListener('load', function() {
                 setTimeout(initElemCoPanel, 500); // Delay to ensure DOM is ready
+                setTimeout(updateInputPlaceholder, 200); // Initialize placeholder text
+                setTimeout(setupDatabaseInputHandlers, 300); // Ensure dropdown handlers are set up
             });
         }
     </script>
@@ -2606,8 +3325,40 @@ ${xyzData.trim()}
                 <button onclick="loadSample('caffeine.mol')" title="Load a caffeine molecule structure">Caffeine</button>
                 <button onclick="loadSample('buckyball.mol')" title="Load a buckminsterfullerene (C60) structure">Buckyball</button>
             </div>
+            <div class="database-section">
+                <div class="database-group">
+                    <div class="search-input-container">
+                        <input type="text" id="pubchemInput" placeholder="PubChem: CID, name, or SMILES (e.g., 1983, aspirin, CC=O)" title="Enter compound identifier and press Enter to load">
+                        <div class="search-type-selector" id="searchTypeSelectorButton" title="Click to select search type">
+                            <span class="dropdown-arrow">▼</span>
+                        </div>
+                        <div class="search-type-dropdown" id="searchTypeDropdown">
+                            <div class="search-type-option" data-value="auto">
+                                <span class="option-label">Auto-detect</span>
+                                <span class="option-description">Smart detection</span>
+                            </div>
+                            <div class="search-type-option" data-value="cid">
+                                <span class="option-label">CID</span>
+                                <span class="option-description">Compound ID</span>
+                            </div>
+                            <div class="search-type-option" data-value="name">
+                                <span class="option-label">Name</span>
+                                <span class="option-description">Chemical name</span>
+                            </div>
+                            <div class="search-type-option" data-value="formula">
+                                <span class="option-label">Formula</span>
+                                <span class="option-description">Molecular formula</span>
+                            </div>
+                            <div class="search-type-option" data-value="smiles">
+                                <span class="option-label">SMILES</span>
+                                <span class="option-description">SMILES notation</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <div id="status"></div>
-            
+
             <h3>Display</h3>
             <div class="control-line">
                 <button id="displayButton" onclick="toggleDisplayMode()" title="Toggle between ball & stick, wireframe, and spacefill display modes">Ball & Stick</button>
