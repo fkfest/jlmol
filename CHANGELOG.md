@@ -7,8 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2025-01-10
+
 ### Added
 
+- Database metadata integration in XYZ file generation: XYZ files now include meaningful database information in comment lines
+- Smart comment line generation for database-loaded structures with PubChem CID, compound name, SMILES, and molecular formula
 - Enhanced database search with combined interface: integrated search type selector within the input field for better user experience
 - SMILES search enforcement capability: users can explicitly force SMILES search to override auto-detection
 - Contextual input placeholders that update based on selected search type
@@ -16,9 +20,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- XYZ file comment lines now show database metadata (e.g., "PubChem, CID:2519, Name:Caffeine, SMILES:CN1C=NC2=C1C(=O)N(C(=O)N2C)C") instead of generic "Structure with numbered atoms" for database-loaded structures
 - Redesigned database search UI from separate dropdown to integrated selector button
 - Improved search type selection with click-to-select interface on the right side of input field
 - Enhanced user experience with cleaner, more intuitive search interface
+
+### Fixed
+
+- Resolved issue where XYZ files generated from PubChem structures showed generic "Structure with numbered atoms" instead of meaningful database information
 
 ## [1.0.2] - 2025-06-10
 
