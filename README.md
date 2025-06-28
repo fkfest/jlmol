@@ -2,7 +2,7 @@
 
 A desktop application for molecular visualization built with Electron and JSmol. This application provides a native desktop experience for the powerful JSmol molecular viewer.
 
-Try it online: [Browser Version](https://fkfest.github.io/jlmol)
+Try it online: [Browser Version](https://app.jlmol.com)
 
 Download: [Latest Release Executables](https://github.com/fkfest/jlmol/releases/latest)
 
@@ -23,6 +23,7 @@ Download: [Latest Release Executables](https://github.com/fkfest/jlmol/releases/
   - **Combined Search Interface**: Modern unified input field with integrated search type selector
   - **Compound ID (CID)**: Search by PubChem compound identifier (e.g., `1983` for caffeine)
   - **Chemical Name**: Search by common or systematic names (e.g., `caffeine`, `aspirin`, `glucose`)
+  - **Formula**: Search by molecular formula (e.g., `C2H5OH`)
   - **SMILES**: Search using SMILES notation (e.g., `C6H6` for benzene, `CC=O` for acetaldehyde)
   - **Search Type Enforcement**: Click selector to force specific search types (CID, Name, SMILES)
   - **Auto-detection**: Intelligent query type detection based on input format
@@ -92,6 +93,7 @@ Executables for Windows and Linux are automatically generated for each release o
 2. Run the installer for your platform
    - Windows: `.exe` installer
    - Linux: `.AppImage` or `.deb`/`.rpm` package
+   - macOS: `.dmg`
 
 ### From Source
 
@@ -128,7 +130,6 @@ This application is built with:
 
 ## Credits
 
-- Electron application wrapper developed as JSmol Viewer
 - JSmol is part of the Jmol project:
   - Original Jmol code conversion to JavaScript by Bob Hanson
   - Java2Script written by Zhou Renjian, et al.
@@ -269,7 +270,7 @@ The application includes built-in support for generating ElemCo.jl input files f
   - Coupled Cluster with Singles, Doubles, and perturbative Triples (CCSD(T))
   - Coupled Cluster with Singles, Doubles, and Triples (CCSDT)
   - Distinguishable Cluster CCSDT (DC-CCSDT)
-  - SVD-Distinguishable Cluster methods (SVD-DCSD)
+  - SVD-Distinguishable Cluster methods (SVD-DC-CCSDT and SVD-DCSD)
 
 ### Available Options
 
@@ -318,32 +319,26 @@ PubChem integration allows direct access to over 100 million chemical structures
    - Examples: `caffeine`, `aspirin`, `benzene`, `glucose`
    - Case-insensitive matching
 
+3. **Molecular Formula Search**
+   - Search by molecular formula
+   - Examples: `H2O`, `C2H5OH`
+
 3. **SMILES Search**
    - Use SMILES notation for precise structure specification
    - Examples: `C6H6` (benzene), `CC=O` (acetaldehyde), `CC(=O)OC1=CC=CC=C1C(=O)O` (aspirin)
    - Useful for specific structural queries
-
-#### Quick Access Buttons
-
-The application provides one-click access to common molecules:
-
-- **Educational Examples**: Caffeine, aspirin, glucose, benzene, ethanol
-- **Research Compounds**: Quercetin (flavonoid)
-- **SMILES Examples**: C6H6 (benzene), CC=O (acetaldehyde)
-- **Reliable CID Examples**: 1983 (caffeine), 2244 (aspirin), 5793 (glucose)
 
 #### Using Database Search
 
 1. **Locate the Database Search Section** in the control panel
 2. **Select Search Method** (optional):
    - Click the search type selector on the right side of the input field
-   - Choose from: **Auto-detect** (default), **CID**, **Name**, or **SMILES**
+   - Choose from: **Auto-detect** (default), **CID**, **Name**, **Formula** or **SMILES**
    - The input placeholder text will update to show relevant examples
 3. **Enter Query** in the input field
 4. **Execute Search**:
    - Click "Load from PubChem" button
    - Or press Enter for quick loading
-5. **Quick Examples**: Click any example button for instant loading
 
 #### Search Tips
 
@@ -351,15 +346,12 @@ The application provides one-click access to common molecules:
   - **Auto-detect**: Smart detection based on input patterns (default)
   - **CID**: Force search by compound identifier (most reliable)
   - **Name**: Force search by chemical name (reliable for common names)
+  - **Formula**: Force search by molecular formula
   - **SMILES**: Force SMILES search (useful when auto-detection fails or for complex SMILES)
 - **Auto-Detection**: When using auto-detect mode, the application automatically detects query type:
   - Pure numbers are treated as CIDs
   - Text with chemical patterns is treated as names
   - Strings with SMILES-specific characters are detected as SMILES
-- **Reliability**: For best results, use this order of preference:
-  1. **CID numbers** (most reliable - unique identifiers)
-  2. **Chemical names** (reliable - use common or systematic names)
-  3. **SMILES** (least reliable for auto-detection - use explicit SMILES mode for better results)
 - **Error Handling**: Network issues and invalid queries show helpful error messages
 - **Display Mode**: Loaded structures automatically use your current display mode preference
 - **Integration**: Database-loaded structures work with all editing and analysis features
@@ -372,7 +364,6 @@ The application provides one-click access to common molecules:
   - Auto-detected SMILES searches may return unexpected compounds due to database indexing
   - **Solution**: Click the search type selector on the right and choose "SMILES" for more predictable results
   - Multiple compounds may match the same SMILES pattern
-  - For ethanol, use the name `ethanol` instead of SMILES `CCO`
   - Use chemical names or CID numbers for more predictable results
 - **Invalid SMILES**: Verify SMILES syntax using online validators
 - **Slow Loading**: Large molecules may take longer to load and render
