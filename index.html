@@ -911,6 +911,32 @@
             border-radius: 4px;
             text-align: center;
         }
+
+        /* Julia output section styles */
+        #julia-output-section {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid #ddd;
+        }
+
+        #julia-output {
+            background: #f8f8f8;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.4;
+            padding: 8px;
+            resize: vertical;
+            min-height: 150px;
+            max-height: 400px;
+        }
+
+        #julia-output:focus {
+            outline: none;
+            border-color: #4CAF50;
+            box-shadow: 0 0 3px rgba(76, 175, 80, 0.3);
+        }
     </style>
     <script type="text/javascript">
         var jmolApplet0;
@@ -3283,6 +3309,199 @@ ${xyzData.trim()}
             }
         }
 
+        // Function to run Julia calculation
+        async function runJuliaCalculation() {
+            const inputTextarea = document.getElementById('elemco-input');
+            const outputTextarea = document.getElementById('julia-output');
+            const outputSection = document.getElementById('julia-output-section');
+            
+            if (!inputTextarea || !outputTextarea || !outputSection) {
+                document.getElementById('status').innerHTML = 'Error: Could not find required elements';
+                return;
+            }
+            
+            const juliaCode = inputTextarea.value.trim();
+            if (!juliaCode || juliaCode === '# Please load a molecule first') {
+                document.getElementById('status').innerHTML = 'Please generate valid input first';
+                return;
+            }
+            
+            // Show the output section
+            outputSection.style.display = 'block';
+            outputTextarea.value = 'Initializing Julia calculation...\n';
+            document.getElementById('status').innerHTML = 'Preparing Julia calculation...';
+            
+            try {
+                // Check if we're in Electron environment
+                if (typeof require !== 'undefined') {
+                    // Electron environment - use child_process to run Julia
+                    await runJuliaInElectron(juliaCode);
+                } else {
+                    // Browser environment - show instructions for manual execution
+                    showJuliaInstructions(juliaCode);
+                }
+            } catch (error) {
+                console.error('Error running Julia calculation:', error);
+                outputTextarea.value = `Error: ${error.message}\n\nTroubleshooting:\n- Ensure Julia is installed and accessible\n- Verify ElemCo.jl package is installed\n- Check file permissions\n- Try running Julia from command line first`;
+                document.getElementById('status').innerHTML = 'Julia calculation failed - see output for details';
+            }
+        }
+        
+        // Function to run Julia in Electron environment
+        async function runJuliaInElectron(juliaCode) {
+            const { spawn } = require('child_process');
+            const fs = require('fs');
+            const path = require('path');
+            const os = require('os');
+            
+            const outputTextarea = document.getElementById('julia-output');
+            
+            try {
+                // Create temporary file for Julia code
+                const tempDir = os.tmpdir();
+                const tempFile = path.join(tempDir, `jlmol_calculation_${Date.now()}.jl`);
+                fs.writeFileSync(tempFile, juliaCode);
+                
+                outputTextarea.value = `=== JLMol Julia Calculation ===\nTimestamp: ${new Date().toISOString()}\nTemporary file: ${tempFile}\nJulia command: julia "${tempFile}"\n\n--- Starting calculation ---\n`;
+                document.getElementById('status').innerHTML = 'Starting Julia process...';
+                
+                // Check if Julia is available first
+                const juliaCheck = spawn('julia', ['--version'], { stdio: ['pipe', 'pipe', 'pipe'] });
+                
+                juliaCheck.on('error', (error) => {
+                    throw new Error(`Julia not found in PATH: ${error.message}\n\nPlease install Julia and ensure it's accessible from command line.`);
+                });
+                
+                juliaCheck.on('close', (code) => {
+                    if (code !== 0) {
+                        throw new Error(`Julia version check failed with code ${code}`);
+                    }
+                    
+                    // Julia is available, proceed with calculation
+                    document.getElementById('status').innerHTML = 'Julia found, executing calculation...';
+                    
+                    const juliaProcess = spawn('julia', [tempFile], {
+                        cwd: process.cwd(),
+                        stdio: ['pipe', 'pipe', 'pipe'],
+                        timeout: 300000 // 5 minute timeout
+                    });
+                    
+                    let output = '';
+                    let errorOutput = '';
+                    let startTime = Date.now();
+                    
+                    juliaProcess.stdout.on('data', (data) => {
+                        const text = data.toString();
+                        output += text;
+                        outputTextarea.value += text;
+                        outputTextarea.scrollTop = outputTextarea.scrollHeight;
+                        
+                        // Update status with progress indication
+                        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+                        document.getElementById('status').innerHTML = `Calculation running... (${elapsed}s)`;
+                    });
+                    
+                    juliaProcess.stderr.on('data', (data) => {
+                        const text = data.toString();
+                        errorOutput += text;
+                        
+                        // Only show actual errors in STDERR, not just warnings
+                        if (text.toLowerCase().includes('error') || text.toLowerCase().includes('exception')) {
+                            outputTextarea.value += `\n[ERROR] ${text}`;
+                        } else {
+                            outputTextarea.value += `[INFO] ${text}`;
+                        }
+                        outputTextarea.scrollTop = outputTextarea.scrollHeight;
+                    });
+                    
+                    juliaProcess.on('close', (code) => {
+                        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+                        
+                        // Clean up temporary file
+                        try {
+                            fs.unlinkSync(tempFile);
+                            outputTextarea.value += `\n--- Cleanup: Temporary file deleted ---\n`;
+                        } catch (e) {
+                            console.warn('Could not delete temporary file:', e);
+                            outputTextarea.value += `\n--- Warning: Could not delete temporary file ---\n`;
+                        }
+                        
+                        if (code === 0) {
+                            outputTextarea.value += `\n=== CALCULATION COMPLETED SUCCESSFULLY ===\nElapsed time: ${elapsed} seconds\nExit code: ${code}`;
+                            document.getElementById('status').innerHTML = `Julia calculation completed successfully (${elapsed}s)`;
+                        } else {
+                            outputTextarea.value += `\n=== CALCULATION FAILED ===\nElapsed time: ${elapsed} seconds\nExit code: ${code}\n\nCheck the output above for error details.`;
+                            document.getElementById('status').innerHTML = `Julia calculation failed with exit code ${code}`;
+                        }
+                        outputTextarea.scrollTop = outputTextarea.scrollHeight;
+                    });
+                    
+                    juliaProcess.on('error', (error) => {
+                        throw new Error(`Failed to execute Julia: ${error.message}`);
+                    });
+                });
+                
+            } catch (error) {
+                outputTextarea.value = `=== EXECUTION ERROR ===\n${error.message}\n\nTroubleshooting:\n1. Install Julia from https://julialang.org/downloads/\n2. Add Julia to your system PATH\n3. Install ElemCo.jl package:\n   julia> import Pkg; Pkg.add("ElemCo")\n4. Verify installation by running 'julia --version' in terminal\n5. Ensure you have write permissions to temp directory\n\nFor more help, see: https://docs.julialang.org/en/v1/manual/getting-started/`;
+                document.getElementById('status').innerHTML = 'Julia execution failed - see output for troubleshooting';
+                throw error;
+            }
+        }
+        
+        // Function to show instructions for browser environment
+        function showJuliaInstructions(juliaCode) {
+            const outputTextarea = document.getElementById('julia-output');
+            
+            outputTextarea.value = `=== JLMol Browser Mode ===
+Running calculations directly from the browser is not supported for security reasons.
+
+OPTION 1: Use the Desktop Version
+Download and install the JLMol desktop application which includes integrated Julia execution.
+
+OPTION 2: Manual Execution
+Follow these steps to run the calculation manually:
+
+1. Install Julia (if not already installed):
+   Download from: https://julialang.org/downloads/
+
+2. Install ElemCo.jl package:
+   Open Julia and run:
+   julia> import Pkg; Pkg.add("ElemCo")
+
+3. Copy the generated code below and save it to a file (e.g., calculation.jl):
+
+--- BEGIN JULIA CODE ---
+${juliaCode}
+--- END JULIA CODE ---
+
+4. Run the calculation:
+   From command line: julia calculation.jl
+   Or from Julia REPL: include("calculation.jl")
+
+5. The results will be displayed in your Julia terminal.
+
+For detailed documentation, visit: https://elem.co.il
+
+Note: The desktop version of JLMol provides seamless Julia integration
+and eliminates the need for manual steps.`;
+
+            document.getElementById('status').innerHTML = 'Manual execution instructions provided';
+        }
+
+        // Function to clear calculation output
+        function clearJuliaOutput() {
+            const outputTextarea = document.getElementById('julia-output');
+            const outputSection = document.getElementById('julia-output-section');
+            
+            if (outputTextarea) {
+                outputTextarea.value = '';
+            }
+            if (outputSection) {
+                outputSection.style.display = 'none';
+            }
+            document.getElementById('status').innerHTML = 'Calculation output cleared';
+        }
+
         // Initialize ElemCo panel elements
         function initElemCoPanel() {
             // Clean up any existing elements first
@@ -3503,6 +3722,17 @@ ${xyzData.trim()}
         <div class="action-buttons">
             <button onclick="generateElemCoInput()" title="Reset input to default settings">Reset Input</button>
             <button onclick="copyElemCoInput()" title="Copy input text to clipboard">Copy to Clipboard</button>
+            <button onclick="runJuliaCalculation()" title="Execute the Julia calculation using ElemCo.jl">Run Calculation</button>
+        </div>
+        <div id="julia-output-section" style="display: none;">
+            <div class="elemco-input-group vertical">
+                <label for="julia-output">Calculation Output:</label>
+                <textarea id="julia-output" readonly style="height: 200px; font-family: monospace; background: #f8f8f8;"></textarea>
+                <div class="preview-note">Julia calculation results will appear here.</div>
+            </div>
+            <div class="action-buttons">
+                <button onclick="clearJuliaOutput()" title="Clear calculation output">Clear Output</button>
+            </div>
         </div>
     </div>
 </body>
