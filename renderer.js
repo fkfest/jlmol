@@ -39,6 +39,15 @@ function runJuliaCalculation() {
     }
 }
 
+function showXtbPanel() {
+    // This function is defined in index.html and will be called from there
+    if (typeof window.showXtbPanel === 'function') {
+        window.showXtbPanel();
+    } else {
+        document.getElementById('status').innerHTML = 'xTB optimization function not available';
+    }
+}
+
 // Add event listeners for input changes when the DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     const method = document.getElementById('elemco-method');

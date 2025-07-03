@@ -937,6 +937,92 @@
             border-color: #4CAF50;
             box-shadow: 0 0 3px rgba(76, 175, 80, 0.3);
         }
+
+        /* xTB panel styles */
+        #xtbPanel {
+            position: fixed;
+            width: 350px;
+            padding: 10px;
+            display: none;
+            background: white;
+            border: 1px solid #ccc;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 9999;
+            top: 140px;
+            left: 140px;
+            resize: both;
+            overflow: auto;
+            min-width: 300px;
+            min-height: 250px;
+            max-height: 90vh;
+        }
+
+        #xtb-header {
+            cursor: move;
+            padding: 10px;
+            background: #f0f0f0;
+            margin: -10px -10px 10px -10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #ccc;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        .xtb-input-group {
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .xtb-input-group.vertical {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 8px;
+        }
+
+        .xtb-input-group input,
+        .xtb-input-group select {
+            width: 100%;
+            padding: 5px;
+            margin-bottom: 5px;
+        }
+
+        .xtb-input-group label {
+            min-width: 120px;
+        }
+
+        .xtb-input-group input[type="checkbox"] {
+            width: auto;
+            margin: 0 5px 0 0;
+        }
+
+        #xtb-output {
+            background: #f8f8f8;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.4;
+            padding: 8px;
+            resize: vertical;
+            min-height: 150px;
+            max-height: 400px;
+        }
+
+        #xtb-output:focus {
+            outline: none;
+            border-color: #4CAF50;
+            box-shadow: 0 0 3px rgba(76, 175, 80, 0.3);
+        }
+
+        #xtb-output-section {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid #ddd;
+        }
     </style>
     <script type="text/javascript">
         var jmolApplet0;
@@ -2537,6 +2623,10 @@
                 document.getElementById('elemcoPanel'),
                 document.getElementById('elemco-header')
             );
+            makeDraggable(
+                document.getElementById('xtbPanel'),
+                document.getElementById('xtb-header')
+            );
         }
         
         // Add page zoom functionality
@@ -3502,6 +3592,420 @@ and eliminates the need for manual steps.`;
             document.getElementById('status').innerHTML = 'Calculation output cleared';
         }
 
+        // xTB Integration Functions
+        var optimizedStructurePath = null; // Store path to optimized structure
+        
+        function showXtbPanel() {
+            console.log('showXtbPanel: Opening xTB panel');
+            const panel = document.getElementById('xtbPanel');
+            if (panel) {
+                panel.style.display = 'block';
+                
+                // Check if molecule is loaded
+                const atomCount = Jmol.evaluateVar(jmolApplet0, '{*}.length');
+                if (!atomCount || atomCount === 0) {
+                    document.getElementById('status').innerHTML = 'Please load a molecule first';
+                    return;
+                }
+                
+                // Initialize xTB panel
+                initXtbPanel();
+                document.getElementById('status').innerHTML = 'xTB optimization panel opened';
+            } else {
+                console.error('showXtbPanel: Could not find xtbPanel element');
+            }
+        }
+        
+        function hideXtbPanel() {
+            document.getElementById('xtbPanel').style.display = 'none';
+        }
+        
+        function initXtbPanel() {
+            // Enable/disable solvent dropdown based on checkbox
+            const solventEnable = document.getElementById('xtb-solvent-enable');
+            const solventSelect = document.getElementById('xtb-solvent');
+            
+            solventEnable.addEventListener('change', function() {
+                solventSelect.disabled = !this.checked;
+            });
+            
+            // Set default charge and multiplicity from current structure if possible
+            try {
+                const totalCharge = Jmol.evaluateVar(jmolApplet0, '{*}.formalCharge.sum');
+                if (totalCharge && !isNaN(totalCharge)) {
+                    document.getElementById('xtb-charge').value = totalCharge;
+                }
+            } catch (e) {
+                // Ignore if unable to get charge
+            }
+        }
+        
+        // Function to generate xTB input file content
+        function generateXtbInput() {
+            const xyzData = getXYZDataWithNumberedAtoms();
+            if (!xyzData) {
+                throw new Error('No molecular structure available');
+            }
+            
+            // Convert numbered atom names to element symbols for xTB
+            const lines = xyzData.trim().split('\n');
+            const atomCount = parseInt(lines[0]);
+            let xtbInput = atomCount + '\n' + 'Generated by JLMol for xTB optimization\n';
+            
+            for (let i = 2; i < atomCount + 2 && i < lines.length; i++) {
+                const parts = lines[i].trim().split(/\s+/);
+                if (parts.length >= 4) {
+                    // Extract element symbol (remove numbers)
+                    const element = parts[0].replace(/\d+/g, '');
+                    xtbInput += `${element} ${parts[1]} ${parts[2]} ${parts[3]}\n`;
+                }
+            }
+            
+            return xtbInput;
+        }
+        
+        // Function to generate xTB command
+        function generateXtbCommand() {
+            const method = document.getElementById('xtb-method').value;
+            const calculation = document.getElementById('xtb-calculation').value;
+            const charge = parseInt(document.getElementById('xtb-charge').value) || 0;
+            const multiplicity = parseInt(document.getElementById('xtb-multiplicity').value) || 0;
+            const solventEnable = document.getElementById('xtb-solvent-enable').checked;
+            const solvent = document.getElementById('xtb-solvent').value;
+            
+            let command = 'xtb input.xyz';
+            
+            // Add method
+            if (method === 'GFN1-xTB') {
+                command += ' --gfn 1';
+            } else if (method === 'GFN0-xTB') {
+                command += ' --gfn 0';
+            }
+            // GFN2-xTB is default, no flag needed
+            
+            // Add calculation type
+            if (calculation === 'opt') {
+                command += ' --opt';
+            } else if (calculation === 'hess') {
+                command += ' --hess';
+            } else if (calculation === 'ohess') {
+                command += ' --ohess';
+            }
+            
+            // Add charge
+            if (charge !== 0) {
+                command += ` --chrg ${charge}`;
+            }
+            
+            // Add unpaired electrons
+            if (multiplicity > 0) {
+                command += ` --uhf ${multiplicity}`;
+            }
+            
+            // Add solvent
+            if (solventEnable && solvent) {
+                command += ` --alpb ${solvent}`;
+            }
+            
+            return command;
+        }
+        
+        function copyXtbInput() {
+            try {
+                const command = generateXtbCommand();
+                const input = generateXtbInput();
+                
+                const fullInput = `# xTB Command:
+${command}
+
+# Input coordinate file (input.xyz):
+${input}
+
+# Usage Instructions:
+# 1. Save the coordinates to a file named 'input.xyz'
+# 2. Run the command above in a terminal where xTB is installed
+# 3. xTB will generate optimized coordinates and other output files`;
+                
+                navigator.clipboard.writeText(fullInput).then(() => {
+                    document.getElementById('status').innerHTML = 'xTB command and input copied to clipboard';
+                }).catch(() => {
+                    // Fallback for older browsers
+                    const textarea = document.createElement('textarea');
+                    textarea.value = fullInput;
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textarea);
+                    document.getElementById('status').innerHTML = 'xTB command and input copied to clipboard';
+                });
+            } catch (error) {
+                document.getElementById('status').innerHTML = 'Error generating xTB input: ' + error.message;
+            }
+        }
+        
+        // Function to run xTB calculation
+        async function runXtbCalculation() {
+            const outputTextarea = document.getElementById('xtb-output');
+            const outputSection = document.getElementById('xtb-output-section');
+            const loadBtn = document.getElementById('load-optimized-btn');
+            
+            if (!outputTextarea || !outputSection) {
+                document.getElementById('status').innerHTML = 'Error: Could not find required elements';
+                return;
+            }
+            
+            try {
+                // Validate input
+                const input = generateXtbInput();
+                const command = generateXtbCommand();
+                
+                // Show output section
+                outputSection.style.display = 'block';
+                loadBtn.style.display = 'none';
+                outputTextarea.value = 'Initializing xTB calculation...\n';
+                document.getElementById('status').innerHTML = 'Preparing xTB calculation...';
+                
+                // Check environment
+                if (typeof require !== 'undefined') {
+                    // Electron environment
+                    await runXtbInElectron(input, command);
+                } else {
+                    // Browser environment
+                    showXtbInstructions(input, command);
+                }
+            } catch (error) {
+                console.error('Error running xTB calculation:', error);
+                outputTextarea.value = `Error: ${error.message}\n\nTroubleshooting:\n- Ensure xTB is installed and accessible\n- Check molecular structure is valid\n- Verify file permissions`;
+                document.getElementById('status').innerHTML = 'xTB calculation failed - see output for details';
+            }
+        }
+        
+        // Function to run xTB in Electron environment
+        async function runXtbInElectron(input, command) {
+            const { spawn } = require('child_process');
+            const fs = require('fs');
+            const path = require('path');
+            const os = require('os');
+            
+            const outputTextarea = document.getElementById('xtb-output');
+            const loadBtn = document.getElementById('load-optimized-btn');
+            
+            try {
+                // Create temporary directory for calculation
+                const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'jlmol_xtb_'));
+                const inputFile = path.join(tempDir, 'input.xyz');
+                const optimizedFile = path.join(tempDir, 'xtbopt.xyz');
+                
+                fs.writeFileSync(inputFile, input);
+                
+                outputTextarea.value = `=== JLMol xTB Calculation ===\nTimestamp: ${new Date().toISOString()}\nWorking directory: ${tempDir}\nCommand: ${command}\n\n--- Starting calculation ---\n`;
+                document.getElementById('status').innerHTML = 'Starting xTB process...';
+                
+                // Check if xTB is available
+                const xtbCheck = spawn('xtb', ['--help'], { stdio: ['pipe', 'pipe', 'pipe'] });
+                
+                xtbCheck.on('error', (error) => {
+                    // Try bundled xTB executable
+                    tryBundledXtb(tempDir, inputFile, optimizedFile, command);
+                });
+                
+                xtbCheck.on('close', (code) => {
+                    if (code === 0 || code === 1) { // xTB help returns exit code 1
+                        // System xTB is available
+                        runSystemXtb(tempDir, inputFile, optimizedFile, command);
+                    } else {
+                        // Try bundled xTB
+                        tryBundledXtb(tempDir, inputFile, optimizedFile, command);
+                    }
+                });
+                
+            } catch (error) {
+                outputTextarea.value = `=== EXECUTION ERROR ===\n${error.message}\n\nTroubleshooting:\n1. Install xTB from https://github.com/grimme-lab/xtb\n2. Ensure xTB is in your system PATH\n3. Or use the bundled xTB executable\n4. Check file permissions\n\nFor installation help, see: https://xtb-docs.readthedocs.io/en/latest/setup.html`;
+                document.getElementById('status').innerHTML = 'xTB execution failed - see output for troubleshooting';
+                throw error;
+            }
+            
+            function tryBundledXtb(tempDir, inputFile, optimizedFile, command) {
+                let xtbExecutable;
+                const platform = process.platform;
+                
+                if (platform === 'win32') {
+                    xtbExecutable = path.join(__dirname, 'xtb', 'win32', 'xtb.exe');
+                } else if (platform === 'darwin') {
+                    xtbExecutable = path.join(__dirname, 'xtb', 'darwin', 'xtb');
+                } else {
+                    xtbExecutable = path.join(__dirname, 'xtb', 'linux', 'xtb');
+                }
+                
+                // Check if bundled executable exists
+                if (fs.existsSync(xtbExecutable)) {
+                    outputTextarea.value += `Using bundled xTB: ${xtbExecutable}\n`;
+                    executeXtb(xtbExecutable, tempDir, inputFile, optimizedFile, command);
+                } else {
+                    throw new Error(`xTB not found in system PATH and bundled executable not available at: ${xtbExecutable}`);
+                }
+            }
+            
+            function runSystemXtb(tempDir, inputFile, optimizedFile, command) {
+                outputTextarea.value += `Using system xTB\n`;
+                executeXtb('xtb', tempDir, inputFile, optimizedFile, command);
+            }
+            
+            function executeXtb(xtbPath, tempDir, inputFile, optimizedFile, command) {
+                document.getElementById('status').innerHTML = 'xTB found, executing calculation...';
+                
+                // Parse command to get arguments
+                const cmdParts = command.split(' ').slice(1); // Remove 'xtb' from beginning
+                const args = ['input.xyz', ...cmdParts];
+                
+                const xtbProcess = spawn(xtbPath, args, {
+                    cwd: tempDir,
+                    stdio: ['pipe', 'pipe', 'pipe'],
+                    timeout: 600000 // 10 minute timeout
+                });
+                
+                let startTime = Date.now();
+                
+                xtbProcess.stdout.on('data', (data) => {
+                    const text = data.toString();
+                    outputTextarea.value += text;
+                    outputTextarea.scrollTop = outputTextarea.scrollHeight;
+                    
+                    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+                    document.getElementById('status').innerHTML = `xTB calculation running... (${elapsed}s)`;
+                });
+                
+                xtbProcess.stderr.on('data', (data) => {
+                    const text = data.toString();
+                    if (text.toLowerCase().includes('error') || text.toLowerCase().includes('failed')) {
+                        outputTextarea.value += `\n[ERROR] ${text}`;
+                    } else {
+                        outputTextarea.value += `[INFO] ${text}`;
+                    }
+                    outputTextarea.scrollTop = outputTextarea.scrollHeight;
+                });
+                
+                xtbProcess.on('close', (code) => {
+                    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+                    
+                    if (code === 0) {
+                        outputTextarea.value += `\n=== CALCULATION COMPLETED SUCCESSFULLY ===\nElapsed time: ${elapsed} seconds\nExit code: ${code}`;
+                        
+                        // Check for optimized structure
+                        if (fs.existsSync(optimizedFile)) {
+                            optimizedStructurePath = optimizedFile;
+                            loadBtn.style.display = 'inline-block';
+                            outputTextarea.value += `\n\nOptimized structure saved: ${optimizedFile}`;
+                        }
+                        
+                        document.getElementById('status').innerHTML = `xTB calculation completed successfully (${elapsed}s)`;
+                    } else {
+                        outputTextarea.value += `\n=== CALCULATION FAILED ===\nElapsed time: ${elapsed} seconds\nExit code: ${code}`;
+                        document.getElementById('status').innerHTML = `xTB calculation failed with exit code ${code}`;
+                    }
+                    
+                    outputTextarea.scrollTop = outputTextarea.scrollHeight;
+                });
+                
+                xtbProcess.on('error', (error) => {
+                    throw new Error(`Failed to execute xTB: ${error.message}`);
+                });
+            }
+        }
+        
+        // Function to show xTB instructions for browser environment
+        function showXtbInstructions(input, command) {
+            const outputTextarea = document.getElementById('xtb-output');
+            
+            outputTextarea.value = `=== JLMol Browser Mode ===
+Running xTB calculations directly from the browser is not supported for security reasons.
+
+OPTION 1: Use the Desktop Version
+Download and install the JLMol desktop application which includes bundled xTB executables.
+
+OPTION 2: Manual Execution
+Follow these steps to run the calculation manually:
+
+1. Install xTB (if not already installed):
+   Download from: https://github.com/grimme-lab/xtb/releases
+   Documentation: https://xtb-docs.readthedocs.io/
+
+2. Save the following coordinates to a file named 'input.xyz':
+
+${input}
+
+3. Run the xTB calculation:
+   ${command}
+
+4. The optimized structure will be saved as 'xtbopt.xyz'
+
+5. Load the optimized structure back into JLMol by opening the file.
+
+For detailed xTB documentation, visit: https://xtb-docs.readthedocs.io/
+
+Note: The desktop version provides seamless xTB integration with bundled executables.`;
+
+            document.getElementById('status').innerHTML = 'Manual xTB execution instructions provided';
+        }
+        
+        function loadOptimizedStructure() {
+            if (!optimizedStructurePath) {
+                document.getElementById('status').innerHTML = 'No optimized structure available';
+                return;
+            }
+            
+            try {
+                const fs = require('fs');
+                const optimizedData = fs.readFileSync(optimizedStructurePath, 'utf8');
+                
+                // Load optimized structure using the XYZ loader with numbered atoms
+                loadXYZWithNumberedAtoms(optimizedData);
+                
+                document.getElementById('status').innerHTML = 'Optimized structure loaded successfully';
+                
+                // Clean up temporary file
+                try {
+                    fs.unlinkSync(optimizedStructurePath);
+                    optimizedStructurePath = null;
+                    document.getElementById('load-optimized-btn').style.display = 'none';
+                } catch (e) {
+                    console.warn('Could not delete temporary optimized structure file:', e);
+                }
+                
+            } catch (error) {
+                document.getElementById('status').innerHTML = 'Error loading optimized structure: ' + error.message;
+            }
+        }
+        
+        function clearXtbOutput() {
+            const outputTextarea = document.getElementById('xtb-output');
+            const outputSection = document.getElementById('xtb-output-section');
+            const loadBtn = document.getElementById('load-optimized-btn');
+            
+            if (outputTextarea) {
+                outputTextarea.value = '';
+            }
+            if (outputSection) {
+                outputSection.style.display = 'none';
+            }
+            if (loadBtn) {
+                loadBtn.style.display = 'none';
+            }
+            
+            // Clean up any temporary files
+            if (optimizedStructurePath) {
+                try {
+                    const fs = require('fs');
+                    fs.unlinkSync(optimizedStructurePath);
+                } catch (e) {
+                    // Ignore cleanup errors
+                }
+                optimizedStructurePath = null;
+            }
+            
+            document.getElementById('status').innerHTML = 'xTB output cleared';
+        }
+
         // Initialize ElemCo panel elements
         function initElemCoPanel() {
             // Clean up any existing elements first
@@ -3599,6 +4103,9 @@ and eliminates the need for manual steps.`;
                 <button onclick="showXYZEditor()" title="Open XYZ coordinate editor">XYZ</button>
                 <button id="dragMinButton" class="toggle-button" onclick="toggleDragMinimize()" title="Toggle 3D manipulation mode with energy minimization">3D</button>
                 <button id="toggle2D3DButton" onclick="toggle2D3D()" title="Switch between 2D and 3D molecular editors">2D Editor</button>
+            </div>
+            <div class="control-line">
+                <button onclick="showXtbPanel()" title="Optimize structure using xTB quantum chemistry">xTB Optimize</button>
             </div>
 
             <div class="console-container">
@@ -3732,6 +4239,87 @@ and eliminates the need for manual steps.`;
             </div>
             <div class="action-buttons">
                 <button onclick="clearJuliaOutput()" title="Clear calculation output">Clear Output</button>
+            </div>
+        </div>
+    </div>
+    <div id="xtbPanel">
+        <div id="xtb-header">
+            <div style="display: flex; align-items: center;">
+                <h3>xTB Optimization</h3>
+            </div>
+            <button onclick="hideXtbPanel()" title="Close xTB optimization panel">Close</button>
+        </div>
+        <div class="xtb-input-group">
+            <label for="xtb-method">Method:</label>
+            <select id="xtb-method">
+                <option value="GFN2-xTB" selected>GFN2-xTB</option>
+                <option value="GFN1-xTB">GFN1-xTB</option>
+                <option value="GFN0-xTB">GFN0-xTB</option>
+            </select>
+        </div>
+        <div class="xtb-input-group">
+            <label for="xtb-calculation">Calculation Type:</label>
+            <select id="xtb-calculation">
+                <option value="opt" selected>Geometry Optimization</option>
+                <option value="hess">Hessian (Frequencies)</option>
+                <option value="ohess">Optimization + Frequencies</option>
+            </select>
+        </div>
+        <div class="charge-multiplicity-group">
+            <div class="charge-multiplicity-item">
+                <label for="xtb-charge">Charge:</label>
+                <input type="number" id="xtb-charge" value="0" min="-99" max="99">
+            </div>
+            <div class="charge-multiplicity-item">
+                <label for="xtb-multiplicity">Unpaired Electrons:</label>
+                <input type="number" id="xtb-multiplicity" value="0" min="0" max="99">
+            </div>
+        </div>
+        <div class="xtb-input-group">
+            <label>
+                <input type="checkbox" id="xtb-solvent-enable">
+                Implicit Solvent (ALPB)
+            </label>
+            <select id="xtb-solvent" disabled>
+                <option value="water" selected>Water</option>
+                <option value="acetone">Acetone</option>
+                <option value="acetonitrile">Acetonitrile</option>
+                <option value="aniline">Aniline</option>
+                <option value="benzaldehyde">Benzaldehyde</option>
+                <option value="benzene">Benzene</option>
+                <option value="ch2cl2">Dichloromethane</option>
+                <option value="chcl3">Chloroform</option>
+                <option value="cs2">Carbon Disulfide</option>
+                <option value="dioxane">Dioxane</option>
+                <option value="dmf">DMF</option>
+                <option value="dmso">DMSO</option>
+                <option value="ether">Diethyl Ether</option>
+                <option value="ethylacetate">Ethyl Acetate</option>
+                <option value="furane">Furane</option>
+                <option value="hexandecane">Hexadecane</option>
+                <option value="hexane">Hexane</option>
+                <option value="methanol">Methanol</option>
+                <option value="nitromethane">Nitromethane</option>
+                <option value="octanol">Octanol</option>
+                <option value="woctanol">Wet Octanol</option>
+                <option value="phenol">Phenol</option>
+                <option value="toluene">Toluene</option>
+                <option value="thf">THF</option>
+            </select>
+        </div>
+        <div class="action-buttons">
+            <button onclick="runXtbCalculation()" title="Run xTB optimization calculation">Run Optimization</button>
+            <button onclick="copyXtbInput()" title="Copy xTB command to clipboard">Copy Command</button>
+        </div>
+        <div id="xtb-output-section" style="display: none;">
+            <div class="xtb-input-group vertical">
+                <label for="xtb-output">Calculation Output:</label>
+                <textarea id="xtb-output" readonly style="height: 200px; font-family: monospace; background: #f8f8f8;"></textarea>
+                <div class="preview-note">xTB calculation results will appear here.</div>
+            </div>
+            <div class="action-buttons">
+                <button onclick="clearXtbOutput()" title="Clear calculation output">Clear Output</button>
+                <button onclick="loadOptimizedStructure()" title="Load optimized structure back into viewer" style="display: none;" id="load-optimized-btn">Load Optimized Structure</button>
             </div>
         </div>
     </div>

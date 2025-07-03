@@ -1,0 +1,10 @@
+#!/bin/bash
+echo "xTB not available for macOS in this package"
+echo "macOS users can install xTB using:"
+echo "1. Conda: conda install -c conda-forge xtb"
+echo "2. Homebrew: brew install grimme-lab/qc/xtb"
+echo "3. Build from source: https://github.com/grimme-lab/xtb"
+echo ""
+echo "After installation, you can use the system xTB by enabling"
+echo "'Use System xTB' in the xTB panel options."
+exit 1
