@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About JLmol - Molecular Visualization Desktop Application</title>
+    <meta name="description" content="Learn more about JLmol, the powerful desktop application for molecular visualization built with Electron and JSmol.">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='40' fill='%234F46E5'/><circle cx='35' cy='35' r='8' fill='%23FBBF24'/><circle cx='65' cy='35' r='8' fill='%23EF4444'/><circle cx='50' cy='65' r='8' fill='%2310B981'/></svg>">
+    <style>
+        /* Include the same base styles as index.html */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #1f2937;
+            background: white;
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+        
+        /* Navigation (simplified) */
+        nav {
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 1rem 0;
+        }
+        .nav-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #4F46E5;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(45deg, #4F46E5, #7C3AED);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+        
+        /* Content */
+        .content {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 4rem 20px;
+        }
+        .content h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
+            color: #1f2937;
+        }
+        .content h2 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin: 2rem 0 1rem;
+            color: #374151;
+        }
+        .content p {
+            margin-bottom: 1.5rem;
+            color: #6b7280;
+            font-size: 1.1rem;
+        }
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #4F46E5;
+            text-decoration: none;
+            font-weight: 500;
+            margin-bottom: 2rem;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="nav-container">
+            <a href="index.html" class="logo">
+                <div class="logo-icon">JL</div>
+                JLmol
+            </a>
+        </div>
+    </nav>
+
+    <div class="content">
+        <a href="index.html" class="back-link">← Back to Home</a>
+        
+        <h1>About JLmol</h1>
+        
+        <p>JLmol is a powerful desktop application designed for molecular visualization and analysis, built on the robust foundation of Electron and the renowned JSmol molecular viewer. Our mission is to provide researchers, educators, and students with a native desktop experience that combines the flexibility of web technologies with the performance and integration capabilities of desktop applications.</p>
+
+        <h2>Our Vision</h2>
+        <p>We believe that molecular visualization should be accessible, powerful, and intuitive. JLmol bridges the gap between complex molecular data and clear, interactive visualizations that help advance scientific understanding and education.</p>
+
+        <h2>Key Technologies</h2>
+        <p>JLmol is built on proven, open-source technologies:</p>
+        <ul style="margin-left: 2rem; margin-bottom: 1.5rem; color: #6b7280;">
+            <li><strong>JSmol</strong>: The JavaScript port of the famous Jmol molecular viewer</li>
+            <li><strong>Electron</strong>: Cross-platform desktop application framework</li>
+            <li><strong>JSME</strong>: JavaScript Molecular Editor for structure drawing</li>
+            <li><strong>ModelKit</strong>: Advanced 3D molecular editing capabilities</li>
+        </ul>
+
+        <h2>Development Philosophy</h2>
+        <p>Our development is guided by principles of openness, accessibility, and scientific rigor. We maintain compatibility with established molecular file formats while embracing modern web technologies to create a seamless user experience.</p>
+
+        <h2>Community and Support</h2>
+        <p>JLmol is developed as an open-source project with the molecular science community in mind. We welcome contributions, feedback, and collaboration from researchers, developers, and educators worldwide.</p>
+
+        <h2>Credits and Acknowledgments</h2>
+        <p>JLmol builds upon the work of many dedicated scientists and developers:</p>
+        <ul style="margin-left: 2rem; margin-bottom: 1.5rem; color: #6b7280;">
+            <li>The Jmol team for creating the foundational molecular visualization platform</li>
+            <li>Bob Hanson for the JavaScript conversion that made JSmol possible</li>
+            <li>Peter Ertl and Bruno Bienfait for the JSME molecular editor</li>
+            <li>Zhou Renjian and the Java2Script team</li>
+            <li>The broader open-source community for tools and libraries</li>
+        </ul>
+
+        <p>JLmol is licensed under LGPL-2.1, ensuring it remains free and open for the scientific community.</p>
+    </div>
+</body>
+</html>

@@ -1,3509 +1,735 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>jlmol</title>
-    <meta charset="utf-8">
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script type="text/javascript" src="jsmol/jquery/jquery.min.js"></script>
-    <script type="text/javascript" src="jsmol/JSmol.min.js"></script>
-    <script type="text/javascript" src="jsmol/JSmolJME.js"></script>
-    <script type="text/javascript" src="jsmol/jsme/jsme/jsme.nocache.js"></script>
-    <script type="text/javascript" src="renderer.js"></script>
-    <script type="text/javascript">
-        // Load version from package.json for browser usage (when not in Electron)
-        if (!window.appVersion) {
-            fetch('package.json')
-                .then(response => response.json())
-                .then(data => {
-                    window.appVersion = data.version;
-                    // Update version display if element exists
-                    const versionElement = document.getElementById('version-number');
-                    if (versionElement) {
-                        versionElement.textContent = window.appVersion;
-                    }
-                })
-                .catch(error => {
-                    console.warn('Could not load version from package.json:', error);
-                    // Fallback for browser usage when package.json is not accessible
-                    window.appVersion = 'unknown';
-                    const versionElement = document.getElementById('version-number');
-                    if (versionElement) {
-                        versionElement.textContent = window.appVersion;
-                    }
-                });
-        }
-    </script>
+    <title>JLmol - Desktop Molecular Visualization</title>
+    <meta name="description" content="A powerful desktop application for molecular visualization built with Electron and JSmol. Cross-platform support with advanced 3D visualization capabilities.">
+    <meta name="keywords" content="molecular visualization, JSmol, Electron, chemistry, 3D molecules, PubChem, JSME editor">
+    
+    <!-- Security Headers -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https:; frame-ancestors 'none'; base-uri 'self'; form-action 'self';">
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='40' fill='%234F46E5'/><circle cx='35' cy='35' r='8' fill='%23FBBF24'/><circle cx='65' cy='35' r='8' fill='%23EF4444'/><circle cx='50' cy='65' r='8' fill='%2310B981'/></svg>">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://jlmol.com/">
+    <meta property="og:title" content="JLmol - Desktop Molecular Visualization">
+    <meta property="og:description" content="A powerful desktop application for molecular visualization built with Electron and JSmol.">
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://jlmol.com/">
+    <meta property="twitter:title" content="JLmol - Desktop Molecular Visualization">
+    <meta property="twitter:description" content="A powerful desktop application for molecular visualization built with Electron and JSmol.">
+    
     <style>
-        body {
+        * {
             margin: 0;
             padding: 0;
-            overflow: auto;
-        }
-        #container { 
-            display: flex;
-            height: 100vh;
-            width: 100vw;
             box-sizing: border-box;
-            overflow: auto;
         }
-        #viewer { 
-            flex: 1; 
-            min-height: 400px;
-            min-width: 400px;
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #1f2937;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        /* Navigation */
+        nav {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 1000;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .nav-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 20px;
+        }
+        
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #4F46E5;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(45deg, #4F46E5, #7C3AED);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .nav-links {
+            display: flex;
+            list-style: none;
+            gap: 2rem;
+        }
+        
+        .nav-links a {
+            text-decoration: none;
+            color: #4b5563;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+        
+        .nav-links a:hover {
+            color: #4F46E5;
+        }
+        
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 120px 0 80px;
+            text-align: center;
             position: relative;
             overflow: hidden;
         }
-        #viewer-inner {
-            width: 100%;
-            height: 100%;
+        
+        .hero::before {
+            content: '';
             position: absolute;
             top: 0;
             left: 0;
-        }
-        #controls { 
-            width: 200px; 
-            padding: 10px;
-            transform-origin: top right;
-        }
-        #editor-panel {
-            position: fixed;
-            width: 300px;
-            padding: 10px;
-            display: none;
-            background: white;
-            border: 1px solid #ccc;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            z-index: 9999;
-            top: 100px;
-            left: 100px;
-            resize: both;
-            overflow: auto;
-            min-width: 200px;
-            min-height: 200px;
-            max-width: 90vw;
-            max-height: 90vh;
-        }
-        #editor-header {
-            cursor: move;
-            padding: 10px;
-            background: #f0f0f0;
-            margin: -10px -10px 10px -10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #ccc;
-            -webkit-user-select: none;
-            user-select: none;
-        }
-        .xyz-row {
-            display: flex;
-            margin: 2px 0;
-        }
-        .xyz-row:hover {
-            background-color: #f0f0f0;
-            cursor: pointer;
-        }
-        .xyz-row.selected {
-            background-color: #e0e0ff;
-        }
-        .xyz-cell {
-            padding: 2px 5px;
-        }
-        .atom-symbol { width: 40px; }
-        .coordinate { width: 80px; }
-        #xyz-editor {
-            width: 100%;
-            height: 400px;
-            font-family: monospace;
-            white-space: pre;
-            resize: vertical;
-        }
-        #status { color: red; margin: 10px; }
-        #orbitalControls {
-            position: fixed;
-            width: 300px;
-            padding: 10px;
-            display: none;
-            background: white;
-            border: 1px solid #ccc;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            z-index: 9999;
-            top: 100px;
-            left: 400px;
-            resize: both;
-            overflow: auto;
-            min-width: 200px;
-            min-height: 200px;
-        }
-        #orbital-header {
-            cursor: move;
-            padding: 10px;
-            background: #f0f0f0;
-            margin: -10px -10px 10px -10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #ccc;
-        }
-        #orbital-header h3 {
-            margin: 0;
-        }
-        .orbital-nav {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            margin: 10px 0;
-        }
-        #orbitalList {
-            max-height: 200px;
-            overflow-y: auto;
-            border: 1px solid #ddd;
-            margin: 10px 0;
-        }
-        #orbitalList div {
-            padding: 5px;
-            cursor: pointer;
-        }
-        #orbitalList div:hover {
-            background-color: #f0f0f0;
-        }
-        #orbitalList div.selected {
-            background-color: #e0e0e0;
-        }
-        .homo-lumo-controls {
-            display: flex;
-            gap: 5px;
-            margin: 10px 0;
-        }
-        .xyz-content-edit {
-            display: none;
-        }
-        textarea.xyz-editor {
-            width: 100%;
-            min-height: 200px;
-            font-family: monospace;
-            margin: 10px 0;
-        }
-        .mode-buttons {
-            margin: 10px 0;
-        }
-        .action-buttons {
-            margin-top: 10px;
-        }
-        
-        /* Add zoom container styles */
-        body {
-            transform-origin: center top;
-            transition: transform 0.1s ease;
-        }
-        h3 {
-            margin: 16px 0 2px 0;  /* Increased top margin from 8px to 16px */
-        }
-        
-        /* Database search styles */
-        .database-section {
-            margin: 10px 0;
-        }
-        .database-group {
-            margin: 8px 0;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            background: #f9f9f9;
-        }
-        .database-group input {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 3px;
-            font-size: 12px;
-            box-sizing: border-box;
-        }
-        .database-group input:focus {
-            outline: none;
-            border-color: #4CAF50;
-            box-shadow: 0 0 3px rgba(76, 175, 80, 0.3);
-        }
-
-        /* Combined search input container */
-        .search-input-container {
-            position: relative;
-            display: flex;
-            align-items: center;
-        }
-        
-        .search-input-container input {
-            flex: 1;
-            padding: 8px 30px 8px 8px; /* Reduced right padding for smaller selector */
-            border: 1px solid #ccc;
-            border-radius: 3px;
-            font-size: 12px;
-            margin: 0;
-        }
-        
-        .search-input-container input:focus {
-            outline: none;
-            border-color: #4CAF50;
-            box-shadow: 0 0 3px rgba(76, 175, 80, 0.3);
-        }
-        
-        .search-type-selector {
-            position: absolute;
-            right: 1px;
-            top: 1px;
-            bottom: 1px;
-            width: 25px;
-            background: linear-gradient(to bottom, #f8f8f8 0%, #e8e8e8 100%);
-            border-left: 1px solid #ccc;
-            border-radius: 0 2px 2px 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            font-size: 12px;
-            color: #666;
-            transition: background 0.2s ease;
-        }
-        
-        .search-type-selector:hover {
-            background: linear-gradient(to bottom, #f0f0f0 0%, #d8d8d8 100%);
-        }
-        
-        .search-type-selector.active {
-            background: linear-gradient(to bottom, #e0e0e0 0%, #d0d0d0 100%);
-        }
-        
-        .dropdown-arrow {
-            font-size: 12px;
-        }
-        
-        .search-type-dropdown {
-            position: absolute;
-            top: 100%;
             right: 0;
-            width: 160px;
-            background: white;
-            border: 1px solid #ccc;
-            border-radius: 3px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-            z-index: 10000;
-            display: none;
-            margin-top: 2px;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="20" r="2" fill="white" opacity="0.1"/><circle cx="80" cy="30" r="1.5" fill="white" opacity="0.1"/><circle cx="40" cy="70" r="1" fill="white" opacity="0.1"/><circle cx="90" cy="80" r="2" fill="white" opacity="0.1"/><circle cx="10" cy="90" r="1.5" fill="white" opacity="0.1"/></svg>');
         }
         
-        .search-type-option {
-            padding: 8px 12px;
-            cursor: pointer;
-            border-bottom: 1px solid #eee;
-            transition: background 0.15s ease;
+        .hero-content {
+            position: relative;
+            z-index: 1;
         }
         
-        .search-type-option:last-child {
-            border-bottom: none;
+        .hero h1 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            background: linear-gradient(45deg, #ffffff, #e0e7ff);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
         
-        .search-type-option:hover {
-            background: #f5f5f5;
+        .hero p {
+            font-size: 1.25rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
         }
         
-        .search-type-option.selected {
-            background: #e8f5e8;
-            color: #2e7d32;
-        }
-        
-        .option-label {
-            font-weight: bold;
-            display: block;
-            font-size: 12px;
-        }
-        
-        .option-description {
-            font-size: 10px;
-            color: #666;
-            margin-top: 2px;
-            display: block;
-        }
-
-        /* Database search help styles */
-        .database-help {
-            background: #f9f9f9;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            padding: 8px;
-            margin: 8px 0;
-            font-size: 11px;
-            color: #666;
-        }
-        .database-help h4 {
-            margin: 0 0 4px 0;
-            font-size: 12px;
-            color: #333;
-        }
-        .database-help ul {
-            margin: 4px 0;
-            padding-left: 16px;
-        }
-        .database-help li {
-            margin: 2px 0;
-        }
-        .database-help code {
-            background: #fff;
-            padding: 1px 3px;
-            border-radius: 2px;
-            font-family: monospace;
-        }
-
-        #jsmeContainer { 
-            flex: 1; 
-            min-height: 400px;
-            min-width: 400px;
-            position: relative;  /* Change from absolute to relative */
-            display: none;
-            background: white;
-        }
-        .console-button {
-            padding: 8px 16px;
-            font-size: 16px;
-        }
-        
-        .console-container {
+        .cta-buttons {
             display: flex;
-            justify-content: flex-start;
-            padding-left: 40px;  /* Increased padding from 20px to 40px to move button right */
-            width: 100%;
-            margin-top: 16px;
-            margin-bottom: 16px;  /* Add space below console button */
-        }
-        
-        /* Make ElemCo button container match console container */
-        .elemco-container {
-            display: flex;
-            justify-content: flex-start;
-            padding-left: 40px;
-            width: 100%;
-        }
-
-        #elemcoButton {
-            background: linear-gradient(to bottom, #ffffff 0%, #f5f5f5 100%);
-            border: 1px solid #ccc;
-            padding: 8px calc(16px + 20px);  /* Original padding + 2.5px on each side = 5px total increase */
-            cursor: pointer;
-            display: flex;
-            align-items: center;
+            gap: 1rem;
             justify-content: center;
-            border-radius: 8px;
-            box-shadow: 
-                0 2px 4px rgba(0,0,0,0.1),
-                inset 0 1px 0 rgba(255,255,255,0.9),
-                inset 0 -1px 0 rgba(0,0,0,0.05);
-            transition: all 0.2s ease;
-            margin: 8px 0;  /* Consistent margins */
-        }
-
-        #elemcoButton img {
-            height: 32px;  /* Adjust logo size to better fit the button */
-        }
-
-        /* Adjust container margins to match Console button placement */
-        .console-container, .elemco-container {
-            display: flex;
-            justify-content: flex-start;
-            padding-left: 40px;
-            width: 100%;
-            margin: 8px 0;  /* Equal margins for both containers */
-        }
-
-        #structureFile {
-            margin-bottom: 8px;  /* Add space below the file input */
-            display: block;  /* Ensure it's on its own line */
-        }
-        .sample-buttons {
-            margin-top: 4px;  /* Add space above the sample buttons */
-        }
-        #elemcoPanel {
-            position: fixed;
-            width: 350px; /* Reduced from 400px */
-            padding: 10px;
-            display: none;
-            background: white;
-            border: 1px solid #ccc;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            z-index: 9999;
-            top: 120px;
-            left: 120px;
-            resize: both;
-            overflow: auto;
-            min-width: 250px; /* Reduced from 300px */
-            min-height: 300px; /* Reduced from 400px */
-            max-height: 90vh;
-        }
-        #elemco-header {
-            cursor: move;
-            padding: 10px;
-            background: #f0f0f0;
-            margin: -10px -10px 10px -10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #ccc;
-            -webkit-user-select: none;
-            user-select: none;
-        }
-        #elemco-header img {
-            height: 24px;
-            margin-right: 10px;
-        }
-        .elemco-input-group {
-            margin-bottom: 12px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .elemco-input-group.vertical {
-            flex-direction: column;
-            align-items: stretch;
-            gap: 8px;
-        }
-        .elemco-input-group.vertical > * {
-            width: 100%;
-        }
-        .elemco-input-group.vertical label {
-            min-width: unset;
-            margin-bottom: 4px;
-        }
-        .elemco-input-group.vertical textarea {
-            height: 150px;
-            min-height: 120px;
-            resize: vertical;
-        }
-        .elemco-input-group.vertical .preview-note {
-            margin-top: 8px;
-            color: #666;
-            font-size: 0.9em;
-        }
-        .elemco-input-group input,
-        .elemco-input-group select,
-        .elemco-input-group textarea {
-            width: 100%;
-            padding: 5px;
-            margin-bottom: 5px;
-        }
-        .elemco-input-group textarea {
-            height: 120px; /* Reduced from 150px */
-            font-family: monospace;
-        }
-        #elemcoButton {
-            background: linear-gradient(to bottom, #ffffff 0%, #f5f5f5 100%);
-            border: 1px solid #ccc;
-            padding: 16px;  /* Increased padding */
-            margin: 20px 40px;  /* Increased margins */
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: calc(100% - 80px);  /* Account for margins */
-            border-radius: 12px;  /* More rounded corners */
-            box-shadow: 
-                0 2px 4px rgba(0,0,0,0.1),  /* Subtle drop shadow */
-                inset 0 1px 0 rgba(255,255,255,0.9),  /* Top inner highlight */
-                inset 0 -1px 0 rgba(0,0,0,0.05);  /* Bottom inner shadow */
-            transition: all 0.2s ease;  /* Smooth transitions */
-        }
-        #elemcoButton:hover {
-            background: linear-gradient(to bottom, #f8f8f8 0%, #f0f0f0 100%);
-            transform: translateY(-1px);
-            box-shadow: 
-                0 4px 8px rgba(0,0,0,0.15),
-                inset 0 1px 0 rgba(255,255,255,0.9),
-                inset 0 -1px 0 rgba(0,0,0,0.05);
-        }
-        #elemcoButton:active {
-            transform: translateY(1px);
-            box-shadow: 
-                0 1px 2px rgba(0,0,0,0.1),
-                inset 0 1px 0 rgba(255,255,255,0.9),
-                inset 0 -1px 0 rgba(0,0,0,0.05);
-        }
-        #elemcoButton img {
-            height: 48px;  /* Made logo even bigger */
-        }
-        .preview-note {
-            font-size: 0.8em;
-            color: #666;
-            margin-top: 4px;
-        }
-
-        button {
-            background: linear-gradient(to bottom, #ffffff 0%, #f5f5f5 100%);
-            border: 1px solid #ccc;
-            padding: 6px 12px;  /* Reduced padding */
-            border-radius: 6px;  /* Slightly reduced border radius */
-            cursor: pointer;
-            box-shadow: 
-                0 2px 4px rgba(0,0,0,0.1),
-                inset 0 1px 0 rgba(255,255,255,0.9),
-                inset 0 -1px 0 rgba(0,0,0,0.05);
-            transition: all 0.2s ease;
-            font-size: 13px;  /* Slightly smaller font */
-            color: #333;
-            min-width: 70px;  /* Reduced minimum width */
-            margin: 0;
-        }
-
-        button:hover {
-            background: linear-gradient(to bottom, #f8f8f8 0%, #f0f0f0 100%);
-            transform: translateY(-1px);
-            box-shadow: 
-                0 4px 8px rgba(0,0,0,0.15),
-                inset 0 1px 0 rgba(255,255,255,0.9),
-                inset 0 -1px 0 rgba(0,0,0,0.05);
-        }
-
-        button:active {
-            transform: translateY(1px);
-            box-shadow: 
-                0 1px 2px rgba(0,0,0,0.1),
-                inset 0 1px 0 rgba(255,255,255,0.9),
-                inset 0 -1px 0 rgba(0,0,0,0.05);
-        }
-
-        /* Special styling for the ElemCo button since it's larger */
-        #elemcoButton {
-            padding: 12px;  /* Slightly reduced padding */
-            margin: 16px 40px;  /* Slightly reduced margin */
-            width: calc(100% - 80px);
-            border-radius: 10px;  /* Slightly reduced border radius */
-        }
-
-        #elemcoButton img {
-            height: 40px;  /* Slightly reduced logo size */
-        }
-
-        /* Toggle button active state */
-        .toggle-button.active {
-            background: linear-gradient(to bottom, #e0e0ff 0%, #d5d5ff 100%);
-            box-shadow: 
-                inset 0 1px 3px rgba(0,0,0,0.1),
-                inset 0 1px 0 rgba(255,255,255,0.9);
-        }
-
-        /* Consistent styling for console button */
-        .console-button {
-            font-size: 14px;  /* Slightly reduced font size */
-            padding: 7px 14px;  /* Slightly reduced padding */
-        }
-
-        /* Action buttons in panels */
-        .action-buttons {
-            display: flex;
-            gap: 8px;
-            margin-top: 10px;
-        }
-
-        /* Control line buttons */
-        .control-line {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin: 4px 0;
-        }
-
-        /* Sample buttons container */
-        .sample-buttons {
-            display: flex;
-            gap: 8px;
-            margin-top: 4px;
-        }
-
-        /* Mode buttons */
-        .mode-buttons {
-            margin: 10px 0;
-        }
-
-        /* HOMO-LUMO controls */
-        .homo-lumo-controls {
-            display: flex;
-            gap: 8px;
-            margin: 10px 0;
-        }
-
-        /* Panel close buttons */
-        #editor-header button,
-        #orbital-header button,
-        #elemco-header button {
-            min-width: unset;
-            padding: 4px 10px;  /* Reduced padding */
-            font-size: 12px;  /* Smaller font */
-        }
-
-        /* Zoom control buttons - make them more compact */
-        .control-line button[onclick*="adjustZoom"] {
-            min-width: 40px;  /* Reduced from default 70px */
-            padding: 6px 8px;  /* Reduced horizontal padding */
-        }
-
-        /* Keep the Reset button at normal width */
-        .control-line button[onclick*="resetZoom"] {
-            min-width: 70px;
-        }
-
-        /* Edit buttons - make them more compact */
-        .control-line button[onclick*="showXYZEditor"],
-        #dragMinButton,
-        #toggle2D3DButton {
-            min-width: 50px;  /* Reduced from default 70px */
-            padding: 6px 8px;  /* Consistent with other compact buttons */
-        }
-
-        /* Console and ElemCo containers */
-        .console-container, .elemco-container {
-            margin: 8px 0;
-            padding-left: 40px;
-        }
-
-        /* Common button styles */
-        .console-button, #elemcoButton {
-            display: inline-flex;
-            align-items: center;
-            padding: 8px 16px;
-            font-size: 14px;
-            background: linear-gradient(to bottom, #ffffff 0%, #f5f5f5 100%);
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            box-shadow: 
-                0 2px 4px rgba(0,0,0,0.1),
-                inset 0 1px 0 rgba(255,255,255,0.9),
-                inset 0 -1px 0 rgba(0,0,0,0.05);
-            transition: all 0.2s ease;
-        }
-
-        /* ElemCo button image */
-        #elemcoButton img {
-            height: 32px;
-        }
-
-        /* Remove all previous button container styles */
-        .console-container, .elemco-container {
-            padding-left: 40px;
-            margin: 8px 0;
-            width: auto;  /* Remove fixed width */
-        }
-
-        /* Button styles */
-        .console-button, #elemcoButton {
-            display: inline-flex;
-            align-items: center;
-            padding: 8px 16px;
-            font-size: 14px;
-            background: linear-gradient(to bottom, #ffffff 0%, #f5f5f5 100%);
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            box-shadow: 
-                0 2px 4px rgba(0,0,0,0.1),
-                inset 0 1px 0 rgba(255,255,255,0.9),
-                inset 0 -1px 0 rgba(0,0,0,0.05);
-            transition: all 0.2s ease;
-            margin: 0;  /* Remove any margin from buttons */
-        }
-
-        /* Remove any width constraints on buttons */
-        #elemcoButton {
-            width: auto;
-        }
-
-        #elemcoButton img {
-            height: 32px;
-        }
-
-        /* Container styles */
-        .console-container, .elemco-container {
-            padding-left: 40px;
-            margin: 8px 0;
-            width: auto;
-            display: block;
-        }
-
-        /* Button base styles */
-        .console-button, #elemcoButton {
-            display: inline-flex;
-            align-items: center;
-            padding: 8px 16px;
-            font-size: 14px;
-            background: linear-gradient(to bottom, #ffffff 0%, #f5f5f5 100%);
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            box-shadow: 
-                0 2px 4px rgba(0,0,0,0.1),
-                inset 0 1px 0 rgba(255,255,255,0.9),
-                inset 0 -1px 0 rgba(0,0,0,0.05);
-            transition: all 0.2s ease;
-            margin: 0;
-        }
-
-        /* ElemCo button image */
-        #elemcoButton img {
-            height: 32px;
-        }
-
-        #elemcoButton {
-            display: inline-flex;
-            align-items: center;
-            padding: 8px calc(16px + 13px);  /* Original padding + 2.5px on each side = 5px total increase */
-            font-size: 14px;
-            background: linear-gradient(to bottom, #ffffff 0%, #f5f5f5 100%);
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            box-shadow: 
-                0 2px 4px rgba(0,0,0,0.1),
-                inset 0 1px 0 rgba(255,255,255,0.9),
-                inset 0 -1px 0 rgba(0,0,0,0.05);
-            transition: all 0.2s ease;
-        }
-
-        #elemcoButton img {
-            height: 32px;
-        }
-
-        .method-df-line {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            flex: 1;
+            flex-wrap: wrap;
+            margin-bottom: 3rem;
         }
         
-        .method-df-line select {
-            flex: 1;
-        }
-        
-        .df-toggle-label {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            margin: 0;
-            min-width: unset !important;
-            white-space: nowrap;
-        }
-        
-        .df-toggle-label input[type="checkbox"] {
-            width: auto;
-            margin: 0;
-        }
-        
-        /* ...existing styles... */
-        .elemco-input-group.vertical {
-            flex-direction: column;
-            align-items: stretch;
-            gap: 4px;
-        }
-        
-        .elemco-input-group.vertical label {
-            min-width: unset;
-            margin-bottom: 4px;
-        }
-
-        .elemco-input-group.vertical textarea {
-            height: 150px;
-            min-height: 120px;
-            resize: vertical;
-            margin: 0;
-        }
-
-        .elemco-input-group.vertical a {
-            display: inline-block;
-            margin-bottom: 8px;
-        }
-
-        #elemco-input {
-            font-family: monospace;
-            width: 100%;
-            height: 150px;
-            min-height: 120px;
-            resize: vertical;
-            margin: 0;
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
-
-        .preview-note {
-            font-size: 0.8em;
-            color: #666;
-            margin-top: 4px;
-        }
-
-        .elemco-input-group.vertical .doc-link-container {
-            margin-bottom: 12px;
-            padding-bottom: 8px;
-            border-bottom: 1px solid #eee;
-        }
-
-        .elemco-input-group.vertical .doc-link-container a {
-            color: #0066cc;
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 50px;
+            font-weight: 600;
             text-decoration: none;
-        }
-
-        .elemco-input-group.vertical .doc-link-container a:hover {
-            text-decoration: underline;
-        }
-
-        .elemco-input-group.vertical label {
-            min-width: unset;
-            margin-bottom: 8px;
-            font-weight: bold;
-        }
-
-        .elemco-input-group.vertical textarea {
-            height: 150px;
-            min-height: 120px;
-            resize: vertical;
-            padding: 8px;
-            font-family: monospace;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            margin: 0;
-        }
-
-        .elemco-input-group.vertical .preview-note {
-            margin-top: 8px;
-            color: #666;
-            font-size: 0.9em;
-            padding: 4px;
-            background-color: #f8f8f8;
-            border-radius: 4px;
-        }
-
-        .elemco-input-group input[type="number"] {
-            width: 45px;  /* Make number inputs exactly 3 characters wide */
-            padding: 4px;
-            text-align: center;
-            appearance: textfield;  /* Standard property */
-            -moz-appearance: textfield;  /* Firefox-specific */
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 1rem;
         }
         
-        /* Remove spinner arrows in Chrome/Safari/Edge */
-        .elemco-input-group input[type="number"]::-webkit-outer-spin-button,
-        .elemco-input-group input[type="number"]::-webkit-inner-spin-button {
-            -webkit-appearance: none;
-            appearance: none;
-            margin: 0;
+        .btn-primary {
+            background: white;
+            color: #4F46E5;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
-
-        .charge-multiplicity-group {
-            display: flex;
-            justify-content: flex-start;
-            gap: 24px;  /* Increased gap between charge and multiplicity */
-            margin: 12px 0;
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
         }
-
-        .charge-multiplicity-item {
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+        
+        /* Features Section */
+        .features {
+            padding: 80px 0;
+            background: white;
+        }
+        
+        .section-title {
+            text-align: center;
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 3rem;
+            color: #1f2937;
+        }
+        
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+        
+        .feature-card {
+            background: #f8fafc;
+            padding: 2rem;
+            border-radius: 16px;
+            text-align: center;
+            transition: transform 0.3s, box-shadow 0.3s;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px rgba(0, 0, 0, 0.1);
+        }
+        
+        .feature-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(45deg, #4F46E5, #7C3AED);
+            border-radius: 50%;
             display: flex;
             align-items: center;
-            gap: 8px;
-            white-space: nowrap;  /* Prevent label wrapping */
+            justify-content: center;
+            margin: 0 auto 1rem;
+            font-size: 1.5rem;
+            color: white;
         }
-        #version-display {
-            font-size: 12px;
-            color: #666;
-            margin-bottom: 16px;
-            padding: 4px 8px;
-            background: #f5f5f5;
-            border-radius: 4px;
+        
+        .feature-card h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #1f2937;
+        }
+        
+        .feature-card p {
+            color: #6b7280;
+            line-height: 1.6;
+        }
+        
+        /* Demo Section */
+        .demo {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            padding: 80px 0;
+        }
+        
+        .demo-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3rem;
+            align-items: center;
+        }
+        
+        .demo-text h2 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: #1f2937;
+        }
+        
+        .demo-text p {
+            font-size: 1.1rem;
+            color: #6b7280;
+            margin-bottom: 2rem;
+        }
+        
+        .demo-video {
+            background: white;
+            border-radius: 16px;
+            padding: 1rem;
+            box-shadow: 0 20px 25px rgba(0, 0, 0, 0.1);
             text-align: center;
+        }
+        
+        .demo-placeholder {
+            background: linear-gradient(45deg, #e2e8f0, #cbd5e1);
+            border-radius: 12px;
+            height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #64748b;
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+        
+        /* Download Section */
+        .download {
+            background: #1f2937;
+            color: white;
+            padding: 80px 0;
+        }
+        
+        .download-content {
+            text-align: center;
+        }
+        
+        .download h2 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+        
+        .download p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            margin-bottom: 3rem;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .download-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .download-card {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2rem;
+            border-radius: 16px;
+            text-align: center;
+            transition: all 0.3s;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .download-card:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-2px);
+        }
+        
+        .platform-icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+        
+        .download-card h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .download-card p {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-bottom: 1rem;
+        }
+        
+        /* Footer */
+        footer {
+            background: #111827;
+            color: white;
+            padding: 3rem 0 2rem;
+        }
+        
+        .footer-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+        }
+        
+        .footer-section h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #f9fafb;
+        }
+        
+        .footer-section p, .footer-section a {
+            color: #9ca3af;
+            text-decoration: none;
+            line-height: 1.6;
+        }
+        
+        .footer-section a:hover {
+            color: #4F46E5;
+        }
+        
+        .footer-links {
+            list-style: none;
+        }
+        
+        .footer-links li {
+            margin-bottom: 0.5rem;
+        }
+        
+        .footer-bottom {
+            border-top: 1px solid #374151;
+            margin-top: 2rem;
+            padding-top: 2rem;
+            text-align: center;
+            color: #9ca3af;
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+            
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+            
+            .demo-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .cta-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .feature-card {
+            animation: fadeInUp 0.6s ease-out;
+        }
+        
+        .feature-card:nth-child(2) {
+            animation-delay: 0.1s;
+        }
+        
+        .feature-card:nth-child(3) {
+            animation-delay: 0.2s;
+        }
+        
+        .feature-card:nth-child(4) {
+            animation-delay: 0.3s;
+        }
+        
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #4F46E5;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #3730A3;
         }
     </style>
-    <script type="text/javascript">
-        var jmolApplet0;
-        var isSpinning = false;
-        var displayMode = 'default'; // Track current display mode
-        var lastDisplayMode = 'default'; // Store last used display mode
-        var currentZoom = 100;
-        var isDragMinimize = false; // Track drag-minimize state
-        var Info = {
-            width: "100%",
-            height: "100%",
-            debug: false,
-            color: "0xFFFFFF",
-            use: "HTML5",
-            j2sPath: "jsmol/j2s",
-            addSelectionOptions: true,
-            serverURL: "https://chemapps.stolaf.edu/jmol/jsmol/php/jsmol.php",
-            disableJ2SLoadMonitor: true,
-            disableInitialConsole: true,
-            allowJavaScript: true,
-            readyFunction: function(applet) {
-                jmolApplet0._ready = true;
-                console.log('JSmol initialization complete');
-                
-                // Set initial display mode after JSmol is ready
-                setTimeout(() => {
-                    if (displayMode === undefined || displayMode === null) {
-                        displayMode = 'default';
-                        lastDisplayMode = 'default';
-                    }
-                    console.log('JSmol ready: Setting initial display mode to', displayMode);
-                    setDisplayMode(displayMode);
-                }, 500);
-            },
-            script: "set debugScript off; set antialiasDisplay; set zoomLarge false; set picking ON"
-        };
-
-        /*
-         * FIXES FOR ELEMCO.JL INTEGRATION WITH NUMBERED ATOMS
-         * 
-         * Problem: After using the XYZ editor with numbered atoms (N1, C2, C3, etc.), 
-         * the ElemCo integration button shows "# Please load a molecule first" instead 
-         * of generating proper Julia input code.
-         * 
-         * Root Cause: The getXYZDataWithNumberedAtoms() function was not properly 
-         * handling the case where numbered atom names were used after XYZ editor operations.
-         * 
-         * Implemented Fixes:
-         * 
-         * 1. Enhanced getXYZDataWithNumberedAtoms() function:
-         *    - Added comprehensive error handling and detailed logging
-         *    - Implemented multiple fallback strategies (4 different approaches)
-         *    - Added validation of coordinates and atom data at each step
-         *    - Proper handling of window.originalAtomNames variable
-         * 
-         * 2. Improved updateElemCoInput() function:
-         *    - Added detailed validation checks for XYZ data completeness
-         *    - Enhanced error messages for different failure scenarios
-         *    - Better logging for debugging molecular data issues
-         *    - Validation of atom count vs actual data lines
-         * 
-         * 3. Updated showElemCoPanel() function:
-         *    - Added multiple delayed molecular data refresh attempts
-         *    - Integrated forceRefreshMolecularData() for comprehensive refresh
-         *    - Enhanced diagnostic capabilities for troubleshooting
-         *    - Better error reporting for different failure modes
-         * 
-         * 4. Added refreshAtomNames() function:
-         *    - Maintains numbered atom names across operations
-         *    - Detects and preserves numbered atom patterns
-         *    - Reapplies atom names when needed
-         * 
-         * 5. Added forceRefreshMolecularData() function:
-         *    - Comprehensive molecular data refresh capability
-         *    - Combines atom name refresh with XYZ data retrieval
-         *    - Enhanced debugging and diagnostic information
-         * 
-         * 6. Fixed variable scope issues:
-         *    - Ensured originalAtomNames is accessible as window.originalAtomNames
-         *    - Maintained consistency between local and global variables
-         * 
-         * 7. Enhanced XYZ editor integration:
-         *    - updateStructure() now calls refreshAtomNames() after changes
-         *    - loadXYZWithNumberedAtoms() maintains atom names properly
-         *    - showXYZEditor() refreshes atom names before display
-         * 
-         * Test Workflow:
-         * 1. Load a molecule with numbered atoms (e.g., caffeine with N1, C2, C3, etc.)
-         * 2. Use the XYZ editor to modify coordinates
-         * 3. Apply changes in the XYZ editor
-         * 4. Open the ElemCo.jl integration panel
-         * 5. Verify that proper Julia code is generated with numbered atom names
-         */
-
-        // Function to export the current view as an image
-        function exportImage() {
-            try {
-                // Get the image data using the correct JSmol API method
-                var imageData = Jmol.getPropertyAsString(jmolApplet0, "image");
-                
-                // Convert the raw image data to a proper data URL
-                if (!imageData.startsWith('data:')) {
-                    imageData = 'data:image/png;base64,' + imageData;
-                }
-                
-                // Create a temporary link element
-                var link = document.createElement('a');
-                link.href = imageData;
-                link.download = 'molecule.png';
-                
-                // This is required for Firefox
-                link.target = '_blank';
-                
-                // Append to body, click, and remove
-                document.body.appendChild(link);
-                link.click();
-                
-                // Small delay before removing the link to ensure the download starts
-                setTimeout(() => {
-                    document.body.removeChild(link);
-                }, 100);
-                
-                document.getElementById('status').innerHTML = 'Image exported successfully';
-            } catch (err) {
-                document.getElementById('status').innerHTML = 'Error exporting image: ' + err.message;
-                console.error('Export error:', err);
-            }
-        }
-
-        // Add variable to store XYZ data
-        var lastXYZData = null;
-        var originalAtomNames = null; // Store original numbered atom names
-        window.originalAtomNames = null; // Make sure it's accessible globally
-        var originalXYZContent = null; // Store original XYZ file content
-        var shouldUseNumberedAtoms = false; // Flag to track if numbered atoms should be used (only for XYZ files)
-        
-        // Add frame rate limiting to prevent excessive GPU usage
-        var lastFrameTime = 0;
-        var frameRateLimit = 60; // Max 60 FPS
-        var minFrameInterval = 1000 / frameRateLimit;
-        
-        function throttledRepaint(callback) {
-            var now = Date.now();
-            if (now - lastFrameTime >= minFrameInterval) {
-                lastFrameTime = now;
-                if (typeof callback === 'function') {
-                    callback();
-                }
-            }
-        }
-
-        // Custom XYZ loader that preserves numbered atom names
-        function loadXYZWithNumberedAtoms(xyzContent) {
-            try {
-                // Parse the XYZ content to extract atom names
-                const lines = xyzContent.trim().split('\n');
-                if (lines.length < 3) {
-                    throw new Error('Invalid XYZ format');
-                }
-                
-                const atomCount = parseInt(lines[0]);
-                if (isNaN(atomCount) || atomCount <= 0) {
-                    throw new Error('Invalid atom count');
-                }
-                
-                // Extract original atom names and prepare modified content
-                const extractedNames = [];
-                let modifiedXYZ = lines[0] + '\n' + lines[1] + '\n';
-                let hasNumberedAtoms = false;
-                
-                for (let i = 2; i < atomCount + 2 && i < lines.length; i++) {
-                    const parts = lines[i].trim().split(/\s+/);
-                    if (parts.length >= 4) {
-                        const originalName = parts[0];
-                        let elementSymbol = originalName.replace(/\d+/g, ''); // Remove numbers for JSmol
-                        
-                        // Check if this atom name contains numbers (indicating numbered atoms)
-                        if (originalName !== elementSymbol && /\d/.test(originalName)) {
-                            hasNumberedAtoms = true;
-                        }
-                        
-                        // Capitalize the first letter and make the rest lowercase for proper element recognition
-                        if (elementSymbol.length > 0) {
-                            elementSymbol = elementSymbol.charAt(0).toUpperCase() + elementSymbol.slice(1).toLowerCase();
-                        }
-                        
-                        extractedNames.push(originalName);
-                        modifiedXYZ += `${elementSymbol}  ${parts[1]}  ${parts[2]}  ${parts[3]}\n`;
-                    }
-                }
-                
-                // Store the original data
-                originalAtomNames = extractedNames;
-                window.originalAtomNames = extractedNames; // Make sure it's globally accessible
-                originalXYZContent = xyzContent;
-                
-                // Clear database metadata since this is not a database load
-                window.databaseMetadata = null;
-                
-                // Set the flag to indicate numbered atoms should be used
-                shouldUseNumberedAtoms = hasNumberedAtoms;
-                console.log('loadXYZWithNumberedAtoms: Detected numbered atoms:', hasNumberedAtoms, 'Setting shouldUseNumberedAtoms to:', shouldUseNumberedAtoms);
-                
-                // Save current display mode
-                const currentDisplayMode = displayMode || 'default';
-                
-                // Load the structure with element symbols only
-                Jmol.script(jmolApplet0, `load inline "${modifiedXYZ}"`);
-                
-                // Apply original atom names after a short delay to ensure structure is loaded
-                setTimeout(() => {
-                    applyOriginalAtomNames();
-                    // Also refresh atom names to ensure they're properly maintained
-                    setTimeout(() => {
-                        refreshAtomNames();
-                        console.log('loadXYZWithNumberedAtoms: Atom names refreshed after loading');
-                        
-                        // Restore display mode after everything is loaded
-                        setTimeout(() => {
-                            console.log('loadXYZWithNumberedAtoms: Restoring display mode:', currentDisplayMode);
-                            setDisplayMode(currentDisplayMode);
-                        }, 100);
-                    }, 100);
-                }, 100);
-                
-            } catch (error) {
-                console.error('Error loading XYZ with numbered atoms:', error);
-                // Save current display mode
-                const currentDisplayMode = displayMode || 'default';
-                
-                // Fallback to normal loading
-                Jmol.script(jmolApplet0, `load inline "${xyzContent}"`);
-                
-                // Restore display mode after fallback loading
-                setTimeout(() => {
-                    console.log('loadXYZWithNumberedAtoms fallback: Restoring display mode:', currentDisplayMode);
-                    setDisplayMode(currentDisplayMode);
-                }, 200);
-            }
-        }
-        
-        // Apply the original numbered atom names to the loaded structure
-        function applyOriginalAtomNames() {
-            if (!originalAtomNames) return;
-            
-            try {
-                for (let i = 0; i < originalAtomNames.length; i++) {
-                    const atomName = originalAtomNames[i];
-                    Jmol.script(jmolApplet0, `{atomIndex=${i}}.atomName = "${atomName}"`);
-                }
-                document.getElementById('status').innerHTML = 'Structure loaded with preserved numbered atom names';
-            } catch (error) {
-                console.error('Error applying atom names:', error);
-            }
-        }
-
-        // Function to refresh and maintain numbered atom names
-        let refreshAtomNamesTimeout = null;
-        let lastRefreshTime = 0;
-        const REFRESH_THROTTLE_MS = 1000; // Don't refresh more than once per second
-        
-        function refreshAtomNames() {
-            // Throttle the function to prevent excessive calls
-            const now = Date.now();
-            if (now - lastRefreshTime < REFRESH_THROTTLE_MS) {
-                // Clear any pending refresh and schedule a new one
-                if (refreshAtomNamesTimeout) {
-                    clearTimeout(refreshAtomNamesTimeout);
-                }
-                refreshAtomNamesTimeout = setTimeout(() => {
-                    refreshAtomNamesImmediate();
-                    lastRefreshTime = Date.now();
-                }, REFRESH_THROTTLE_MS - (now - lastRefreshTime));
-                return false;
-            }
-            
-            lastRefreshTime = now;
-            return refreshAtomNamesImmediate();
-        }
-        
-        function refreshAtomNamesImmediate() {
-            console.log('refreshAtomNames: Starting atom name refresh');
-            
-            try {
-                const atomCount = Jmol.evaluateVar(jmolApplet0, '{*}.length');
-                if (!atomCount || atomCount === 0) {
-                    console.warn('refreshAtomNames: No atoms found');
-                    return false;
-                }
-                
-                // If we have preserved atom names, reapply them
-                if (window.originalAtomNames && window.originalAtomNames.length === atomCount) {
-                    console.log('refreshAtomNames: Reapplying preserved atom names');
-                    for (let i = 0; i < atomCount; i++) {
-                        const atomName = window.originalAtomNames[i];
-                        Jmol.script(jmolApplet0, `{atomIndex=${i}}.atomName = "${atomName}"`);
-                    }
-                    return true;
-                } else {
-                    // Try to extract current atom names and preserve them if they look numbered
-                    console.log('refreshAtomNames: Extracting current atom names');
-                    const currentNames = [];
-                    let hasNumberedNames = false;
-                    
-                    for (let i = 0; i < atomCount; i++) {
-                        let atomName = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.atomName`);
-                        if (!atomName || atomName === 'null' || atomName === '') {
-                            const element = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.element`) || 'X';
-                            // Only generate numbered names if the flag indicates we should
-                            atomName = shouldUseNumberedAtoms ? (element + (i + 1)) : element;
-                        } else if (!shouldUseNumberedAtoms && /^[A-Z][a-z]?\d+$/.test(atomName)) {
-                            // Atom name has numbers but we don't want numbered atoms - extract just the element
-                            const element = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.element`) || 'X';
-                            atomName = element;
-                        } else if (shouldUseNumberedAtoms && atomName.length <= 2 && !/\d/.test(atomName)) {
-                            // Atom name is just element symbol but we want numbered atoms
-                            atomName = atomName + (i + 1);
-                        }
-                        
-                        currentNames.push(atomName);
-                        
-                        // Check if this looks like a numbered atom name (element + number)
-                        if (/^[A-Z][a-z]?\d+$/.test(atomName)) {
-                            hasNumberedNames = true;
-                        }
-                    }
-                    
-                    if (hasNumberedNames) {
-                        console.log('refreshAtomNames: Found numbered names, preserving them');
-                        originalAtomNames = currentNames;
-                        window.originalAtomNames = currentNames;
-                        return true;
-                    } else {
-                        // Apply the corrected non-numbered names back to JSmol if needed
-                        let needsUpdate = false;
-                        for (let i = 0; i < atomCount; i++) {
-                            const currentJSmolName = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.atomName`);
-                            if (currentJSmolName !== currentNames[i]) {
-                                needsUpdate = true;
-                                break;
-                            }
-                        }
-                        
-                        if (needsUpdate) {
-                            console.log('refreshAtomNames: Applying corrected non-numbered names to JSmol');
-                            for (let i = 0; i < atomCount; i++) {
-                                Jmol.script(jmolApplet0, `{atomIndex=${i}}.atomName = "${currentNames[i]}"`);
-                            }
-                        }
-                        
-                        // Store the corrected names
-                        originalAtomNames = currentNames;
-                        window.originalAtomNames = currentNames;
-                        return true;
-                    }
-                }
-                
-                return false;
-            } catch (error) {
-                console.error('refreshAtomNames: Error refreshing atom names:', error);
-                return false;
-            }
-        }
-
-        // Function to force a complete refresh of molecular data
-        function forceRefreshMolecularData() {
-            console.log('forceRefreshMolecularData: Starting complete molecular data refresh');
-            
-            try {
-                // Refresh atom names first
-                const atomNamesRefreshed = refreshAtomNames();
-                console.log('forceRefreshMolecularData: Atom names refreshed:', atomNamesRefreshed);
-                
-                // Try to get fresh XYZ data using multiple approaches
-                const xyzData = getXYZDataWithNumberedAtoms();
-                console.log('forceRefreshMolecularData: XYZ data retrieved:', xyzData ? 'Success' : 'Failed');
-                
-                if (xyzData) {
-                    console.log('forceRefreshMolecularData: XYZ data preview:', xyzData.substring(0, 200) + '...');
-                    
-                    // Update ElemCo input with fresh data
-                    updateElemCoInput();
-                    
-                    return true;
-                } else {
-                    console.warn('forceRefreshMolecularData: Could not retrieve XYZ data');
-                    return false;
-                }
-                
-            } catch (error) {
-                console.error('forceRefreshMolecularData: Error during refresh:', error);
-                return false;
-            }
-        }
-
-        // Add initialization with better error handling and cleanup
-        $(document).ready(function() {
-            try {
-                console.log('Initializing JSmol...');
-                console.log('User Agent:', navigator.userAgent);
-                console.log('WebGL Support:', !!window.WebGLRenderingContext);
-                console.log('Hardware Concurrency:', navigator.hardwareConcurrency);
-                console.log('Memory:', navigator.deviceMemory || 'unknown');
-                
-                // Check for graphics capabilities
-                if (window.WebGLRenderingContext) {
-                    const canvas = document.createElement('canvas');
-                    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-                    if (gl) {
-                        console.log('WebGL Renderer:', gl.getParameter(gl.RENDERER));
-                        console.log('WebGL Vendor:', gl.getParameter(gl.VENDOR));
-                        console.log('WebGL Version:', gl.getParameter(gl.VERSION));
-                    }
-                }
-                
-                Jmol.setDocument(0);
-                // Create inner container for JSmol
-                $("#viewer").html('<div id="viewer-inner"></div>');
-                $("#viewer-inner").html(Jmol.getAppletHtml("jmolApplet0", Info));
-                initDraggable();
-                initResizeObserver();
-                setTimeout(initElemCoPanel, 500); // Add initialization here too
-                
-                // Add performance monitoring
-                let frameCount = 0;
-                let lastTime = performance.now();
-                function monitorPerformance() {
-                    frameCount++;
-                    const currentTime = performance.now();
-                    if (currentTime - lastTime >= 5000) { // Every 5 seconds
-                        const fps = (frameCount * 1000) / (currentTime - lastTime);
-                        console.log(`Performance: ${fps.toFixed(1)} FPS, Memory: ${(performance.memory?.usedJSHeapSize/1024/1024 || 0).toFixed(1)}MB`);
-                        frameCount = 0;
-                        lastTime = currentTime;
-                    }
-                    requestAnimationFrame(monitorPerformance);
-                }
-                if (window.performance && window.performance.memory) {
-                    monitorPerformance();
-                }
-                
-                // Add window focus/blur handling for resource management
-                window.addEventListener('focus', function() {
-                    // Resume any paused operations when window gains focus
-                    if (jmolApplet0 && jmolApplet0._ready) {
-                        throttledRepaint(() => {
-                            // Minimal repaint on focus
-                        });
-                    }
-                });
-                
-                window.addEventListener('blur', function() {
-                    // Pause intensive operations when window loses focus
-                    isSpinning = false;
-                    if (jmolApplet0 && jmolApplet0._ready) {
-                        try {
-                            Jmol.script(jmolApplet0, 'spin off');
-                            const spinButton = document.getElementById('spinButton');
-                            if (spinButton) {
-                                spinButton.textContent = 'Spin';
-                            }
-                        } catch (e) {
-                            console.error('Error stopping spin on blur:', e);
-                        }
-                    }
-                });
-
-                // Initialize database input handlers with retry
-                setTimeout(() => {
-                    setupDatabaseInputHandlers();
-                }, 100);
-                
-            } catch (e) {
-                console.error('Error during initialization:', e);
-                document.getElementById('status').innerHTML = 'Error during initialization: ' + e.message;
-            }
-        });
-
-        // Add toggle spin function with proper cleanup
-        function toggleSpin() {
-            isSpinning = !isSpinning;
-            try {
-                Jmol.script(jmolApplet0, isSpinning ? 'spin on' : 'spin off');
-                document.getElementById('spinButton').textContent = isSpinning ? 'Stop' : 'Spin';
-            } catch (e) {
-                console.error('Error toggling spin:', e);
-                isSpinning = false;
-                document.getElementById('spinButton').textContent = 'Spin';
-            }
-        }
-
-        // Add function to set display mode
-        function setDisplayMode(mode) {
-            try {
-                console.log('setDisplayMode: Setting display mode to', mode);
-                
-                // Check if JSmol applet is ready
-                if (!jmolApplet0 || typeof Jmol === 'undefined') {
-                    console.error('setDisplayMode: JSmol applet not ready');
-                    document.getElementById('status').innerHTML = 'JSmol not ready';
-                    return;
-                }
-                
-                // First check if there are any atoms loaded
-                const atomCount = Jmol.evaluateVar(jmolApplet0, '{*}.length');
-                if (!atomCount || atomCount === 0) {
-                    console.warn('setDisplayMode: No atoms loaded');
-                    document.getElementById('status').innerHTML = 'No molecule loaded';
-                    return;
-                }
-                
-                let script = '';
-                let buttonText = '';
-                
-                switch(mode) {
-                    case 'wireframe':
-                        script = 'spacefill off; wireframe only; wireframe 0.1';
-                        buttonText = 'Wireframe';
-                        break;
-                    case 'spacefill':
-                        script = 'wireframe off; spacefill only; spacefill 100%';
-                        buttonText = 'Spacefill';
-                        break;
-                    case 'default':
-                    default:
-                        script = 'spacefill 23%; wireframe 0.15';
-                        buttonText = 'Ball & Stick';
-                        mode = 'default';
-                        break;
-                }
-                
-                console.log('setDisplayMode: Executing script:', script);
-                Jmol.script(jmolApplet0, script);
-                
-                // Update button text and store mode
-                const displayButton = document.getElementById('displayButton');
-                if (displayButton) {
-                    displayButton.textContent = buttonText;
-                }
-                
-                displayMode = mode;
-                lastDisplayMode = mode;
-                
-                console.log('setDisplayMode: Successfully set to', mode);
-                
-            } catch (error) {
-                console.error('setDisplayMode: Error setting display mode:', error);
-                document.getElementById('status').innerHTML = 'Error changing display mode';
-            }
-        }
-
-        // Update toggleDisplayMode to use setDisplayMode
-        function toggleDisplayMode() {
-            try {
-                console.log('toggleDisplayMode: Current mode:', displayMode);
-                
-                switch(displayMode) {
-                    case 'default':
-                        setDisplayMode('wireframe');
-                        break;
-                    case 'wireframe':
-                        setDisplayMode('spacefill');
-                        break;
-                    case 'spacefill':
-                        setDisplayMode('default');
-                        break;
-                    default:
-                        // If mode is undefined or unknown, start with default
-                        setDisplayMode('default');
-                        break;
-                }
-            } catch (error) {
-                console.error('toggleDisplayMode: Error toggling display mode:', error);
-                document.getElementById('status').innerHTML = 'Error toggling display mode';
-            }
-        }
-
-        // Add zoom control functions
-        function adjustZoom(direction) {
-            if (direction === '+' && currentZoom < 200) {
-                currentZoom += 20;
-            } else if (direction === '-' && currentZoom > 40) {
-                currentZoom -= 20;
-            }
-            Jmol.script(jmolApplet0, 'zoom ' + currentZoom);
-        }
-
-        function resetZoom() {
-            currentZoom = 100;
-            Jmol.script(jmolApplet0, 'zoom 100');
-        }
-
-        function handleFileSelect(evt) {
-            var files = evt.target.files;
-            if (files.length > 0) {
-                var file = files[0];
-                var reader = new FileReader();
-                reader.onload = function(e) {
-                    try {
-                        // Save current display mode
-                        const currentDisplayMode = displayMode || 'default';
-                        
-                        const fileContent = e.target.result;
-                        const fileName = file.name.toLowerCase();
-                        
-                        // Check if it's an XYZ file and use custom loader
-                        if (fileName.endsWith('.xyz')) {
-                            // Don't automatically set shouldUseNumberedAtoms to true
-                            // Instead, let loadXYZWithNumberedAtoms detect if numbered atoms are present
-                            loadXYZWithNumberedAtoms(fileContent);
-                        } else {
-                            // Clear numbered atom names for non-XYZ files
-                            originalAtomNames = null;
-                            window.originalAtomNames = null;
-                            originalXYZContent = null;
-                            shouldUseNumberedAtoms = false; // Non-XYZ files should not use numbered atoms
-                            
-                            // Clear database metadata since this is not a database load
-                            window.databaseMetadata = null;
-                            
-                            // Use normal loading for other file types
-                            Jmol.script(jmolApplet0, 'load inline "' + fileContent + '" filter "NOSORT"');
-                            document.getElementById('status').innerHTML = 'File loaded successfully';
-                            
-                            // Refresh atom names to remove any numbered indices for non-XYZ files
-                            setTimeout(() => {
-                                refreshAtomNames();
-                                console.log('handleFileSelect: Atom names refreshed for non-XYZ file');
-                            }, 100);
-                        }
-                        
-                        // Restore display mode after loading with a delay
-                        setTimeout(() => {
-                            console.log('handleFileSelect: Restoring display mode:', currentDisplayMode);
-                            setDisplayMode(currentDisplayMode);
-                        }, 300);
-                        
-                    } catch (err) {
-                        document.getElementById('status').innerHTML = 'Error loading file: ' + err.message;
-                    }
-                };
-                reader.readAsText(file);
-            }
-        }
-
-        function loadSample(filename) {
-            try {
-                // Save current display mode
-                const currentDisplayMode = displayMode || 'default';
-                
-                // Clear any existing numbered atom names since this is a sample load
-                originalAtomNames = null;
-                window.originalAtomNames = null;
-                originalXYZContent = null;
-                shouldUseNumberedAtoms = false; // Sample loads should not use numbered atoms
-                
-                // Clear database metadata since this is not a database load
-                window.databaseMetadata = null;
-                
-                Jmol.script(jmolApplet0, 'load "jsmol/data/' + filename + '"');
-                document.getElementById('status').innerHTML = 'Sample loaded successfully';
-                
-                // Restore display mode after loading with a delay
-                setTimeout(() => {
-                    console.log('loadSample: Restoring display mode:', currentDisplayMode);
-                    setDisplayMode(currentDisplayMode);
-                    
-                    // Refresh atom names to remove any numbered indices
-                    setTimeout(() => {
-                        refreshAtomNames();
-                        console.log('loadSample: Atom names refreshed to remove numbered indices');
-                    }, 100);
-                }, 200);
-                
-            } catch (err) {
-                document.getElementById('status').innerHTML = 'Error loading sample: ' + err.message;
-            }
-        }
-
-        // Database loading functions
-        async function loadFromDatabase(identifier) {
-            try {
-                // Handle PubChem database queries
-                let statusMessage = 'Loading from PubChem...';
-                let loadCommand = identifier;
-                
-                // Store database metadata for XYZ generation
-                let dbMetadata = {
-                    source: 'PubChem',
-                    originalQuery: identifier,
-                    queryType: null,
-                    cid: null,
-                    name: null,
-                    smiles: null,
-                    formula: null
-                };
-                
-                if (identifier.startsWith(':smiles:')) {
-                    const smiles = identifier.substring(8);
-                    statusMessage = `Loading SMILES "${smiles}" from PubChem...`;
-                    dbMetadata.queryType = 'SMILES';
-                    dbMetadata.smiles = smiles;
-                } else if (identifier.startsWith(':formula:')) {
-                    const formula = identifier.substring(9);
-                    statusMessage = `Loading molecular formula "${formula}" from PubChem...`;
-                    dbMetadata.queryType = 'Formula';
-                    dbMetadata.formula = formula;
-                    
-                    // Two-step process for formula searches:
-                    // Step 1: Get CIDs for the formula
-                    document.getElementById('status').innerHTML = `Step 1: Finding compounds with formula "${formula}"...`;
-                    
-                    try {
-                        const cidUrl = `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/fastformula/${encodeURIComponent(formula)}/cids/TXT`;
-                        console.log('Fetching CIDs from:', cidUrl);
-                        
-                        const cidResponse = await fetch(cidUrl);
-                        if (!cidResponse.ok) {
-                            throw new Error(`No compounds found for formula "${formula}" (Status: ${cidResponse.status})`);
-                        }
-                        
-                        const cidText = await cidResponse.text();
-                        const cids = cidText.trim().split('\n').filter(line => line.trim());
-                        
-                        if (cids.length === 0) {
-                            throw new Error(`No compounds found for formula "${formula}"`);
-                        }
-                        
-                        const firstCid = cids[0];
-                        console.log(`Found ${cids.length} compounds for formula "${formula}", using CID: ${firstCid}`);
-                        dbMetadata.cid = firstCid;
-                        
-                        // Step 2: Get SDF for the first CID (try 3D first, fallback to 2D)
-                        document.getElementById('status').innerHTML = `Step 2: Loading structure for CID ${firstCid}...`;
-                        
-                        // Try 3D first
-                        let sdfUrl = `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/${firstCid}/SDF?record_type=3d`;
-                        try {
-                            const sdfTest = await fetch(sdfUrl);
-                            if (!sdfTest.ok) {
-                                // Fallback to 2D if 3D not available
-                                console.log(`3D structure not available for CID ${firstCid}, using 2D structure`);
-                                sdfUrl = `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/${firstCid}/SDF`;
-                            }
-                        } catch (e) {
-                            // Fallback to 2D if 3D fails
-                            console.log(`3D structure test failed for CID ${firstCid}, using 2D structure`);
-                            sdfUrl = `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/${firstCid}/SDF`;
-                        }
-                        
-                        loadCommand = sdfUrl;
-                        statusMessage = `Loading molecular formula "${formula}" (CID: ${firstCid}) from PubChem...`;
-                        
-                    } catch (formulaError) {
-                        console.error('Formula search error:', formulaError);
-                        document.getElementById('status').innerHTML = `Error: ${formulaError.message}`;
-                        return;
-                    }
-                } else if (identifier.startsWith(':')) {
-                    const query = identifier.substring(1);
-                    // Check if it's a number (CID) or name
-                    if (/^\d+$/.test(query)) {
-                        statusMessage = `Loading CID ${query} from PubChem...`;
-                        dbMetadata.queryType = 'CID';
-                        dbMetadata.cid = query;
-                    } else {
-                        statusMessage = `Loading "${query}" by name from PubChem...`;
-                        dbMetadata.queryType = 'Name';
-                        dbMetadata.name = query;
-                    }
-                }
-                
-                document.getElementById('status').innerHTML = statusMessage;
-                
-                // Save current display mode
-                const currentDisplayMode = displayMode || 'default';
-                
-                // Clear any existing numbered atom names since this is a database load
-                originalAtomNames = null;
-                window.originalAtomNames = null;
-                originalXYZContent = null;
-                shouldUseNumberedAtoms = false; // Database loads should not use numbered atoms
-                console.log('loadFromDatabase: Set shouldUseNumberedAtoms to false for database load');
-                
-                // Store metadata globally for XYZ generation
-                window.databaseMetadata = dbMetadata;
-                console.log('Stored database metadata:', dbMetadata);
-                
-                console.log('Loading with command:', loadCommand);
-                Jmol.script(jmolApplet0, 'load "' + loadCommand + '"');
-                
-                // Restore display mode after loading with a delay
-                setTimeout(() => {
-                    setDisplayMode(currentDisplayMode);
-                    document.getElementById('status').innerHTML = 'Structure loaded successfully from PubChem';
-                    
-                    // Refresh atom names to remove any numbered indices
-                    setTimeout(() => {
-                        refreshAtomNames();
-                        console.log('loadFromDatabase: Atom names refreshed to remove numbered indices');
-                    }, 100);
-                }, 1000);
-                
-            } catch (err) {
-                console.error('loadFromDatabase error:', err);
-                document.getElementById('status').innerHTML = 'Error loading from PubChem: ' + err.message;
-            }
-        }
-
-        // Helper function to detect if a string looks like a molecular formula
-        function isMolecularFormula(str) {
-            // Molecular formula pattern: starts with capital letter, contains only element symbols and numbers
-            // Examples: H2O, C6H12O6, NaCl, C8H10N4O2, CH4, CO2, LiH, BeH2, MgO
-            const formulaPattern = /^[A-Z][a-z]?\d*([A-Z][a-z]?\d*)*$/;
-            
-            // Must match the pattern and contain at least one element symbol
-            if (!formulaPattern.test(str)) {
-                return false;
-            }
-            
-            // Additional check: should not contain SMILES-specific characters
-            if (/[=@#\[\]()]/.test(str)) {
-                return false;
-            }
-            
-            // Check if it contains valid element symbols
-            // Common elements include H, He, Li, Be, B, C, N, O, F, Ne, Na, Mg, Al, Si, P, S, Cl, Ar, K, Ca, etc.
-            const validElements = [
-                'H', 'He', 'Li', 'Be', 'B', 'C', 'N', 'O', 'F', 'Ne',
-                'Na', 'Mg', 'Al', 'Si', 'P', 'S', 'Cl', 'Ar', 'K', 'Ca',
-                'Sc', 'Ti', 'V', 'Cr', 'Mn', 'Fe', 'Co', 'Ni', 'Cu', 'Zn',
-                'Ga', 'Ge', 'As', 'Se', 'Br', 'Kr', 'Rb', 'Sr', 'Y', 'Zr',
-                'Nb', 'Mo', 'Tc', 'Ru', 'Rh', 'Pd', 'Ag', 'Cd', 'In', 'Sn',
-                'Sb', 'Te', 'I', 'Xe', 'Cs', 'Ba', 'La', 'Ce', 'Pr', 'Nd',
-                'Pm', 'Sm', 'Eu', 'Gd', 'Tb', 'Dy', 'Ho', 'Er', 'Tm', 'Yb',
-                'Lu', 'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au', 'Hg',
-                'Tl', 'Pb', 'Bi', 'Po', 'At', 'Rn'
-            ];
-            
-            // Extract all element symbols from the formula
-            const elements = str.match(/[A-Z][a-z]?/g) || [];
-            
-            // Check if all extracted elements are valid
-            for (const element of elements) {
-                if (!validElements.includes(element)) {
-                    return false;
-                }
-            }
-            
-            // Must contain at least one element
-            if (elements.length === 0) {
-                return false;
-            }
-            
-            // If it looks like a molecular formula and contains valid elements, treat it as a formula
-            return true;
-        }
-
-        async function loadFromPubChem() {
-            const query = document.getElementById('pubchemInput').value.trim();
-            if (!query) {
-                document.getElementById('status').innerHTML = 'Please enter a search term';
-                return;
-            }
-            
-            const searchType = getCurrentSearchType();
-            let prefix = ':';
-            
-            // Use explicit search type if selected, otherwise auto-detect
-            if (searchType === 'cid') {
-                prefix = ':';
-            } else if (searchType === 'name') {
-                prefix = ':';
-            } else if (searchType === 'formula') {
-                prefix = ':formula:';
-            } else if (searchType === 'smiles') {
-                prefix = ':smiles:';
-            } else if (searchType === 'auto') {
-                // Auto-detect query type based on input (existing logic)
-                // Check if it's a pure number (CID)
-                if (/^\d+$/.test(query)) {
-                    prefix = ':';
-                }
-                // Check if it's a molecular formula
-                else if (isMolecularFormula(query)) {
-                    prefix = ':formula:';
-                }
-                // Check if it's a SMILES string (more specific patterns)
-                else if (/[=@#]|[\[\]()]|[cC][cC]|[nN][oO]|[sS][iI]|[pP][hH]|\d[nNcCoOsS]|[nNcCoOsS]\d|\+|-/.test(query) && 
-                         !/^[a-zA-Z\s\-_()]+$/.test(query)) {
-                    prefix = ':smiles:';
-                }
-                // Otherwise treat as name (default)
-                else {
-                    prefix = ':';
-                }
-            }
-            
-            await            await loadFromDatabase(prefix + query);
-        }
-
-        // Test function for molecular formula search
-        function testFormulaSearch(formula) {
-            const input = document.getElementById('pubchemInput');
-            input.value = formula;
-            
-            // Set search type to formula
-            currentSearchType = 'formula';
-            updateInputPlaceholder();
-            
-            // Update dropdown UI to show formula is selected
-            const options = document.querySelectorAll('.search-type-option');
-            options.forEach(option => option.classList.remove('selected'));
-            const formulaOption = document.querySelector('.search-type-option[data-value="formula"]');
-            if (formulaOption) {
-                formulaOption.classList.add('selected');
-            }
-            
-            // Perform the search
-            loadFromPubChem();
-        }
-
-        // Debug function to test dropdown (can be called from console)
-        window.testDropdown = function() {
-            console.log('Testing dropdown...');
-            const button = document.getElementById('searchTypeSelectorButton');
-            const dropdown = document.getElementById('searchTypeDropdown');
-            
-            console.log('Elements:', { button: !!button, dropdown: !!dropdown });
-            
-            if (button && dropdown) {
-                console.log('Button click listeners:', button.onclick, button.addEventListener ? 'has addEventListener' : 'no addEventListener');
-                console.log('Attempting to toggle dropdown...');
-                toggleSearchTypeDropdown();
-                return 'Dropdown toggle attempted';
-            } else {
-                return 'Elements not found';
-            }
-        };
-
-        // Add keyboard event handlers for database inputs
-        function setupDatabaseInputHandlers() {
-            console.log('setupDatabaseInputHandlers called');
-            
-            const pubchemInput = document.getElementById('pubchemInput');
-            const searchTypeButton = document.getElementById('searchTypeSelectorButton');
-            const dropdown = document.getElementById('searchTypeDropdown');
-            
-            // Check if elements exist
-            if (!pubchemInput || !searchTypeButton || !dropdown) {
-                console.error('Database input elements not found:', {
-                    pubchemInput: !!pubchemInput,
-                    searchTypeButton: !!searchTypeButton,
-                    dropdown: !!dropdown
-                });
-                // Retry after a short delay
-                setTimeout(() => {
-                    console.log('Retrying setupDatabaseInputHandlers...');
-                    setupDatabaseInputHandlers();
-                }, 500);
-                return;
-            }
-            
-            // Check if already initialized to prevent duplicate listeners
-            if (pubchemInput._handlersInitialized) {
-                console.log('Database input handlers already initialized, skipping...');
-                return;
-            }
-            
-            console.log('Setting up event handlers...');
-            
-            // Enter key handler
-            const keypressHandler = function(e) {
-                if (e.key === 'Enter') {
-                    loadFromPubChem();
-                }
-            };
-            pubchemInput.addEventListener('keypress', keypressHandler);
-            
-            // Search type selector click handler (remove onclick to avoid conflicts)
-            searchTypeButton.removeAttribute('onclick');
-            const clickHandler = function(e) {
-                console.log('Search type button clicked via event listener!');
-                e.stopPropagation();
-                toggleSearchTypeDropdown();
-            };
-            searchTypeButton.addEventListener('click', clickHandler);
-            
-            // Store handlers for cleanup if needed
-            searchTypeButton._clickHandler = clickHandler;
-            pubchemInput._keypressHandler = keypressHandler;
-            
-            // Dropdown option click handlers
-            const options = dropdown.querySelectorAll('.search-type-option');
-            options.forEach(option => {
-                option.addEventListener('click', function() {
-                    const value = this.getAttribute('data-value');
-                    const label = this.querySelector('.option-label').textContent;
-                    selectSearchType(value, label);
-                    hideSearchTypeDropdown();
-                    updateInputPlaceholder();
-                });
-            });
-            
-            // Close dropdown when clicking outside
-            document.addEventListener('click', function(e) {
-                if (!searchTypeButton.contains(e.target) && !dropdown.contains(e.target)) {
-                    hideSearchTypeDropdown();
-                }
-            });
-            
-            // Mark as initialized
-            pubchemInput._handlersInitialized = true;
-            console.log('Database input handlers initialized successfully');
-            
-            // Initialize selected state
-            updateSelectedOption();
-        }
-        
-        let currentSearchType = 'auto';
-        
-        function getCurrentSearchType() {
-            return currentSearchType;
-        }
-        
-        function selectSearchType(value, label) {
-            currentSearchType = value;
-            updateSelectedOption();
-        }
-        
-        function updateSelectedOption() {
-            const options = document.querySelectorAll('.search-type-option');
-            options.forEach(option => {
-                option.classList.remove('selected');
-                if (option.getAttribute('data-value') === currentSearchType) {
-                    option.classList.add('selected');
-                }
-            });
-        }
-        
-        function toggleSearchTypeDropdown() {
-            console.log('toggleSearchTypeDropdown called!'); // Debug log
-            const dropdown = document.getElementById('searchTypeDropdown');
-            const button = document.getElementById('searchTypeSelectorButton');
-            
-            if (dropdown.style.display === 'block') {
-                hideSearchTypeDropdown();
-            } else {
-                showSearchTypeDropdown();
-            }
-        }
-        
-        function showSearchTypeDropdown() {
-            const dropdown = document.getElementById('searchTypeDropdown');
-            const button = document.getElementById('searchTypeSelectorButton');
-            
-            dropdown.style.display = 'block';
-            button.classList.add('active');
-            updateSelectedOption();
-        }
-        
-        function hideSearchTypeDropdown() {
-            const dropdown = document.getElementById('searchTypeDropdown');
-            const button = document.getElementById('searchTypeSelectorButton');
-            
-            dropdown.style.display = 'none';
-            button.classList.remove('active');
-        }
-        
-        function updateInputPlaceholder() {
-            const searchType = getCurrentSearchType();
-            const input = document.getElementById('pubchemInput');
-            
-            switch(searchType) {
-                case 'cid':
-                    input.placeholder = 'Enter PubChem CID (e.g., 1983 for caffeine)';
-                    break;
-                case 'name':
-                    input.placeholder = 'Enter chemical name (e.g., caffeine, aspirin, benzene)';
-                    break;
-                case 'formula':
-                    input.placeholder = 'Enter molecular formula (e.g., C8H10N4O2, H2O, C6H12O6)';
-                    break;
-                case 'smiles':
-                    input.placeholder = 'Enter SMILES string (e.g., C6H6, CC=O, CCO)';
-                    break;
-                case 'auto':
-                default:
-                    input.placeholder = 'PubChem: CID, name, formula, or SMILES (e.g., 1983, aspirin, H2O, CC=O)';
-                    break;
-            }
-        }
-
-        var currentOrbitalIndex = 1;
-        var orbitalsVisible = false;
-        
-        function toggleOrbitalControls() {
-            var orbitalControls = document.getElementById('orbitalControls');
-            if (orbitalControls.style.display === 'none' || !orbitalControls.style.display) {
-                orbitalControls.style.display = 'block';
-                // For molden files, ensure orbitals are loaded
-                let fileName = Jmol.evaluateVar(jmolApplet0, '_modelFile.name');
-                if (fileName && fileName.toLowerCase().endsWith('.molden')) {
-                    Jmol.script(jmolApplet0, 'mo fill nomesh;');
-                }
-                // Initialize orbital visualization if not already visible
-                if (!orbitalsVisible) {
-                    Jmol.script(jmolApplet0, 'mo fill nomesh translucent 0.5');
-                    getOrbitalInfo();
-                }
-            } else {
-                orbitalControls.style.display = 'none';
-                Jmol.script(jmolApplet0, 'mo delete');
-                orbitalsVisible = false;
-            }
-        }
-        
-        function showOrbital(index) {
-            if (index < 1 || (numOrbitals > 0 && index > numOrbitals)) return;
-            currentOrbitalIndex = index;
-            document.getElementById('currentOrbital').textContent = index;
-            Jmol.script(jmolApplet0, 'mo ' + index + ' fill nomesh translucent 0.5');
-            orbitalsVisible = true;
-            updateOrbitalList();
-        }
-        
-        function changeOrbital(delta) {
-            if (orbitalsVisible) {
-                showOrbital(currentOrbitalIndex + delta);
-            }
-        }
-        
-        document.addEventListener('keydown', function(event) {
-            if (orbitalsVisible) {
-                if (event.key === 'ArrowUp') {
-                    changeOrbital(-1);
-                    event.preventDefault();
-                } else if (event.key === 'ArrowDown') {
-                    changeOrbital(1);
-                    event.preventDefault();
-                }
-            }
-        });
-
-        var homoOrbital = 0;
-        var lumoOrbital = 0;
-        var numOrbitals = 0;
-        var orbitals = [];
-        
-        function getOrbitalInfo() {
-            try {
-                // Get orbital information
-                Jmol.script(jmolApplet0, 'mo list');
-                
-                // Parse the orbital list response to get the real number of orbitals
-                let moListResponse = Jmol.scriptWait(jmolApplet0, 'show mo list');
-                let lines = moListResponse.split('\n');
-                let maxOrbital = 0;
-                homoOrbital = 0;
-                lumoOrbital = 0;
-                
-                // Parse each line to find orbitals and their occupancies
-                // Store them in order to properly identify HOMO/LUMO
-                orbitals = [];
-                
-                for (let line of lines) {
-                    let match = line.match(/mo\s+(\d+)\s+#\s+energy\s+([+-]?\d+\.?\d*)\s+occupancy\s+(\d+)/);
-                    if (match) {
-                        let orbitalNum = parseInt(match[1]);
-                        let energy = parseFloat(match[2]);
-                        let occupancy = parseInt(match[3]);
-                        
-                        orbitals.push({
-                            number: orbitalNum,
-                            energy: energy,
-                            occupancy: occupancy
-                        });
-                        
-                        maxOrbital = Math.max(maxOrbital, orbitalNum);
-                    }
-                }
-                
-                // Sort orbitals by number to process them in order
-                orbitals.sort((a, b) => a.number - b.number);
-                
-                // Find HOMO (highest occupied) and LUMO (lowest unoccupied)
-                let foundUnoccupied = false;
-                for (let orbital of orbitals) {
-                    if (orbital.occupancy > 0) {
-                        homoOrbital = orbital.number;
-                    } else if (!foundUnoccupied) {
-                        lumoOrbital = orbital.number;
-                        foundUnoccupied = true;
-                    }
-                }
-                
-                // Update orbital information
-                numOrbitals = maxOrbital;
-                
-                // Set initial display parameters
-                Jmol.script(jmolApplet0, 'mo fill nomesh translucent 0.5');
-                
-                // Update the interface
-                let existingInfo = document.getElementById('orbitalInfoDisplay');
-                if (existingInfo) existingInfo.remove();
-                
-                let orbitalInfo = document.createElement('div');
-                orbitalInfo.id = 'orbitalInfoDisplay';
-                orbitalInfo.innerHTML = `
-                    <p>Total Orbitals: ${numOrbitals}</p>
-                    <p>HOMO: ${homoOrbital}, LUMO: ${lumoOrbital}</p>
-                `;
-                document.getElementById('orbitalControls').insertBefore(
-                    orbitalInfo,
-                    document.getElementById('orbitalList')
-                );
-                
-                // Update UI
-                document.getElementById('status').innerHTML = 'Orbital visualization enabled';
-                updateOrbitalList();
-                
-                // Show HOMO by default if none shown
-                if (!orbitalsVisible) {
-                    showOrbital(homoOrbital);
-                }
-                
-            } catch (e) {
-                console.error('Error getting orbital information:', e);
-                document.getElementById('status').innerHTML = 'Error: Could not get orbital information. Make sure the file contains orbital data.';
-                numOrbitals = 0;
-                homoOrbital = 0;
-                lumoOrbital = 0;
-                updateOrbitalList();
-            }
-        }
-        
-        function updateOrbitalList() {
-            const list = document.getElementById('orbitalList');
-            list.innerHTML = '';
-            
-            if (numOrbitals === 0) {
-                list.innerHTML = '<div>No orbital information available</div>';
-                return;
-            }
-            
-            // Create orbital entries in groups of 10 for better performance
-            const fragment = document.createDocumentFragment();
-            for (let i = 1; i <= numOrbitals; i++) {
-                const div = document.createElement('div');
-                // Find orbital energy from the stored orbitals array
-                const orbital = orbitals.find(o => o.number === i);
-                let label = `Orbital ${i}`;
-                if (orbital) {
-                    label += ` (${orbital.energy.toFixed(3)})`;
-                }
-                if (i === homoOrbital) {
-                    label += ' (HOMO)';
-                    div.style.fontWeight = 'bold';
-                    div.style.color = '#0066cc';
-                } else if (i === lumoOrbital) {
-                    label += ' (LUMO)';
-                    div.style.fontWeight = 'bold';
-                    div.style.color = '#cc6600';
-                }
-                div.textContent = label;
-                div.onclick = () => showOrbital(i);
-                if (i === currentOrbitalIndex) {
-                    div.className = 'selected';
-                }
-                fragment.appendChild(div);
-            }
-            list.appendChild(fragment);
-        }
-        
-        function showHOMO() {
-            if (homoOrbital > 0) {
-                showOrbital(homoOrbital);
-            }
-        }
-        
-        function showLUMO() {
-            if (lumoOrbital > 0) {
-                showOrbital(lumoOrbital);
-            }
-        }
-
-        function showXYZEditor() {
-            const editorPanel = document.getElementById('editor-panel');
-            editorPanel.style.display = 'block';
-            
-            try {
-                // Refresh atom names to ensure they're properly maintained
-                refreshAtomNames();
-                
-                // Get atom count first
-                const atomCount = Jmol.evaluateVar(jmolApplet0, '{*}.length');
-                
-                if (!atomCount || atomCount === 0) {
-                    document.getElementById('status').innerHTML = 'No structure data available';
-                    return;
-                }
-                
-                // Build XYZ data with preserved atom names
-                let xyzData = atomCount + '\n';
-                xyzData += 'Structure with preserved atom names\n';
-                
-                // Get atom data individually to preserve numbered names
-                const atomsData = [];
-                for (let i = 0; i < atomCount; i++) {
-                    let atomName;
-                    
-                    // First try to use stored original names if available
-                    if (originalAtomNames && i < originalAtomNames.length) {
-                        atomName = originalAtomNames[i];
-                    } else {
-                        // Get atom name from JSmol (may be just element symbol)
-                        atomName = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.atomName`);
-                        
-                        // Check if we need to modify the atom name based on shouldUseNumberedAtoms flag
-                        if (!atomName || atomName === 'null' || atomName === '') {
-                            // No atom name from JSmol, generate one
-                            const element = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.element`);
-                            if (shouldUseNumberedAtoms) {
-                                atomName = element ? `${element}${i + 1}` : `X${i + 1}`;
-                            } else {
-                                atomName = element || 'X';
-                            }
-                        } else if (!shouldUseNumberedAtoms && /^[A-Z][a-z]?\d+$/.test(atomName)) {
-                            // Atom name has numbers but we don't want numbered atoms - extract just the element
-                            const element = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.element`);
-                            atomName = element || atomName.replace(/\d+/g, '');
-                        } else if (shouldUseNumberedAtoms && atomName.length <= 2 && !/\d/.test(atomName)) {
-                            // Atom name is just element symbol but we want numbered atoms
-                            atomName = `${atomName}${i + 1}`;
-                        }
-                    }
-                    
-                    // Get coordinates
-                    const x = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.x`);
-                    const y = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.y`);
-                    const z = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.z`);
-                    
-                    const atomData = {
-                        name: atomName,
-                        x: parseFloat(x).toFixed(6),
-                        y: parseFloat(y).toFixed(6),
-                        z: parseFloat(z).toFixed(6)
-                    };
-                    
-                    atomsData.push(atomData);
-                    xyzData += `${atomName}  ${atomData.x}  ${atomData.y}  ${atomData.z}\n`;
-                }
-                
-                // Store the XYZ data with preserved names
-                lastXYZData = xyzData;
-                
-                // Create the visual editor interface
-                const xyzContent = document.getElementById('xyz-content');
-                xyzContent.innerHTML = '';
-                
-                // Create table header
-                const headerRow = document.createElement('div');
-                headerRow.className = 'xyz-row header';
-                headerRow.innerHTML = `
-                    <div class="xyz-cell atom-symbol">Atom</div>
-                    <div class="xyz-cell coordinate">X</div>
-                    <div class="xyz-cell coordinate">Y</div>
-                    <div class="xyz-cell coordinate">Z</div>
-                `;
-                xyzContent.appendChild(headerRow);
-                
-                // Add atom rows with preserved names
-                for (let i = 0; i < atomsData.length; i++) {
-                    const atomData = atomsData[i];
-                    const row = document.createElement('div');
-                    row.className = 'xyz-row';
-                    row.innerHTML = `
-                        <div class="xyz-cell atom-symbol">${atomData.name}</div>
-                        <div class="xyz-cell coordinate">${atomData.x}</div>
-                        <div class="xyz-cell coordinate">${atomData.y}</div>
-                        <div class="xyz-cell coordinate">${atomData.z}</div>
-                    `;
-                    row.dataset.atomIndex = i;
-                    row.onclick = function() {
-                        toggleAtomSelection(this);
-                    };
-                    xyzContent.appendChild(row);
-                }
-                
-                // Update textarea content
-                const editArea = document.getElementById('xyz-content-edit');
-                editArea.value = lastXYZData;
-                editArea.style.display = 'none';  // Ensure we start in selection mode
-                xyzContent.style.display = 'block';
-                document.getElementById('toggle-edit-mode').textContent = 'Switch to Edit Mode';
-                
-            } catch (err) {
-                document.getElementById('status').innerHTML = 'Error getting structure data: ' + err.message;
-            }
-        }
-
-        function toggleEditMode() {
-            const selectionView = document.getElementById('xyz-content');
-            const editView = document.getElementById('xyz-content-edit');
-            const editButton = document.getElementById('toggle-edit-mode');
-            
-            if (selectionView.style.display !== 'none') {
-                // Switch to edit mode
-                selectionView.style.display = 'none';
-                editView.style.display = 'block';
-                editButton.textContent = 'Switch to Selection Mode';
-                // Clear any existing selections
-                Jmol.script(jmolApplet0, 'select none; halos off');
-            } else {
-                // Switch to selection mode
-                selectionView.style.display = 'block';
-                editView.style.display = 'none';
-                editButton.textContent = 'Switch to Edit Mode';
-            }
-        }
-
-        function updateStructure() {
-            const editView = document.getElementById('xyz-content-edit');
-            try {
-                const xyzData = editView.value.trim();
-                const lines = xyzData.split('\n');
-                
-                if (lines.length < 3) {
-                    throw new Error('Invalid XYZ format');
-                }
-                
-                const atomCount = parseInt(lines[0]);
-                if (isNaN(atomCount) || atomCount <= 0) {
-                    throw new Error('Invalid atom count');
-                }
-                
-                // Parse the atom data to extract names and coordinates
-                const atomsData = [];
-                const newOriginalNames = [];
-                for (let i = 2; i < atomCount + 2 && i < lines.length; i++) {
-                    const parts = lines[i].trim().split(/\s+/);
-                    if (parts.length >= 4) {
-                        const atomName = parts[0];
-                        let elementSymbol = atomName.replace(/\d+/g, ''); // Extract element symbol
-                        
-                        // Capitalize the first letter and make the rest lowercase for proper element recognition
-                        if (elementSymbol.length > 0) {
-                            elementSymbol = elementSymbol.charAt(0).toUpperCase() + elementSymbol.slice(1).toLowerCase();
-                        }
-                        
-                        newOriginalNames.push(atomName);
-                        atomsData.push({
-                            name: atomName,
-                            element: elementSymbol,
-                            x: parseFloat(parts[1]),
-                            y: parseFloat(parts[2]),
-                            z: parseFloat(parts[3])
-                        });
-                    }
-                }
-                
-                // Load the structure with coordinates only first (using element symbols)
-                let tempXyzData = atomCount + '\n' + lines[1] + '\n';
-                for (const atom of atomsData) {
-                    tempXyzData += `${atom.element}  ${atom.x}  ${atom.y}  ${atom.z}\n`;
-                }
-                
-                // Load the structure
-                Jmol.script(jmolApplet0, 'load inline "' + tempXyzData + '"');
-                
-                // Update stored original names
-                originalAtomNames = newOriginalNames;
-                window.originalAtomNames = newOriginalNames; // Make sure it's globally accessible
-                originalXYZContent = xyzData;
-                
-                // Apply the numbered atom names after a short delay
-                setTimeout(() => {
-                    for (let i = 0; i < atomsData.length; i++) {
-                        const atomName = atomsData[i].name;
-                        Jmol.script(jmolApplet0, `{atomIndex=${i}}.atomName = "${atomName}"`);
-                    }
-                    
-                    // Refresh atom names to ensure they're properly maintained
-                    setTimeout(() => {
-                        refreshAtomNames();
-                        console.log('updateStructure: Atom names refreshed after update');
-                    }, 100);
-                    
-                    document.getElementById('status').innerHTML = 'Structure updated successfully with preserved atom names';
-                }, 100);
-                
-                showXYZEditor(); // Refresh the selection view with updated data
-            } catch (err) {
-                document.getElementById('status').innerHTML = 'Error updating structure: ' + err.message;
-            }
-        }
-
-        function optimizeStructure() {
-            try {
-                Jmol.script(jmolApplet0, 'minimize');
-                document.getElementById('status').innerHTML = 'Structure optimization started';
-                // Update the XYZ editor after a short delay to allow optimization to complete
-                setTimeout(() => {
-                    showXYZEditor();
-                    document.getElementById('status').innerHTML = 'Structure optimization completed';
-                }, 1000);
-            } catch (err) {
-                document.getElementById('status').innerHTML = 'Error optimizing structure: ' + err.message;
-            }
-        }
-
-        function toggleAtomSelection(row) {
-            row.classList.toggle('selected');
-            const atomIndex = parseInt(row.dataset.atomIndex);
-            const isSelected = row.classList.contains('selected');
-            
-            // Update selection in JSmol
-            const script = isSelected ? 
-                `select atomno=${atomIndex + 1}; halos on` :
-                `select atomno=${atomIndex + 1}; halos off`;
-            Jmol.script(jmolApplet0, script);
-        }
-
-        function hideXYZEditor() {
-            // Don't clear the data when hiding the editor
-            document.getElementById('editor-panel').style.display = 'none';
-            // Clear selections when closing editor
-            Jmol.script(jmolApplet0, 'select none; halos off');
-        }
-
-        function saveXYZ() {
-            const xyzData = document.getElementById('xyz-content-edit').value;
-            const blob = new Blob([xyzData], { type: 'chemical/x-xyz' });
-            const url = URL.createObjectURL(blob);
-            
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'molecule.xyz';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }
-
-        // Make editor panel draggable
-        function initDraggable() {
-            function makeDraggable(panel, header) {
-                let isDragging = false;
-                let currentX;
-                let currentY;
-                let initialX;
-                let initialY;
-                let xOffset = 0;
-                let yOffset = 0;
-
-                header.addEventListener('mousedown', dragStart);
-                document.addEventListener('mousemove', drag);
-                document.addEventListener('mouseup', dragEnd);
-
-                function dragStart(e) {
-                    initialX = e.clientX - xOffset;
-                    initialY = e.clientY - yOffset;
-
-                    if (e.target === header) {
-                        isDragging = true;
-                    }
-                }
-
-                function drag(e) {
-                    if (isDragging) {
-                        e.preventDefault();
-                        currentX = e.clientX - initialX;
-                        currentY = e.clientY - initialY;
-                        xOffset = currentX;
-                        yOffset = currentY;
-
-                        panel.style.transform = `translate(${currentX}px, ${currentY}px)`;
-                    }
-                }
-
-                function dragEnd() {
-                    initialX = currentX;
-                    initialY = currentY;
-                    isDragging = false;
-                }
-            }
-
-            // Make all panels draggable
-            makeDraggable(
-                document.getElementById('editor-panel'),
-                document.getElementById('editor-header')
-            );
-            makeDraggable(
-                document.getElementById('orbitalControls'),
-                document.getElementById('orbital-header')
-            );
-            makeDraggable(
-                document.getElementById('elemcoPanel'),
-                document.getElementById('elemco-header')
-            );
-        }
-        
-        // Add page zoom functionality
-        let controlsZoom = 100;
-        
-        document.addEventListener('wheel', function(e) {
-            // Only zoom if Ctrl is pressed and mouse is over the controls panel
-            if (e.ctrlKey && e.target.closest('#controls')) {
-                e.preventDefault();  // Prevent default browser zoom
-                
-                const delta = e.deltaY < 0 ? 10 : -10;
-                controlsZoom = Math.min(Math.max(40, controlsZoom + delta), 200);  // Limit zoom between 40% and 200%
-                
-                // Apply zoom only to controls panel
-                document.getElementById('controls').style.transform = `scale(${controlsZoom / 100})`;
-                
-                // Update status to show current zoom level
-                document.getElementById('status').innerHTML = `Controls zoom: ${controlsZoom}%`;
-            }
-        }, { passive: false });  // Required for preventDefault to work
-
-        function toggleDragMinimize() {
-            isDragMinimize = !isDragMinimize;
-            if (isDragMinimize) {
-                Jmol.script(jmolApplet0, 'set modelkitmode; set picking dragMinimize');
-            } else {
-                Jmol.script(jmolApplet0, 'set modelkitmode false; set picking ident');
-            }
-            document.getElementById('dragMinButton').classList.toggle('active');
-            document.getElementById('dragMinButton').textContent = '3D';
-        }
-
-        // Add resize observer for JSmol viewer with throttling
-        function initResizeObserver() {
-            let resizeTimeout;
-            const resizeObserver = new ResizeObserver(entries => {
-                // Throttle resize events to prevent excessive GPU calls
-                clearTimeout(resizeTimeout);
-                resizeTimeout = setTimeout(() => {
-                    for (const entry of entries) {
-                        const width = entry.contentRect.width;
-                        const height = entry.contentRect.height;
-                        // Update JSmol viewer size
-                        if (jmolApplet0 && jmolApplet0._ready) {
-                            try {
-                                Jmol.resizeApplet(jmolApplet0, [width, height]);
-                            } catch (e) {
-                                console.error('Error resizing JSmol:', e);
-                            }
-                        }
-                    }
-                }, 100); // Throttle to 100ms
-            });
-
-            // Start observing the viewer container
-            const viewer = document.getElementById('viewer');
-            resizeObserver.observe(viewer);
-        }
-
-        var jsmeApplet;
-        var is3D = true;
-        var lastMolFile = null;
-
-        // JSME initialization and conversion functions
-        function convertJsmolToJSME(callback) {
-            try {
-                // First try to get a 2D MOL file
-                let molData = Jmol.evaluateVar(jmolApplet0, 'write("mol")').trim();
-                
-                // If we got valid MOL data, try to clean it up
-                if (molData && molData.includes('V2000')) {
-                    // Ensure proper line endings
-                    molData = molData.replace(/\r?\n/g, '\n');
-                    
-                    // Add implicit hydrogens and clean up structure
-                    Jmol.script(jmolApplet0, 'select all; set addHydrogens true');
-                    let cleanMolData = Jmol.evaluateVar(jmolApplet0, 'write("mol")').trim();
-                    
-                    // Use the cleaned version if it's valid
-                    if (cleanMolData && cleanMolData.includes('V2000')) {
-                        molData = cleanMolData;
-                    }
-                    
-                    callback(molData);
-                } else {
-                    console.error('Failed to get valid MOL data from JSmol');
-                    document.getElementById('status').innerHTML = 'Error: Could not convert 3D structure to 2D';
-                }
-            } catch (e) {
-                console.error('Error converting JSmol to JSME:', e);
-                document.getElementById('status').innerHTML = 'Error converting structure';
-            }
-        }
-
-        function initJSME(container, width, height, molFile = null) {
-            // Create new JSME instance with explicit size
-            const jsmeInstance = new JSApplet.JSME(container, width + "px", height + "px", {
-                "options": "oldlook,star"
-            });
-
-            // Define structure change handler
-            const handleStructureChange = function() {
-                if (jsmeInstance && typeof jsmeInstance.molFile === 'function' && !is3D) {
-                    const currentMol = jsmeInstance.molFile();
-                    if (currentMol && currentMol.includes('V2000')) {
-                        lastMolFile = currentMol;
-                        // Directly load into JSmol in background
-                        Jmol.script(jmolApplet0, `set echo top left; echo "2D structure modified"`);
-                        Jmol.script(jmolApplet0, `load inline "${currentMol}" background`);
-                    }
-                }
-            };
-
-            // Add direct event listener for structure changes
-            jsmeInstance.options.onChange = handleStructureChange;
-            
-            // Store handler for cleanup
-            jsmeInstance._changeHandler = handleStructureChange;
-
-            // Load initial molecule if provided
-            if (molFile && typeof jsmeInstance.readMolFile === 'function') {
-                setTimeout(() => {
-                    jsmeInstance.readMolFile(molFile);
-                    // Store initial state
-                    lastMolFile = jsmeInstance.molFile();
-                }, 100);
-            }
-
-            return jsmeInstance;
-        }
-
-        // Cleanup function for JSME with better resource management
-        function cleanupJSME() {
-            if (jsmeApplet) {
-                try {
-                    if (jsmeApplet.options) {
-                        jsmeApplet.options.onChange = null;
-                    }
-                    if (jsmeApplet._changeHandler) {
-                        delete jsmeApplet._changeHandler;
-                    }
-                    // More thorough cleanup
-                    if (typeof jsmeApplet.destroy === 'function') {
-                        jsmeApplet.destroy();
-                    }
-                } catch (e) {
-                    console.error('Error cleaning up JSME:', e);
-                }
-                
-                // Clear the container
-                const container = document.getElementById('jsmeContainer');
-                if (container) {
-                    container.innerHTML = '';
-                }
-                jsmeApplet = null;
-            }
-        }
-
-        // Update toggle2D3D function
-        function toggle2D3D() {
-            // Check if there's a molecule loaded by getting XYZ data
-            const xyzData = Jmol.evaluateVar(jmolApplet0, 'write("xyz")');
-            const atomCount = xyzData ? parseInt(xyzData.split('\n')[0]) : 0;
-
-            // If we're in 3D mode and there's no structure, just switch to 2D with empty editor
-            if (is3D && atomCount === 0) {
-                is3D = false;
-                const viewer = document.getElementById('viewer');
-                const jsmeContainer = document.getElementById('jsmeContainer');
-                const button = document.getElementById('toggle2D3DButton');
-                
-                cleanupJSME();
-                jsmeContainer.style.display = 'block';
-                viewer.style.display = 'none';
-                button.textContent = '3D Viewer';
-                
-                const width = jsmeContainer.offsetWidth;
-                const height = jsmeContainer.offsetHeight;
-                if (width > 0 && height > 0) {
-                    jsmeApplet = initJSME("jsmeContainer", width, height);
-                }
-                return;
-            }
-
-            is3D = !is3D;
-            const viewer = document.getElementById('viewer');
-            const jsmeContainer = document.getElementById('jsmeContainer');
-            const button = document.getElementById('toggle2D3DButton');
-
-            if (is3D) {
-                // Switch to 3D (JSmol)
-                if (jsmeApplet && typeof jsmeApplet.molFile === 'function') {
-                    let molFile = jsmeApplet.molFile();
-                    if (molFile) {
-                        cleanupJSME(); // Cleanup old JSME instance
-                        jsmeContainer.style.display = 'none';
-                        viewer.style.display = 'block';
-                        
-                        // Get dimensions before switching
-                        const width = viewer.offsetWidth;
-                        const height = viewer.offsetHeight;
-                        
-                        setTimeout(() => {
-                            // Set canvas dimensions
-                            const canvas = document.querySelector('#viewer-inner canvas');
-                            if (canvas) {
-                                canvas.style.width = width + 'px';
-                                canvas.style.height = height + 'px';
-                                canvas.width = width;
-                                canvas.height = height;
-                            }
-                            
-                            // Load the structure and optimize
-                            lastMolFile = molFile;
-                            Jmol.script(jmolApplet0, `load inline "${molFile}"; select all; minimize`);
-                            
-                            // Restore the last used display mode
-                            setTimeout(() => {
-                                setDisplayMode(lastDisplayMode || 'default');
-                                if (width > 0 && height > 0) {
-                                    Jmol.resizeApplet(jmolApplet0, [width, height]);
-                                }
-                                document.getElementById('status').innerHTML = '3D structure generated successfully';
-                            }, 100);
-                        }, 100);
-                    }
-                }
-            } else {
-                // Switch to 2D (JSME) - only try to convert if there's a structure
-                if (atomCount > 0) {
-                    convertJsmolToJSME(molFile => {
-                        viewer.style.display = 'none';
-                        jsmeContainer.style.display = 'block';
-                        jsmeContainer.innerHTML = ''; // Clear old instance
-                        
-                        setTimeout(() => {
-                            const width = jsmeContainer.offsetWidth;
-                            const height = jsmeContainer.offsetHeight;
-                            
-                            if (width > 0 && height > 0) {
-                                lastMolFile = molFile;
-                                jsmeApplet = initJSME("jsmeContainer", width, height, molFile);
-                            }
-                        }, 150);
-                    });
-                } else {
-                    // No structure in JSmol, just show empty 2D editor
-                    viewer.style.display = 'none';
-                    jsmeContainer.style.display = 'block';
-                    jsmeContainer.innerHTML = ''; // Clear old instance
-                    
-                    const width = jsmeContainer.offsetWidth;
-                    const height = jsmeContainer.offsetHeight;
-                    if (width > 0 && height > 0) {
-                        jsmeApplet = initJSME("jsmeContainer", width, height);
-                    }
-                }
-            }
-            
-            button.textContent = is3D ? '2D Editor' : '3D Viewer';
-        }
-
-        // Update window.jsmeOnLoad to use the new initJSME function
-        window.jsmeOnLoad = function() {
-            // Add delay and multiple retries for Electron
-            let attempts = 0;
-            const maxAttempts = 3;
-            
-            function tryInitJSME() {
-                const container = document.getElementById('jsmeContainer');
-                const width = container.offsetWidth;
-                const height = container.offsetHeight;
-                
-                if (width > 0 && height > 0) {
-                    try {
-                        jsmeApplet = initJSME("jsmeContainer", width, height);
-                        console.log("JSME initialized successfully");
-                    } catch (e) {
-                        console.error("JSME init error:", e);
-                        if (attempts < maxAttempts) {
-                            attempts++;
-                            setTimeout(tryInitJSME, 500); // Retry after 500ms
-                        }
-                    }
-                } else {
-                    if (attempts < maxAttempts) {
-                        attempts++;
-                        setTimeout(tryInitJSME, 500);
-                    }
-                }
-            }
-
-            // Initial delay for Electron to ensure DOM is ready
-            setTimeout(tryInitJSME, 250);
-        };
-
-        function showElemCoPanel() {
-            console.log('showElemCoPanel: Opening ElemCo panel');
-            const panel = document.getElementById('elemcoPanel');
-            if (panel) {
-                panel.style.display = 'block';
-                
-                // Reinitialize panel elements to ensure they're set up properly
-                console.log('showElemCoPanel: Initializing panel elements');
-                initElemCoPanel();
-                
-                // Force refresh molecular data detection with multiple attempts
-                console.log('showElemCoPanel: Starting molecular data refresh sequence');
-                
-                // Immediate attempt
-                updateElemCoInput();
-                
-                // Delayed attempt 1 - sometimes JSmol needs time to update
-                setTimeout(() => {
-                    console.log('showElemCoPanel: First delayed attempt');
-                    updateElemCoInput();
-                }, 100);
-                
-                // Delayed attempt 2 - final fallback with force refresh
-                setTimeout(() => {
-                    console.log('showElemCoPanel: Second delayed attempt with force refresh');
-                    
-                    // Check if we still have the error message
-                    const inputArea = document.getElementById('elemco-input');
-                    if (inputArea && inputArea.value.includes('Please load a molecule first')) {
-                        console.warn('showElemCoPanel: Still showing "Please load a molecule first", trying force refresh');
-                        
-                        const refreshSuccess = forceRefreshMolecularData();
-                        
-                        if (!refreshSuccess) {
-                            // Try to diagnose the issue
-                            try {
-                                const atomCount = Jmol.evaluateVar(jmolApplet0, '{*}.length');
-                                console.log('showElemCoPanel: Diagnostic - JSmol atom count:', atomCount);
-                                
-                                if (atomCount > 0) {
-                                    console.log('showElemCoPanel: Atoms exist but data retrieval failed. This suggests a JSmol communication issue.');
-                                    inputArea.value = '# Molecular data detected but could not be retrieved.\n# Try closing and reopening the ElemCo panel, or reload the molecule.';
-                                } else {
-                                    console.log('showElemCoPanel: No atoms detected in JSmol');
-                                    inputArea.value = '# No molecular structure detected.\n# Please load a molecule first.';
-                                }
-                            } catch (e) {
-                                console.error('showElemCoPanel: Diagnostic failed:', e);
-                                inputArea.value = '# Error communicating with molecular viewer.\n# Please reload the page and try again.';
-                            }
-                        }
-                    } else {
-                        console.log('showElemCoPanel: ElemCo input appears to be working correctly');
-                    }
-                }, 300);
-            } else {
-                console.error('showElemCoPanel: Could not find elemcoPanel element');
-            }
-        }
-
-        function hideElemCoPanel() {
-            document.getElementById('elemcoPanel').style.display = 'none';
-        }
-
-        function generateElemCoInput() {
-            updateElemCoInput();
-            document.getElementById('status').innerHTML = 'ElemCo.jl input reset to default';
-        }
-
-        function copyElemCoInput() {
-            const input = document.getElementById('elemco-input');
-            input.select();
-            document.execCommand('copy');
-            document.getElementById('status').innerHTML = 'Input copied to clipboard';
-        }
-
-        // Remove previous event listeners and add new ones
-        function initializeElemCoListeners() {
-            const method = document.getElementById('elemco-method');
-            const aoBasis = document.getElementById('elemco-basis');
-            const jkfitBasis = document.getElementById('elemco-jkfit');
-            const mpfitBasis = document.getElementById('elemco-mpfit');
-            const charge = document.getElementById('elemco-charge');
-            const multiplicity = document.getElementById('elemco-multiplicity');
-
-            // Remove old listeners if they exist
-            const oldListener = function() {};
-            method?.removeEventListener('change', oldListener);
-            aoBasis?.removeEventListener('change', oldListener);
-            jkfitBasis?.removeEventListener('change', oldListener);
-            mpfitBasis?.removeEventListener('change', oldListener);
-            charge?.removeEventListener('input', oldListener);
-            multiplicity?.removeEventListener('input', oldListener);
-
-            // Add new listeners
-            method?.addEventListener('change', updateElemCoInput);
-            aoBasis?.addEventListener('change', updateElemCoInput);
-            jkfitBasis?.addEventListener('change', updateElemCoInput);
-            mpfitBasis?.addEventListener('change', updateElemCoInput);
-            charge?.addEventListener('input', updateElemCoInput);
-            multiplicity?.addEventListener('input', updateElemCoInput);
-        }
-
-        // Function to update method options based on DF toggle
-        function updateMethodOptions() {
-            const dfEnabled = document.getElementById('elemco-df').checked;
-            const methodSelect = document.getElementById('elemco-method');
-            const selectedMethod = methodSelect.value;
-            
-            // Store all available methods
-            const allMethods = {
-                standard: ['HF', 'MP2', 'DCSD', 'CCSD(T)', 'CCSDT', 'DC-CCSDT', 'SVD-DC-CCSDT'],
-                df: ['HF', 'MP2', 'SVD-DCSD']
-            };
-
-            // Clear existing options
-            methodSelect.innerHTML = '';
-
-            // Add appropriate methods based on DF toggle
-            const methods = dfEnabled ? allMethods.df : allMethods.standard;
-            methods.forEach(method => {
-                const option = document.createElement('option');
-                option.value = method;
-                option.text = method;
-                methodSelect.appendChild(option);
-            });
-
-            // Try to maintain selected method if it's still available
-            if (methods.includes(selectedMethod)) {
-                methodSelect.value = selectedMethod;
-            }
-
-            // Update the input text
-            updateElemCoInput();
-        }
-        
-        // Function to generate meaningful comment line for XYZ files
-        function generateXYZCommentLine() {
-            // Check if we have database metadata
-            if (window.databaseMetadata && window.databaseMetadata.source === 'PubChem') {
-                const metadata = window.databaseMetadata;
-                let commentParts = [];
-                
-                // Add PubChem source
-                commentParts.push('PubChem');
-                
-                // Add CID if available
-                if (metadata.cid) {
-                    commentParts.push(`CID:${metadata.cid}`);
-                }
-                
-                // Add compound name if available
-                if (metadata.name) {
-                    commentParts.push(`Name:"${metadata.name}"`);
-                }
-                
-                // Add SMILES if available (truncate if too long)
-                if (metadata.smiles) {
-                    const smiles = metadata.smiles.length > 50 ? 
-                        metadata.smiles.substring(0, 47) + '...' : 
-                        metadata.smiles;
-                    commentParts.push(`SMILES:${smiles}`);
-                }
-                
-                // Add query info if different from what's already shown
-                if (metadata.originalQuery && metadata.queryType) {
-                    if (metadata.queryType === 'CID' && metadata.originalQuery !== metadata.cid) {
-                        commentParts.push(`Query:${metadata.originalQuery}`);
-                    } else if (metadata.queryType === 'Name' && metadata.originalQuery !== metadata.name) {
-                        commentParts.push(`Query:"${metadata.originalQuery}"`);
-                    } else if (metadata.queryType === 'SMILES' && metadata.originalQuery !== metadata.smiles) {
-                        commentParts.push(`Query:${metadata.originalQuery}`);
-                    } else if (metadata.queryType === 'Formula') {
-                        commentParts.push(`Formula:${metadata.originalQuery}`);
-                    }
-                }
-                
-                return commentParts.join(', ');
-            }
-            
-            // Fallback to original comment if no database metadata
-            return 'Structure with numbered atoms';
-        }
-        
-        // Function to generate XYZ content with numbered atoms if available
-        function getXYZDataWithNumberedAtoms() {
-            console.log('getXYZDataWithNumberedAtoms: Starting data retrieval');
-            console.log('getXYZDataWithNumberedAtoms: shouldUseNumberedAtoms flag is:', shouldUseNumberedAtoms);
-            
-            try {
-                // First check if there are any atoms at all
-                const atomCount = Jmol.evaluateVar(jmolApplet0, '{*}.length');
-                console.log('getXYZDataWithNumberedAtoms: Atom count from JSmol:', atomCount);
-                
-                if (!atomCount || atomCount === 0) {
-                    console.warn('No atoms found in JSmol');
-                    return null;
-                }
-                
-                // Strategy 1: Try to use preserved numbered atom names
-                if (window.originalAtomNames && window.originalAtomNames.length > 0) {
-                    console.log('getXYZDataWithNumberedAtoms: Found preserved atom names, count:', window.originalAtomNames.length);
-                    try {
-                        if (atomCount === window.originalAtomNames.length) {
-                            let xyzContent = atomCount + '\n' + generateXYZCommentLine() + '\n';
-                            
-                            for (let i = 0; i < atomCount; i++) {
-                                // Get atom coordinates from JSmol
-                                const x = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.x`);
-                                const y = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.y`);
-                                const z = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.z`);
-                                
-                                // Validate coordinates
-                                if (isNaN(x) || isNaN(y) || isNaN(z)) {
-                                    console.warn('Invalid coordinates for atom', i, 'falling back');
-                                    break;
-                                }
-                                
-                                // Use the preserved numbered atom name
-                                const atomName = window.originalAtomNames[i];
-                                xyzContent += `${atomName} ${x.toFixed(6)} ${y.toFixed(6)} ${z.toFixed(6)}\n`;
-                            }
-                            
-                            // Validate the generated content
-                            const lines = xyzContent.trim().split('\n');
-                            if (lines.length >= atomCount + 2) {
-                                console.log('getXYZDataWithNumberedAtoms: Successfully generated numbered XYZ data');
-                                return xyzContent;
-                            }
-                        } else {
-                            console.warn('Atom count mismatch: JSmol has', atomCount, 'but preserved names has', window.originalAtomNames.length);
-                        }
-                    } catch (error) {
-                        console.error('Error generating numbered XYZ data:', error);
-                        // Continue to next strategy
-                    }
-                }
-                
-                // Strategy 2: Try to get current atom names from JSmol and build XYZ
-                console.log('getXYZDataWithNumberedAtoms: Trying to get current atom names from JSmol');
-                try {
-                    let xyzContent = atomCount + '\n' + generateXYZCommentLine() + '\n';
-                    let validData = true;
-                    
-                    for (let i = 0; i < atomCount && validData; i++) {
-                        try {
-                            // Try to get current atom name from JSmol
-                            let atomName = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.atomName`);
-                            if (!atomName || atomName === 'null' || atomName === '') {
-                                // Fallback based on whether we should use numbered atoms
-                                const element = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.element`) || 'X';
-                                atomName = shouldUseNumberedAtoms ? `${element}${i + 1}` : element;
-                                console.log(`getXYZDataWithNumberedAtoms: Strategy 2 - Generated atom name for atom ${i}: ${atomName} (shouldUseNumberedAtoms: ${shouldUseNumberedAtoms})`);
-                            }
-                            
-                            const x = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.x`);
-                            const y = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.y`);
-                            const z = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.z`);
-                            
-                            // Validate coordinates
-                            if (isNaN(x) || isNaN(y) || isNaN(z)) {
-                                console.warn('Invalid coordinates for atom', i);
-                                validData = false;
-                                break;
-                            }
-                            
-                            xyzContent += `${atomName} ${x.toFixed(6)} ${y.toFixed(6)} ${z.toFixed(6)}\n`;
-                        } catch (atomError) {
-                            console.warn('Error getting data for atom', i, ':', atomError);
-                            validData = false;
-                            break;
-                        }
-                    }
-                    
-                    if (validData) {
-                        console.log('getXYZDataWithNumberedAtoms: Successfully generated XYZ from current JSmol state');
-                        return xyzContent;
-                    }
-                } catch (error) {
-                    console.error('Error building XYZ from current JSmol state:', error);
-                }
-                
-                // Strategy 3: Try JSmol's built-in write function
-                console.log('getXYZDataWithNumberedAtoms: Trying JSmol write function');
-                try {
-                    const xyzData = Jmol.evaluateVar(jmolApplet0, 'write("xyz")');
-                    if (xyzData && xyzData.trim().length > 0) {
-                        const lines = xyzData.trim().split('\n');
-                        if (lines.length >= 3 && !isNaN(parseInt(lines[0]))) {
-                            console.log('getXYZDataWithNumberedAtoms: Successfully got XYZ from JSmol write function');
-                            return xyzData;
-                        }
-                    }
-                } catch (error) {
-                    console.error('JSmol write function failed:', error);
-                }
-                
-                // Strategy 4: Manual XYZ building with element symbols (numbered only if appropriate)
-                console.log('getXYZDataWithNumberedAtoms: Building manual XYZ with element symbols');
-                try {
-                    let manualXYZ = atomCount + '\n' + generateXYZCommentLine() + '\n';
-                    let validManualData = true;
-                    
-                    for (let i = 0; i < atomCount && validManualData; i++) {
-                        try {
-                            const element = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.element`) || 'X';
-                            const x = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.x`) || 0;
-                            const y = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.y`) || 0;
-                            const z = Jmol.evaluateVar(jmolApplet0, `{atomIndex=${i}}.z`) || 0;
-                            
-                            // Use numbered atoms only if this came from an XYZ file
-                            const atomName = shouldUseNumberedAtoms ? `${element}${i+1}` : element;
-                            console.log(`getXYZDataWithNumberedAtoms: Strategy 4 - Generated atom name for atom ${i}: ${atomName} (shouldUseNumberedAtoms: ${shouldUseNumberedAtoms})`);
-                            manualXYZ += `${atomName} ${parseFloat(x).toFixed(6)} ${parseFloat(y).toFixed(6)} ${parseFloat(z).toFixed(6)}\n`;
-                        } catch (atomError) {
-                            console.warn('Error in manual XYZ generation for atom', i, ':', atomError);
-                            validManualData = false;
-                            break;
-                        }
-                    }
-                    
-                    if (validManualData) {
-                        console.log('getXYZDataWithNumberedAtoms: Successfully generated manual XYZ');
-                        return manualXYZ;
-                    }
-                } catch (error) {
-                    console.error('Manual XYZ generation failed:', error);
-                }
-                
-                console.error('All XYZ generation strategies failed');
-                return null;
-                
-            } catch (error) {
-                console.error('Error in getXYZDataWithNumberedAtoms:', error);
-                
-                // Last resort: try to get any molecular data
-                try {
-                    console.log('getXYZDataWithNumberedAtoms: Last resort fallback attempt');
-                    const fallbackData = Jmol.evaluateVar(jmolApplet0, 'write("xyz")');
-                    if (fallbackData && fallbackData.trim().length > 0) {
-                        console.log('getXYZDataWithNumberedAtoms: Fallback successful');
-                        return fallbackData;
-                    }
-                } catch (fallbackError) {
-                    console.error('Fallback XYZ generation also failed:', fallbackError);
-                }
-                
-                console.error('All molecular data retrieval attempts failed');
-                return null;
-            }
-        }
-
-        function updateElemCoInput() {
-            console.log('updateElemCoInput: Starting input generation');
-            
-            const dfEnabled = document.getElementById('elemco-df').checked;
-            const method = document.getElementById('elemco-method').value;
-            const aoBasis = document.getElementById('elemco-basis').value;
-            const jkfitBasis = document.getElementById('elemco-jkfit').value;
-            const mpfitBasis = document.getElementById('elemco-mpfit').value;
-            const charge = parseInt(document.getElementById('elemco-charge').value) || 0;
-            const multiplicity = parseInt(document.getElementById('elemco-multiplicity').value) || 0;
-
-            // Get current molecular structure from JSmol (with numbered atoms if available)
-            console.log('updateElemCoInput: Calling getXYZDataWithNumberedAtoms');
-            const xyzData = getXYZDataWithNumberedAtoms();
-            
-            if (!xyzData || xyzData.trim().length === 0) {
-                console.warn('updateElemCoInput: No XYZ data received');
-                document.getElementById('elemco-input').value = '# Please load a molecule first';
-                return;
-            }
-            
-            console.log('updateElemCoInput: Received XYZ data, length:', xyzData.length);
-            
-            // Double-check that we have valid XYZ data
-            const lines = xyzData.trim().split('\n');
-            if (lines.length < 3) {
-                console.warn('updateElemCoInput: XYZ data has insufficient lines:', lines.length);
-                document.getElementById('elemco-input').value = '# Invalid molecular structure - please reload molecule';
-                return;
-            }
-            
-            // Check if first line contains atom count
-            const atomCount = parseInt(lines[0]);
-            if (isNaN(atomCount) || atomCount <= 0) {
-                console.warn('updateElemCoInput: Invalid atom count in first line:', lines[0]);
-                document.getElementById('elemco-input').value = '# Invalid molecular structure - please reload molecule';
-                return;
-            }
-            
-            // Verify we have enough data lines for all atoms
-            const dataLines = lines.slice(2); // Skip atom count and comment lines
-            if (dataLines.length < atomCount) {
-                console.warn('updateElemCoInput: Insufficient atom data lines. Expected:', atomCount, 'Found:', dataLines.length);
-                document.getElementById('elemco-input').value = '# Incomplete molecular structure - please reload molecule';
-                return;
-            }
-            
-            // Validate that atom data lines have proper format
-            let validAtomLines = 0;
-            for (let i = 0; i < Math.min(dataLines.length, atomCount); i++) {
-                const parts = dataLines[i].trim().split(/\s+/);
-                if (parts.length >= 4) {
-                    const x = parseFloat(parts[1]);
-                    const y = parseFloat(parts[2]);
-                    const z = parseFloat(parts[3]);
-                    if (!isNaN(x) && !isNaN(y) && !isNaN(z)) {
-                        validAtomLines++;
-                    }
-                }
-            }
-            
-            if (validAtomLines < atomCount) {
-                console.warn('updateElemCoInput: Not all atom lines are valid. Valid:', validAtomLines, 'Expected:', atomCount);
-                document.getElementById('elemco-input').value = '# Malformed molecular structure - please reload molecule';
-                return;
-            }
-            
-            console.log('updateElemCoInput: XYZ data validation passed. Atoms:', atomCount, 'Valid lines:', validAtomLines);
-        
-            // Format ElemCo.jl input with complete XYZ specification
-            let elemcoInput = `using ElemCo
-
-function main()        
-# Molecule specification
-geometry = """
-${xyzData.trim()}
-"""
-        
-# Set basis set`;
-        
-            // Handle basis set configuration based on selected options
-            if (jkfitBasis === 'auto' && mpfitBasis === 'auto') {
-                // Use simple basis set specification if no auxiliary basis sets are selected
-                elemcoInput += `\nbasis = "${aoBasis}"\n`;
-            } else {
-                // Build the basis dictionary with selected auxiliary basis sets
-                elemcoInput += `\nbasis = Dict(\n    "ao" => "${aoBasis}"`;
-
-                if (jkfitBasis !== 'auto') {
-                    elemcoInput += `,\n    "jkfit" => "${jkfitBasis}"`;
-                }
-
-                if (mpfitBasis !== 'auto') {
-                    elemcoInput += `,\n    "mpfit" => "${mpfitBasis}"`;
-                }
-
-                elemcoInput += "\n)\n";
-            }
-        
-            // Add charge and multiplicity settings only if they are non-zero
-            if (charge !== 0 || multiplicity !== 0) {
-                elemcoInput += `\n# Set charge and multiplicity\n@set wf charge=${charge} ms2=${multiplicity}\n`;
-            }
-        
-            // Add calculation commands
-            elemcoInput += `\n# Run HF calculation first\n${dfEnabled ? '@dfhf' : '@dfhf'}\n`;
-        
-            // Add coupled cluster calculation if method is not HF
-            if (method !== 'HF') {
-                const ccCommand = dfEnabled ? '@dfcc' : '@cc';
-                elemcoInput += `\n# Run ${method} calculation\n${ccCommand} ${method.toLowerCase()}\n`;
-            }
-            elemcoInput += `\nend\nmain()\n`;
-        
-            // Set the input text
-            const inputArea = document.getElementById('elemco-input');
-            if (inputArea) {
-                inputArea.value = elemcoInput;
-                console.log('updateElemCoInput: Successfully generated ElemCo input');
-            } else {
-                console.error('updateElemCoInput: Could not find elemco-input textarea');
-            }
-        }
-
-        // Initialize ElemCo panel elements
-        function initElemCoPanel() {
-            // Clean up any existing elements first
-            const dfLabel = document.querySelector('.df-toggle-label');
-            if (dfLabel) {
-                // Remove existing content to prevent memory leaks
-                dfLabel.innerHTML = '';
-                dfLabel.innerHTML = `
-                    <input type="checkbox" id="elemco-df" onchange="updateMethodOptions()">
-                    <span>Use DF</span>
-                `;
-            }
-
-            // Initialize method options
-            updateMethodOptions();
-
-            // Update input text
-            updateElemCoInput();
-        }
-
-        // Add initialization to both window.onload and document.ready
-        if (typeof window !== 'undefined') {
-            window.addEventListener('load', function() {
-                setTimeout(initElemCoPanel, 500); // Delay to ensure DOM is ready
-                setTimeout(updateInputPlaceholder, 200); // Initialize placeholder text
-                setTimeout(setupDatabaseInputHandlers, 300); // Ensure dropdown handlers are set up
-            });
-        }
-    </script>
 </head>
 <body>
-    <div id="container">
-        <div id="viewer"></div>
-        <div id="jsmeContainer"></div>
-        <div id="controls">
-            <div id="version-display" style="font-size: 12px; color: #666; margin-bottom: 16px; padding: 4px 8px; background: #f5f5f5; border-radius: 4px; text-align: center;">jlmol v<span id="version-number">loading...</span></div>
-            <h3>Load Structure</h3>
-            <input type="file" id="structureFile" accept=".xyz,.pdb,.mol,.cif,.molden" onChange="handleFileSelect(event)" title="Select a molecular structure file">
-            <div class="sample-buttons">
-                <button onclick="loadSample('caffeine.mol')" title="Load a caffeine molecule structure">Caffeine</button>
-                <button onclick="loadSample('buckyball.mol')" title="Load a buckminsterfullerene (C60) structure">Buckyball</button>
+    <!-- Navigation -->
+    <nav>
+        <div class="nav-container">
+            <a href="#" class="logo">
+                <div class="logo-icon">JL</div>
+                JLmol
+            </a>
+            <ul class="nav-links">
+                <li><a href="#features">Features</a></li>
+                <li><a href="#demo">Demo</a></li>
+                <li><a href="#download">Download</a></li>
+                <li><a href="https://app.jlmol.com" target="_blank" rel="noopener noreferrer">Try Online</a></li>
+                <li><a href="https://github.com/fkfest/jlmol" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <h1>JLmol</h1>
+                <p>A powerful desktop application for molecular visualization built with Electron and JSmol. Experience native performance with advanced 3D visualization capabilities across all platforms.</p>
+                <div class="cta-buttons">
+                    <a href="#download" class="btn btn-primary">
+                        <span>⬇️</span>
+                        Download Now
+                    </a>
+                    <a href="https://app.jlmol.com" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">
+                        <span>🌐</span>
+                        Try Online
+                    </a>
+                </div>
+                <div style="margin-top: 2rem; font-size: 0.9rem; opacity: 0.8;">
+                    Available for Windows • macOS • Linux
+                </div>
             </div>
-            <div class="database-section">
-                <div class="database-group">
-                    <div class="search-input-container">
-                        <input type="text" id="pubchemInput" placeholder="PubChem: CID, name, or SMILES (e.g., 1983, aspirin, CC=O)" title="Enter compound identifier and press Enter to load">
-                        <div class="search-type-selector" id="searchTypeSelectorButton" title="Click to select search type">
-                            <span class="dropdown-arrow">▼</span>
-                        </div>
-                        <div class="search-type-dropdown" id="searchTypeDropdown">
-                            <div class="search-type-option" data-value="auto">
-                                <span class="option-label">Auto-detect</span>
-                                <span class="option-description">Smart detection</span>
-                            </div>
-                            <div class="search-type-option" data-value="cid">
-                                <span class="option-label">CID</span>
-                                <span class="option-description">Compound ID</span>
-                            </div>
-                            <div class="search-type-option" data-value="name">
-                                <span class="option-label">Name</span>
-                                <span class="option-description">Chemical name</span>
-                            </div>
-                            <div class="search-type-option" data-value="formula">
-                                <span class="option-label">Formula</span>
-                                <span class="option-description">Molecular formula</span>
-                            </div>
-                            <div class="search-type-option" data-value="smiles">
-                                <span class="option-label">SMILES</span>
-                                <span class="option-description">SMILES notation</span>
-                            </div>
-                        </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="features">
+        <div class="container">
+            <h2 class="section-title">Powerful Features for Molecular Science</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🧬</div>
+                    <h3>Advanced 3D Visualization</h3>
+                    <p>Powerful JSmol molecular visualization with multiple display styles including ball & stick, wireframe, and spacefill. Interactive controls for rotation, zoom, and spin animation.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">🔍</div>
+                    <h3>PubChem Database Integration</h3>
+                    <p>Direct access to molecular structures from PubChem. Search by compound ID, chemical name, formula, or SMILES notation with intelligent auto-detection.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">✏️</div>
+                    <h3>Structure Editing Suite</h3>
+                    <p>Integrated JSME 2D editor, ModelKit 3D editor, and enhanced XYZ editor. Real-time synchronization between 2D and 3D views with automatic optimization.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">⚛️</div>
+                    <h3>Orbital Visualization</h3>
+                    <p>Advanced orbital visualization with HOMO/LUMO identification, easy navigation with arrow keys, and energy level display for quantum chemistry analysis.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">📁</div>
+                    <h3>Multi-Format Support</h3>
+                    <p>Support for multiple file formats including XYZ, PDB, MOL, CIF, and MOLDEN. Drag and drop file loading for seamless workflow integration.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3>ElemCo.jl Integration</h3>
+                    <p>Built-in support for generating ElemCo.jl input files with common quantum chemistry methods (HF, MP2, CCSD) and basis set selection.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Demo Section -->
+    <section id="demo" class="demo">
+        <div class="container">
+            <div class="demo-content">
+                <div class="demo-text">
+                    <h2>See JLmol in Action</h2>
+                    <p>Experience the power of JLmol with our interactive online demo. Load molecular structures, explore 3D visualizations, and test the editing capabilities directly in your browser.</p>
+                    <a href="https://app.jlmol.com" target="_blank" rel="noopener noreferrer" class="btn btn-primary">
+                        <span>🚀</span>
+                        Launch Demo
+                    </a>
+                </div>
+                <div class="demo-video">
+                    <img src="jlmol.png" alt="JLmol Application Screenshot" style="width: 100%; height: auto; border-radius: 12px; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);">
+                    <div style="margin-top: 1rem; color: #64748b; font-size: 0.9rem;">
+                        JLmol Desktop Application Interface
                     </div>
                 </div>
             </div>
-            <div id="status"></div>
+        </div>
+    </section>
 
-            <h3>Display</h3>
-            <div class="control-line">
-                <button id="displayButton" onclick="toggleDisplayMode()" title="Toggle between ball & stick, wireframe, and spacefill display modes">Ball & Stick</button>
-                <button id="spinButton" onclick="toggleSpin()" title="Start or stop continuous rotation of the molecule">Spin</button>
+    <!-- Download Section -->
+    <section id="download" class="download">
+        <div class="container">
+            <div class="download-content">
+                <h2>Download JLmol</h2>
+                <p>Get the latest version of JLmol for your operating system. Pre-built executables are available for all major platforms.</p>
+                
+                <div class="download-options">
+                    <div class="download-card">
+                        <div class="platform-icon">🪟</div>
+                        <h3>Windows</h3>
+                        <p>.exe installer</p>
+                        <a href="https://github.com/fkfest/jlmol/releases/latest" target="_blank" rel="noopener noreferrer" class="btn btn-primary">Download</a>
+                    </div>
+                    
+                    <div class="download-card">
+                        <div class="platform-icon">🍎</div>
+                        <h3>macOS</h3>
+                        <p>.dmg package</p>
+                        <a href="https://github.com/fkfest/jlmol/releases/latest" target="_blank" rel="noopener noreferrer" class="btn btn-primary">Download</a>
+                    </div>
+                    
+                    <div class="download-card">
+                        <div class="platform-icon">🐧</div>
+                        <h3>Linux</h3>
+                        <p>.AppImage, .deb, .rpm</p>
+                        <a href="https://github.com/fkfest/jlmol/releases/latest" target="_blank" rel="noopener noreferrer" class="btn btn-primary">Download</a>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 3rem; font-size: 0.9rem; opacity: 0.8;">
+                    All downloads are available on our <a href="https://github.com/fkfest/jlmol/releases/latest" target="_blank" rel="noopener noreferrer" style="color: #60A5FA;">GitHub Releases page</a>
+                </div>
             </div>
-            <div class="control-line">
-                <button onclick="toggleOrbitalControls()" title="Show or hide molecular orbital visualization controls">Orbitals</button>
-                <button onclick="exportImage()" title="Save the current view as an image file">Export Image</button>
-            </div>
-            <div class="control-line">
-                <span>🔍</span>
-                <button onclick="adjustZoom('-')" title="Zoom out from the molecule">Out</button>
-                <button onclick="adjustZoom('+')" title="Zoom in on the molecule">In</button>
-                <button onclick="resetZoom()" title="Reset zoom level to default">Reset</button>
-            </div>
+        </div>
+    </section>
 
-            <h3>Edit</h3>
-            <div class="control-line">
-                <button onclick="showXYZEditor()" title="Open XYZ coordinate editor">XYZ</button>
-                <button id="dragMinButton" class="toggle-button" onclick="toggleDragMinimize()" title="Toggle 3D manipulation mode with energy minimization">3D</button>
-                <button id="toggle2D3DButton" onclick="toggle2D3D()" title="Switch between 2D and 3D molecular editors">2D Editor</button>
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>JLmol</h3>
+                    <p>A desktop application for molecular visualization built with Electron and JSmol, providing powerful tools for chemistry research and education.</p>
+                </div>
+                
+                <div class="footer-section">
+                    <h3>Resources</h3>
+                    <ul class="footer-links">
+                        <li><a href="https://github.com/fkfest/jlmol" target="_blank" rel="noopener noreferrer">GitHub Repository</a></li>
+                        <li><a href="https://github.com/fkfest/jlmol/releases" target="_blank" rel="noopener noreferrer">Releases</a></li>
+                        <li><a href="https://app.jlmol.com" target="_blank" rel="noopener noreferrer">Online Demo</a></li>
+                        <li><a href="https://github.com/fkfest/jlmol/blob/main/Troubleshooting.md" target="_blank" rel="noopener noreferrer">Troubleshooting</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <h3>Technologies</h3>
+                    <ul class="footer-links">
+                        <li><a href="http://jmol.sourceforge.net" target="_blank" rel="noopener noreferrer">Jmol Project</a></li>
+                        <li><a href="http://jsmol.sourceforge.net" target="_blank" rel="noopener noreferrer">JSmol</a></li>
+                        <li><a href="https://www.electronjs.org" target="_blank" rel="noopener noreferrer">Electron</a></li>
+                        <li><a href="https://jsme-editor.github.io" target="_blank" rel="noopener noreferrer">JSME Editor</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <h3>Support</h3>
+                    <ul class="footer-links">
+                        <li><a href="https://github.com/fkfest/jlmol/issues" target="_blank" rel="noopener noreferrer">Report Issues</a></li>
+                        <li><a href="https://github.com/fkfest/jlmol/discussions" target="_blank" rel="noopener noreferrer">Discussions</a></li>
+                        <li><a href="https://github.com/fkfest/jlmol/blob/main/README.md" target="_blank" rel="noopener noreferrer">Documentation</a></li>
+                    </ul>
+                </div>
             </div>
+            
+            <div class="footer-bottom">
+                <p>&copy; 2025 JLmol. Licensed under LGPL-2.1. Built with ❤️ for the molecular science community.</p>
+            </div>
+        </div>
+    </footer>
 
-            <div class="console-container">
-                <button onclick="Jmol.script(jmolApplet0, 'console')" class="console-button" title="Open JSmol scripting console">Console</button>
-            </div>
-            <div class="elemco-container">
-                <button id="elemcoButton" onclick="showElemCoPanel()">
-                    <img src="build/elemco_logo.png" alt="ElemCo.jl" title="Generate ElemCo.jl Input">
-                </button>
-            </div>
-        </div>
-    </div>
-    <div id="orbitalControls">
-        <div id="orbital-header">
-            <h3>Orbital Controls</h3>
-            <button onclick="toggleOrbitalControls()" title="Close orbital visualization panel">Close</button>
-        </div>
-        <div class="homo-lumo-controls">
-            <button onclick="showHOMO()" title="Display the Highest Occupied Molecular Orbital (HOMO)">Show HOMO</button>
-            <button onclick="showLUMO()" title="Display the Lowest Unoccupied Molecular Orbital (LUMO)">Show LUMO</button>
-        </div>
-        <div class="orbital-nav">
-            <button onclick="changeOrbital(-1)" title="Show previous orbital">←</button>
-            <span>Orbital: <span id="currentOrbital">1</span></span>
-            <button onclick="changeOrbital(1)" title="Show next orbital">→</button>
-        </div>
-        <div id="orbitalList"></div>
-        <p>Use arrow keys ↑/↓ to navigate orbitals</p>
-    </div>
-    <div id="editor-panel">
-        <div id="editor-header">
-            <h3>XYZ Editor</h3>
-            <button onclick="hideXYZEditor()" title="Close XYZ editor panel">Close</button>
-        </div>
-        <div class="mode-buttons">
-            <button id="toggle-edit-mode" onclick="toggleEditMode()" title="Toggle between selection and text edit modes">Switch to Edit Mode</button>
-        </div>
-        <div id="xyz-content"></div>
-        <textarea id="xyz-content-edit" class="xyz-editor"></textarea>
-        <div class="action-buttons">
-            <button onclick="updateStructure()" title="Update molecular structure with current XYZ coordinates">Update Structure</button>
-            <button onclick="optimizeStructure()" title="Optimize molecular geometry using built-in force field">Optimize Structure</button>
-            <button onclick="saveXYZ()" title="Save current coordinates as XYZ file">Save XYZ File</button>
-        </div>
-    </div>
-    <div id="elemcoPanel">
-        <div id="elemco-header">
-            <div style="display: flex; align-items: center;">
-                <img src="build/elemco_logo.png" alt="ElemCo.jl">
-                <h3>ElemCo.jl Input</h3>
-            </div>
-            <button onclick="hideElemCoPanel()" title="Close ElemCo.jl input panel">Close</button>
-        </div>
-        <div class="elemco-input-group">
-            <label for="elemco-method">Method:</label>
-            <div class="method-df-line">
-                <select id="elemco-method">
-                    <option value="HF">HF</option>
-                    <option value="MP2">MP2</option>
-                    <option value="DCSD" selected>DCSD</option>
-                    <option value="CCSD(T)">CCSD(T)</option>
-                    <option value="CCSDT">CCSDT</option>
-                    <option value="DC-CCSDT">DC-CCSDT</option>
-                </select>
-                <label class="df-toggle-label" for="elemco-df">
-                    <input type="checkbox" id="elemco-df" onchange="updateMethodOptions()">
-                    DF
-                </label>
-            </div>
-        </div>
-        <div class="elemco-input-group">
-            <label for="elemco-basis">AO Basis Set:</label>
-            <select id="elemco-basis">
-                <option value="cc-pVDZ" selected>cc-pVDZ</option>
-                <option value="cc-pVTZ">cc-pVTZ</option>
-                <option value="aug-cc-pVDZ">aug-cc-pVDZ</option>
-                <option value="aug-cc-pVTZ">aug-cc-pVTZ</option>
-            </select>
-        </div>
-        <div class="elemco-input-group">
-            <label for="elemco-jkfit">JKfit Basis:</label>
-            <select id="elemco-jkfit">
-                <option value="auto" selected>Auto (Based on AO)</option>
-                <option value="cc-pVDZ-jkfit">cc-pVDZ-jkfit</option>
-                <option value="cc-pVTZ-jkfit">cc-pVTZ-jkfit</option>
-                <option value="cc-pVQZ-jkfit">cc-pVQZ-jkfit</option>
-                <option value="cc-pV5Z-jkfit">cc-pV5Z-jkfit</option>
-                <option value="def2-universal-jkfit">def2-universal-jkfit</option>
-            </select>
-        </div>
-        <div class="elemco-input-group">
-            <label for="elemco-mpfit">MPfit Basis:</label>
-            <select id="elemco-mpfit">
-                <option value="auto" selected>Auto (Based on AO)</option>
-                <option value="cc-pVDZ-mpfit">cc-pVDZ-mpfit</option>
-                <option value="cc-pVTZ-mpfit">cc-pVTZ-mpfit</option>
-                <option value="cc-pVQZ-mpfit">cc-pVQZ-mpfit</option>
-                <option value="aug-cc-pVDZ-mpfit">aug-cc-pVDZ-mpfit</option>
-                <option value="aug-cc-pVTZ-mpfit">aug-cc-pVTZ-mpfit</option>
-                <option value="aug-cc-pVQZ-mpfit">aug-cc-pVQZ-mpfit</option>
-            </select>
-        </div>
-        <div class="charge-multiplicity-group">
-            <div class="charge-multiplicity-item">
-                <label for="elemco-charge">Charge:</label>
-                <input type="number" id="elemco-charge" value="0" min="-99" max="99">
-            </div>
-            <div class="charge-multiplicity-item">
-                <label for="elemco-multiplicity">Multiplicity:</label>
-                <input type="number" id="elemco-multiplicity" value="0" min="0" max="99">
-            </div>
-        </div>
-        <div class="elemco-input-group vertical">
-            <div style="margin-bottom: 8px;">
-                <a href="https://elem.co.il" target="_blank" rel="noopener noreferrer">Documentation →</a>
-            </div>
-            <label for="elemco-input">Input Editor:</label>
-            <textarea id="elemco-input"></textarea>
-            <div class="preview-note">Note: Changes to parameters will update this editor. You can also edit directly.</div>
-        </div>
-        <div class="action-buttons">
-            <button onclick="generateElemCoInput()" title="Reset input to default settings">Reset Input</button>
-            <button onclick="copyElemCoInput()" title="Copy input text to clipboard">Copy to Clipboard</button>
-        </div>
-    </div>
+    <script>
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Add scroll effect to navigation
+        window.addEventListener('scroll', function() {
+            const nav = document.querySelector('nav');
+            if (window.scrollY > 100) {
+                nav.style.background = 'rgba(255, 255, 255, 0.98)';
+            } else {
+                nav.style.background = 'rgba(255, 255, 255, 0.95)';
+            }
+        });
+
+        // Intersection Observer for animations
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver(function(entries) {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+
+        // Observe feature cards for animation
+        document.querySelectorAll('.feature-card').forEach(card => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(30px)';
+            card.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+            observer.observe(card);
+        });
+
+        // Add loading state to download buttons
+        document.querySelectorAll('.download-card .btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const originalText = this.innerHTML;
+                this.innerHTML = '<span>⏳</span> Redirecting...';
+                setTimeout(() => {
+                    this.innerHTML = originalText;
+                }, 2000);
+            });
+        });
+    </script>
 </body>
 </html>

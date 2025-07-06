@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://jlmol.com/sitemap.xml
+
+# Crawl delay (optional)
+Crawl-delay: 1
+
+# Disallow specific paths if needed (none for now)
+# Disallow: /admin/
+# Disallow: /private/
