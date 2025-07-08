@@ -967,6 +967,85 @@
             -webkit-user-select: none;
             user-select: none;
         }
+
+        .preference-section {
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            background: #f9f9f9;
+        }
+
+        .preference-section h4 {
+            margin: 0 0 10px 0;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .preference-item {
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .preference-label {
+            min-width: 120px;
+            font-size: 13px;
+            color: #555;
+        }
+
+        .preference-select, .preference-input {
+            flex: 1;
+            padding: 4px 8px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            font-size: 13px;
+        }
+
+        .preference-input {
+            min-width: 150px;
+        }
+
+        .preference-checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .preference-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+            padding-top: 10px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .preference-save-button, .preference-reset-button, .preference-close-button {
+            padding: 6px 12px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            background: #f5f5f5;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .preference-save-button {
+            background: #4CAF50;
+            color: white;
+            border-color: #45a049;
+        }
+
+        .preference-save-button:hover {
+            background: #45a049;
+        }
+
+        .preference-reset-button:hover, .preference-close-button:hover {
+            background: #e0e0e0;
+        }
     </style>
     <script type="text/javascript">
         var jmolApplet0;
@@ -3390,31 +3469,35 @@ ${xyzData.trim()}
             
             const outputTextarea = document.getElementById('julia-output');
             
+            // Get the configured Julia command from user preferences
+            const prefs = getPreferences();
+            const juliaCommand = prefs.juliaCommand || 'julia';
+            
             try {
                 // Create temporary file for Julia code
                 const tempDir = os.tmpdir();
                 const tempFile = path.join(tempDir, `jlmol_calculation_${Date.now()}.jl`);
                 fs.writeFileSync(tempFile, juliaCode);
                 
-                outputTextarea.value = `=== JLMol Julia Calculation ===\nTimestamp: ${new Date().toISOString()}\nTemporary file: ${tempFile}\nJulia command: julia "${tempFile}"\n\n--- Starting calculation ---\n`;
+                outputTextarea.value = `=== JLMol Julia Calculation ===\nTimestamp: ${new Date().toISOString()}\nJulia command: ${juliaCommand}\nTemporary file: ${tempFile}\nFull command: ${juliaCommand} "${tempFile}"\n\n--- Starting calculation ---\n`;
                 document.getElementById('status').innerHTML = 'Starting Julia process...';
                 
                 // Check if Julia is available first
-                const juliaCheck = spawn('julia', ['--version'], { stdio: ['pipe', 'pipe', 'pipe'] });
+                const juliaCheck = spawn(juliaCommand, ['--version'], { stdio: ['pipe', 'pipe', 'pipe'] });
                 
                 juliaCheck.on('error', (error) => {
-                    throw new Error(`Julia not found in PATH: ${error.message}\n\nPlease install Julia and ensure it's accessible from command line.`);
+                    throw new Error(`Julia not found at "${juliaCommand}": ${error.message}\n\nPlease check your Julia command in Settings or install Julia and ensure it's accessible from command line.`);
                 });
                 
                 juliaCheck.on('close', (code) => {
                     if (code !== 0) {
-                        throw new Error(`Julia version check failed with code ${code}`);
+                        throw new Error(`Julia version check failed with code ${code} for command "${juliaCommand}"`);
                     }
                     
                     // Julia is available, proceed with calculation
                     document.getElementById('status').innerHTML = 'Julia found, executing calculation...';
                     
-                    const juliaProcess = spawn('julia', [tempFile], {
+                    const juliaProcess = spawn(juliaCommand, [tempFile], {
                         cwd: process.cwd(),
                         stdio: ['pipe', 'pipe', 'pipe'],
                         timeout: 300000 // 5 minute timeout
@@ -3476,7 +3559,7 @@ ${xyzData.trim()}
                 });
                 
             } catch (error) {
-                outputTextarea.value = `=== EXECUTION ERROR ===\n${error.message}\n\nTroubleshooting:\n1. Install Julia from https://julialang.org/downloads/\n2. Add Julia to your system PATH\n3. Install ElemCo.jl package:\n   julia> import Pkg; Pkg.add("ElemCo")\n4. Verify installation by running 'julia --version' in terminal\n5. Ensure you have write permissions to temp directory\n\nFor more help, see: https://docs.julialang.org/en/v1/manual/getting-started/`;
+                outputTextarea.value = `=== EXECUTION ERROR ===\n${error.message}\n\nTroubleshooting:\n1. Install Julia from https://julialang.org/downloads/\n2. Add Julia to your system PATH or configure the correct path in Settings\n3. Current Julia command: "${prefs.juliaCommand}"\n4. Install ElemCo.jl package:\n   ${prefs.juliaCommand}> import Pkg; Pkg.add("ElemCo")\n5. Verify installation by running '${prefs.juliaCommand} --version' in terminal\n6. Ensure you have write permissions to temp directory\n\nFor more help, see: https://docs.julialang.org/en/v1/manual/getting-started/`;
                 document.getElementById('status').innerHTML = 'Julia execution failed - see output for troubleshooting';
             }
         }
@@ -3577,7 +3660,8 @@ and eliminates the need for manual steps.`;
             defaultBasisSet: 'cc-pVDZ',
             defaultMethod: 'HF',
             saveWindowPositions: true,
-            autoLoadLastMolecule: false
+            autoLoadLastMolecule: false,
+            juliaCommand: 'julia'
         };
         
         // Load preferences from localStorage
@@ -3717,6 +3801,9 @@ and eliminates the need for manual steps.`;
             
             const autoLoadCheckbox = document.getElementById('pref-auto-load');
             if (autoLoadCheckbox) autoLoadCheckbox.checked = prefs.autoLoadLastMolecule;
+            
+            const juliaCommandInput = document.getElementById('pref-julia-command');
+            if (juliaCommandInput) juliaCommandInput.value = prefs.juliaCommand;
         }
         
         // Save preferences from UI
@@ -3741,6 +3828,9 @@ and eliminates the need for manual steps.`;
             
             const autoLoadCheckbox = document.getElementById('pref-auto-load');
             if (autoLoadCheckbox) prefs.autoLoadLastMolecule = autoLoadCheckbox.checked;
+            
+            const juliaCommandInput = document.getElementById('pref-julia-command');
+            if (juliaCommandInput) prefs.juliaCommand = juliaCommandInput.value.trim() || 'julia';
             
             // Save to storage
             window.userPreferences = prefs;
@@ -4016,6 +4106,10 @@ and eliminates the need for manual steps.`;
         
         <div class="preference-section">
             <h4>Application Settings</h4>
+            <div class="preference-item">
+                <label class="preference-label">Julia command:</label>
+                <input type="text" id="pref-julia-command" class="preference-input" placeholder="julia" title="Path to Julia executable (e.g., julia, /usr/local/bin/julia, or julia.exe)">
+            </div>
             <div class="preference-item">
                 <label class="preference-checkbox-label">
                     <input type="checkbox" id="pref-save-positions">
