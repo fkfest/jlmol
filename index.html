@@ -909,7 +909,7 @@
             padding: 4px 8px;
             background: #f5f5f5;
             border-radius: 4px;
-            text-align: center;
+            cursor: pointer;
         }
 
         /* Julia output section styles */
@@ -936,6 +936,36 @@
             outline: none;
             border-color: #4CAF50;
             box-shadow: 0 0 3px rgba(76, 175, 80, 0.3);
+        }
+
+        #preferencesPanel {
+            position: fixed;
+            width: 400px;
+            padding: 10px;
+            display: none;
+            background: white;
+            border: 1px solid #ccc;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 9999;
+            top: 140px;
+            left: 140px;
+            resize: both;
+            overflow: auto;
+            min-width: 300px;
+            min-height: 300px;
+        }
+
+        #preferences-header {
+            cursor: move;
+            padding: 10px;
+            background: #f0f0f0;
+            margin: -10px -10px 10px -10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #ccc;
+            -webkit-user-select: none;
+            user-select: none;
         }
     </style>
     <script type="text/javascript">
@@ -2537,8 +2567,12 @@
                 document.getElementById('elemcoPanel'),
                 document.getElementById('elemco-header')
             );
+            makeDraggable(
+                document.getElementById('preferencesPanel'),
+                document.getElementById('preferences-header')
+            );
         }
-        
+
         // Add page zoom functionality
         let controlsZoom = 100;
         
@@ -3444,7 +3478,6 @@ ${xyzData.trim()}
             } catch (error) {
                 outputTextarea.value = `=== EXECUTION ERROR ===\n${error.message}\n\nTroubleshooting:\n1. Install Julia from https://julialang.org/downloads/\n2. Add Julia to your system PATH\n3. Install ElemCo.jl package:\n   julia> import Pkg; Pkg.add("ElemCo")\n4. Verify installation by running 'julia --version' in terminal\n5. Ensure you have write permissions to temp directory\n\nFor more help, see: https://docs.julialang.org/en/v1/manual/getting-started/`;
                 document.getElementById('status').innerHTML = 'Julia execution failed - see output for troubleshooting';
-                throw error;
             }
         }
         
@@ -3528,7 +3561,207 @@ and eliminates the need for manual steps.`;
                 setTimeout(initElemCoPanel, 500); // Delay to ensure DOM is ready
                 setTimeout(updateInputPlaceholder, 200); // Initialize placeholder text
                 setTimeout(setupDatabaseInputHandlers, 300); // Ensure dropdown handlers are set up
+                
+                // Initialize user preferences
+                setTimeout(() => {
+                    initPreferences();
+                }, 400);
             });
+        }
+        
+        // User Preferences System - Core Functions
+        const DEFAULT_PREFERENCES = {
+            theme: 'default',
+            autoSpin: false,
+            defaultDisplayMode: 'ball&stick',
+            defaultBasisSet: 'cc-pVDZ',
+            defaultMethod: 'HF',
+            saveWindowPositions: true,
+            autoLoadLastMolecule: false
+        };
+        
+        // Load preferences from localStorage
+        function loadPreferences() {
+            try {
+                const saved = localStorage.getItem('jlmol-preferences');
+                if (saved) {
+                    return { ...DEFAULT_PREFERENCES, ...JSON.parse(saved) };
+                }
+            } catch (error) {
+                console.warn('Error loading preferences:', error);
+            }
+            return { ...DEFAULT_PREFERENCES };
+        }
+        
+        // Save preferences to localStorage
+        function savePreferences(preferences) {
+            try {
+                localStorage.setItem('jlmol-preferences', JSON.stringify(preferences));
+                document.getElementById('status').innerHTML = 'Preferences saved';
+                return true;
+            } catch (error) {
+                console.error('Error saving preferences:', error);
+                document.getElementById('status').innerHTML = 'Error saving preferences';
+                return false;
+            }
+        }
+        
+        // Get current preferences
+        function getPreferences() {
+            return window.userPreferences || loadPreferences();
+        }
+        
+        // Update a specific preference
+        function updatePreference(key, value) {
+            const preferences = getPreferences();
+            preferences[key] = value;
+            window.userPreferences = preferences;
+            savePreferences(preferences);
+        }
+        
+        // Initialize preferences
+        function initPreferences() {
+            // Load preferences
+            window.userPreferences = loadPreferences();
+            
+            // Apply preferences
+            applyPreferences();
+            
+            console.log('User preferences initialized');
+        }
+        
+        // Apply preferences to current UI state
+        function applyPreferences() {
+            const prefs = getPreferences();
+            
+            // Apply auto-spin preference if enabled
+            if (prefs.autoSpin && !isSpinning) {
+                toggleSpin();
+            }
+            
+            // Apply display mode if set
+            if (prefs.defaultDisplayMode) {
+                // Use existing display mode functions if they're compatible
+                try {
+                    // Only set if current mode doesn't match preference
+                    if (displayMode !== prefs.defaultDisplayMode) {
+                        // This should use existing functionality instead of directly setting
+                        console.log('Applying preferred display mode:', prefs.defaultDisplayMode);
+                        // Will implement integration with existing display mode later
+                    }
+                } catch (e) {
+                    console.warn('Could not apply display mode preference:', e);
+                }
+            }
+            
+            // Apply default basis set to ElemCo panel
+            try {
+                const basisSelect = document.getElementById('elemco-basis');
+                if (basisSelect && prefs.defaultBasisSet) {
+                    basisSelect.value = prefs.defaultBasisSet;
+                }
+                
+                // Apply default method to ElemCo panel
+                const methodSelect = document.getElementById('elemco-method');
+                if (methodSelect && prefs.defaultMethod) {
+                    methodSelect.value = prefs.defaultMethod;
+                }
+                
+                // Update ElemCo input with these preferences
+                if ((basisSelect || methodSelect) && typeof updateElemCoInput === 'function') {
+                    updateElemCoInput();
+                }
+            } catch (e) {
+                console.warn('Could not apply ElemCo preferences:', e);
+            }
+        }
+        
+        // Show preferences panel
+        function showPreferencesPanel() {
+            const panel = document.getElementById('preferencesPanel');
+            if (panel) {
+                panel.style.display = 'block';
+                // Reset transform to avoid it appearing in a strange location if previously dragged
+                panel.style.transform = 'translate(0px, 0px)';
+                loadPreferencesIntoUI();
+            }
+        }
+        
+        // Hide preferences panel
+        function hidePreferencesPanel() {
+            const panel = document.getElementById('preferencesPanel');
+            if (panel) {
+                panel.style.display = 'none';
+            }
+        }
+        
+        // Load current preferences into the UI
+        function loadPreferencesIntoUI() {
+            const prefs = getPreferences();
+            
+            // Load each preference into corresponding UI element
+            const autoSpinCheckbox = document.getElementById('pref-auto-spin');
+            if (autoSpinCheckbox) autoSpinCheckbox.checked = prefs.autoSpin;
+            
+            const displayModeSelect = document.getElementById('pref-display-mode');
+            if (displayModeSelect) displayModeSelect.value = prefs.defaultDisplayMode;
+            
+            const basisSetSelect = document.getElementById('pref-basis-set');
+            if (basisSetSelect) basisSetSelect.value = prefs.defaultBasisSet;
+            
+            const methodSelect = document.getElementById('pref-method');
+            if (methodSelect) methodSelect.value = prefs.defaultMethod;
+            
+            const savePositionsCheckbox = document.getElementById('pref-save-positions');
+            if (savePositionsCheckbox) savePositionsCheckbox.checked = prefs.saveWindowPositions;
+            
+            const autoLoadCheckbox = document.getElementById('pref-auto-load');
+            if (autoLoadCheckbox) autoLoadCheckbox.checked = prefs.autoLoadLastMolecule;
+        }
+        
+        // Save preferences from UI
+        function savePreferencesFromUI() {
+            const prefs = getPreferences();
+            
+            // Read values from UI elements
+            const autoSpinCheckbox = document.getElementById('pref-auto-spin');
+            if (autoSpinCheckbox) prefs.autoSpin = autoSpinCheckbox.checked;
+            
+            const displayModeSelect = document.getElementById('pref-display-mode');
+            if (displayModeSelect) prefs.defaultDisplayMode = displayModeSelect.value;
+            
+            const basisSetSelect = document.getElementById('pref-basis-set');
+            if (basisSetSelect) prefs.defaultBasisSet = basisSetSelect.value;
+            
+            const methodSelect = document.getElementById('pref-method');
+            if (methodSelect) prefs.defaultMethod = methodSelect.value;
+            
+            const savePositionsCheckbox = document.getElementById('pref-save-positions');
+            if (savePositionsCheckbox) prefs.saveWindowPositions = savePositionsCheckbox.checked;
+            
+            const autoLoadCheckbox = document.getElementById('pref-auto-load');
+            if (autoLoadCheckbox) prefs.autoLoadLastMolecule = autoLoadCheckbox.checked;
+            
+            // Save to storage
+            window.userPreferences = prefs;
+            savePreferences(prefs);
+            
+            // Apply preferences immediately
+            applyPreferences();
+            
+            // Hide panel after saving
+            hidePreferencesPanel();
+        }
+        
+        // Reset preferences to defaults
+        function resetPreferencesToDefaults() {
+            if (confirm('Reset all preferences to default values?')) {
+                window.userPreferences = { ...DEFAULT_PREFERENCES };
+                savePreferences(window.userPreferences);
+                loadPreferencesIntoUI();
+                applyPreferences();
+                document.getElementById('status').innerHTML = 'Preferences reset to defaults';
+            }
         }
     </script>
 </head>
@@ -3600,9 +3833,9 @@ and eliminates the need for manual steps.`;
                 <button id="dragMinButton" class="toggle-button" onclick="toggleDragMinimize()" title="Toggle 3D manipulation mode with energy minimization">3D</button>
                 <button id="toggle2D3DButton" onclick="toggle2D3D()" title="Switch between 2D and 3D molecular editors">2D Editor</button>
             </div>
-
-            <div class="console-container">
+            <div class="control-line">
                 <button onclick="Jmol.script(jmolApplet0, 'console')" class="console-button" title="Open JSmol scripting console">Console</button>
+                <button onclick="showPreferencesPanel()" class="console-button" title="Open user preferences">⚙️Settings</button>
             </div>
             <div class="elemco-container">
                 <button id="elemcoButton" onclick="showElemCoPanel()">
@@ -3665,7 +3898,7 @@ and eliminates the need for manual steps.`;
                 </select>
                 <label class="df-toggle-label" for="elemco-df">
                     <input type="checkbox" id="elemco-df" onchange="updateMethodOptions()">
-                    DF
+                    <span>DF</span>
                 </label>
             </div>
         </div>
@@ -3733,6 +3966,73 @@ and eliminates the need for manual steps.`;
             <div class="action-buttons">
                 <button onclick="clearJuliaOutput()" title="Clear calculation output">Clear Output</button>
             </div>
+        </div>
+    </div>
+    <div id="preferencesPanel">
+        <div id="preferences-header">
+            <h3>⚙️ User Preferences</h3>
+            <button onclick="hidePreferencesPanel()" title="Close preferences panel" class="preference-close-button">Close</button>
+        </div>
+        
+        <div class="preference-section">
+            <h4>Display Settings</h4>
+            <div class="preference-item">
+                <label class="preference-checkbox-label">
+                    <input type="checkbox" id="pref-auto-spin">
+                    <span>Auto-spin molecules when loaded</span>
+                </label>
+            </div>
+            <div class="preference-item">
+                <label class="preference-label">Default display mode:</label>
+                <select id="pref-display-mode" class="preference-select">
+                    <option value="ball&stick">Ball & Stick</option>
+                    <option value="wireframe">Wireframe</option>
+                    <option value="spacefill">Spacefill</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="preference-section">
+            <h4>ElemCo.jl Defaults</h4>
+            <div class="preference-item">
+                <label class="preference-label">Default basis set:</label>
+                <select id="pref-basis-set" class="preference-select">
+                    <option value="cc-pVDZ">cc-pVDZ</option>
+                    <option value="cc-pVTZ">cc-pVTZ</option>
+                    <option value="aug-cc-pVDZ">aug-cc-pVDZ</option>
+                    <option value="aug-cc-pVTZ">aug-cc-pVTZ</option>
+                </select>
+            </div>
+            <div class="preference-item">
+                <label class="preference-label">Default method:</label>
+                <select id="pref-method" class="preference-select">
+                    <option value="HF">HF</option>
+                    <option value="MP2">MP2</option>
+                    <option value="DCSD">DCSD</option>
+                    <option value="CCSD(T)">CCSD(T)</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="preference-section">
+            <h4>Application Settings</h4>
+            <div class="preference-item">
+                <label class="preference-checkbox-label">
+                    <input type="checkbox" id="pref-save-positions">
+                    <span>Remember window positions</span>
+                </label>
+            </div>
+            <div class="preference-item">
+                <label class="preference-checkbox-label">
+                    <input type="checkbox" id="pref-auto-load">
+                    <span>Auto-load last molecule on startup</span>
+                </label>
+            </div>
+        </div>
+        
+        <div class="preference-buttons">
+            <button onclick="resetPreferencesToDefaults()" class="preference-reset-button">Reset to Defaults</button>
+            <button onclick="savePreferencesFromUI()" class="preference-save-button">Save Preferences</button>
         </div>
     </div>
 </body>
