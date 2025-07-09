@@ -3474,16 +3474,53 @@ ${xyzData.trim()}
             const juliaCommand = prefs.juliaCommand || 'julia';
             
             try {
+                // Parse Julia command to handle WSL and other complex commands
+                const commandParts = juliaCommand.trim().split(/\s+/);
+                const isWSL = commandParts[0].toLowerCase() === 'wsl';
+                
                 // Create temporary file for Julia code
                 const tempDir = os.tmpdir();
                 const tempFile = path.join(tempDir, `jlmol_calculation_${Date.now()}.jl`);
                 fs.writeFileSync(tempFile, juliaCode);
                 
-                outputTextarea.value = `=== JLMol Julia Calculation ===\nTimestamp: ${new Date().toISOString()}\nJulia command: ${juliaCommand}\nTemporary file: ${tempFile}\nFull command: ${juliaCommand} "${tempFile}"\n\n--- Starting calculation ---\n`;
+                // For WSL, convert Windows path to WSL path
+                let filePathForCommand = tempFile;
+                if (isWSL) {
+                    // Convert Windows path to WSL path format
+                    // e.g., C:\Users\... -> /mnt/c/Users/...
+                    filePathForCommand = tempFile.replace(/^([A-Z]):\\/, '/mnt/$1/').replace(/\\/g, '/').toLowerCase();
+                }
+                
+                outputTextarea.value = `=== JLMol Julia Calculation ===\nTimestamp: ${new Date().toISOString()}\nJulia command: ${juliaCommand}\nTemporary file: ${tempFile}\n${isWSL ? `WSL path: ${filePathForCommand}\n` : ''}Full command: ${juliaCommand} "${filePathForCommand}"\n\n--- Starting calculation ---\n`;
                 document.getElementById('status').innerHTML = 'Starting Julia process...';
                 
+                // Prepare command and arguments for version check
+                let baseCommand, versionCheckArgs;
+                if (isWSL) {
+                    baseCommand = 'wsl';
+                    // Find where 'julia' appears in the command parts
+                    const juliaIndex = commandParts.findIndex(part => part.toLowerCase() === 'julia');
+                    if (juliaIndex > 0) {
+                        // WSL has arguments like: wsl --shell-type login julia
+                        const wslArgs = commandParts.slice(1, juliaIndex); // e.g., ['--shell-type', 'login']
+                        versionCheckArgs = [...wslArgs, 'julia', '--version'];
+                    } else {
+                        // Simple case: wsl julia
+                        versionCheckArgs = ['julia', '--version'];
+                    }
+                } else if (commandParts.length > 1) {
+                    baseCommand = commandParts[0];
+                    versionCheckArgs = [...commandParts.slice(1), '--version'];
+                } else {
+                    baseCommand = juliaCommand;
+                    versionCheckArgs = ['--version'];
+                }
+                
                 // Check if Julia is available first
-                const juliaCheck = spawn(juliaCommand, ['--version'], { stdio: ['pipe', 'pipe', 'pipe'] });
+                const juliaCheck = spawn(baseCommand, versionCheckArgs, { 
+                    stdio: ['pipe', 'pipe', 'pipe'],
+                    shell: isWSL ? false : true
+                });
                 
                 juliaCheck.on('error', (error) => {
                     throw new Error(`Julia not found at "${juliaCommand}": ${error.message}\n\nPlease check your Julia command in Settings or install Julia and ensure it's accessible from command line.`);
@@ -3497,10 +3534,29 @@ ${xyzData.trim()}
                     // Julia is available, proceed with calculation
                     document.getElementById('status').innerHTML = 'Julia found, executing calculation...';
                     
-                    const juliaProcess = spawn(juliaCommand, [tempFile], {
+                    // Prepare arguments for actual execution
+                    let execArgs;
+                    if (isWSL) {
+                        const juliaIndex = commandParts.findIndex(part => part.toLowerCase() === 'julia');
+                        if (juliaIndex > 0) {
+                            // WSL has arguments like: wsl --shell-type login julia file.jl
+                            const wslArgs = commandParts.slice(1, juliaIndex); // e.g., ['--shell-type', 'login']
+                            execArgs = [...wslArgs, 'julia', filePathForCommand];
+                        } else {
+                            // Simple case: wsl julia file.jl
+                            execArgs = ['julia', filePathForCommand];
+                        }
+                    } else if (commandParts.length > 1) {
+                        execArgs = [...commandParts.slice(1), tempFile];
+                    } else {
+                        execArgs = [tempFile];
+                    }
+                    
+                    const juliaProcess = spawn(baseCommand, execArgs, {
                         cwd: process.cwd(),
                         stdio: ['pipe', 'pipe', 'pipe'],
-                        timeout: 300000 // 5 minute timeout
+                        timeout: 300000, // 5 minute timeout
+                        shell: isWSL ? false : true
                     });
                     
                     let output = '';
@@ -3559,7 +3615,10 @@ ${xyzData.trim()}
                 });
                 
             } catch (error) {
-                outputTextarea.value = `=== EXECUTION ERROR ===\n${error.message}\n\nTroubleshooting:\n1. Install Julia from https://julialang.org/downloads/\n2. Add Julia to your system PATH or configure the correct path in Settings\n3. Current Julia command: "${prefs.juliaCommand}"\n4. Install ElemCo.jl package:\n   ${prefs.juliaCommand}> import Pkg; Pkg.add("ElemCo")\n5. Verify installation by running '${prefs.juliaCommand} --version' in terminal\n6. Ensure you have write permissions to temp directory\n\nFor more help, see: https://docs.julialang.org/en/v1/manual/getting-started/`;
+                const isWSL = prefs.juliaCommand && prefs.juliaCommand.trim().toLowerCase().startsWith('wsl');
+                const wslTroubleshooting = isWSL ? `\n\nWSL-specific troubleshooting:\n- Ensure WSL is installed and configured\n- Verify Julia is installed in your WSL distribution\n- Try running 'wsl julia --version' in Command Prompt/PowerShell\n- Make sure the WSL distribution has access to the temp directory\n- Consider using the full path to Julia in WSL (e.g., 'wsl /usr/local/bin/julia')` : '';
+                
+                outputTextarea.value = `=== EXECUTION ERROR ===\n${error.message}\n\nTroubleshooting:\n1. Install Julia from https://julialang.org/downloads/\n2. Add Julia to your system PATH or configure the correct path in Settings\n3. Current Julia command: "${prefs.juliaCommand}"\n4. Install ElemCo.jl package:\n   ${prefs.juliaCommand}> import Pkg; Pkg.add("ElemCo")\n5. Verify installation by running '${prefs.juliaCommand} --version' in terminal\n6. Ensure you have write permissions to temp directory${wslTroubleshooting}\n\nFor more help, see: https://docs.julialang.org/en/v1/manual/getting-started/`;
                 document.getElementById('status').innerHTML = 'Julia execution failed - see output for troubleshooting';
             }
         }
@@ -4108,7 +4167,7 @@ and eliminates the need for manual steps.`;
             <h4>Application Settings</h4>
             <div class="preference-item">
                 <label class="preference-label">Julia command:</label>
-                <input type="text" id="pref-julia-command" class="preference-input" placeholder="julia" title="Path to Julia executable (e.g., julia, /usr/local/bin/julia, or julia.exe)">
+                <input type="text" id="pref-julia-command" class="preference-input" placeholder="julia" title="Julia command or path (e.g., julia, /usr/local/bin/julia, julia.exe, or 'wsl julia' for WSL)">
             </div>
             <div class="preference-item">
                 <label class="preference-checkbox-label">
