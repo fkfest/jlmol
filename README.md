@@ -55,13 +55,16 @@ Download: [Latest Release Executables](https://github.com/fkfest/jlmol/releases/
   - Save edited structures
   - Draggable and resizable editor window
 
-### ElemCo.jl Input Generation
+### ElemCo.jl Input Generation and Calculation
 
 - Built-in support for generating ElemCo.jl input files
 - Direct conversion of molecular structures to ElemCo.jl input format
 - Support for common quantum chemistry methods (HF, MP2, CCSD, etc.)
 - Basis set selection
 - Density fitting toggle for supported methods
+- **NEW**: Integrated calculation runner with customizable Julia command support
+- **NEW**: Windows Subsystem for Linux (WSL) support for running calculations
+- **NEW**: User preferences system for persistent settings
 
 ## Troubleshooting
 
@@ -82,6 +85,8 @@ For troubleshooting guides and solutions to common issues, see [Troubleshooting.
   - Native desktop application experience
   - Multi-format file support
   - Structure optimization capabilities
+  - **NEW**: User preferences system with persistent settings
+  - **NEW**: ElemCo.jl calculation runner with WSL support
 
 ## Installation
 
@@ -299,6 +304,102 @@ The application includes built-in support for generating ElemCo.jl input files f
 
 The integration provides a convenient way to prepare quantum chemistry calculations while visualizing the molecular structure. For more information about ElemCo.jl and its capabilities, visit [elem.co.il](https://elem.co.il).
 
+### Running ElemCo.jl Calculations
+
+jlmol now includes an integrated calculation runner that can execute ElemCo.jl calculations directly from the application:
+
+1. **Generate ElemCo.jl Input**: Use the ElemCo.jl integration to create input files
+2. **Configure Julia Command**: Set up your Julia executable path in Settings (see User Preferences below)
+3. **Run Calculation**: Click "Run ElemCo.jl" to execute the calculation
+4. **View Results**: Monitor progress and view calculation output in real-time
+
+#### WSL (Windows Subsystem for Linux) Support
+
+For Windows users running Julia under WSL, jlmol provides seamless integration:
+
+- **Automatic Path Translation**: Temp files are automatically converted to WSL-compatible paths
+- **WSL Command Support**: Configure Julia commands like `wsl julia` or `wsl --shell-type login julia`
+- **Error Handling**: Detailed troubleshooting information for WSL-specific issues
+
+## User Preferences and Settings
+
+jlmol includes a comprehensive settings system that allows you to customize the application behavior and set up calculation environments.
+
+### Accessing Settings
+
+Click the **Settings** button next to the Console button in the main interface to open the preferences panel.
+
+### Available Settings
+
+#### Display Preferences
+
+- **Startup Display Mode**: Choose the default molecular display style (Ball & Stick, Wireframe, etc.)
+- **Spin Animation**: Enable/disable automatic rotation of molecules
+
+#### ElemCo.jl Defaults
+
+- **Default Method**: Set your preferred quantum chemistry method (HF, MP2, CCSD(T), etc.)
+- **Default Basis Set**: Choose your standard basis set for calculations
+- **Density Fitting**: Enable/disable density fitting by default
+
+#### Application Settings
+
+- **Julia Command**: Configure the command used to run Julia for ElemCo.jl calculations
+
+### Julia Command Configuration
+
+The Julia command setting allows you to specify how jlmol should invoke Julia for running ElemCo.jl calculations. This is particularly useful for custom Julia installations or WSL environments.
+
+#### Examples
+
+**Standard Julia Installation:**
+
+```bash
+julia
+```
+
+**Custom Julia Path:**
+
+```bash
+/usr/local/bin/julia
+```
+
+**Windows Subsystem for Linux (WSL):**
+
+```bash
+wsl julia
+```
+
+**WSL with Specific Shell:**
+
+```bash
+wsl --shell-type login julia
+```
+
+**WSL with Distribution:**
+
+```bash
+wsl -d Ubuntu-20.04 julia
+```
+
+#### WSL Setup Instructions
+
+1. **Install Julia in WSL**: Follow standard Julia installation in your WSL distribution
+2. **Verify Julia Works**: Test that `julia` command works in WSL terminal
+3. **Configure jlmol**: Set Julia command to `wsl julia` (or appropriate variant)
+4. **Test Calculation**: Run a simple ElemCo.jl calculation to verify setup
+
+#### Troubleshooting Julia Command
+
+- **Path Issues**: Use full paths if Julia is not in your system PATH
+- **WSL Issues**: Ensure Julia is properly installed and accessible in your WSL environment
+- **Permission Issues**: Check that Julia executable has proper permissions
+- **Network Issues**: Some calculations may require internet access for package downloads
+
+### Settings Persistence
+
+All user preferences are automatically saved and restored between application sessions using local storage.
+
 ## Database Search and Molecule Loading
 
 The application includes comprehensive database search functionality for loading molecular structures directly from online databases.
@@ -323,7 +424,7 @@ PubChem integration allows direct access to over 100 million chemical structures
    - Search by molecular formula
    - Examples: `H2O`, `C2H5OH`
 
-3. **SMILES Search**
+4. **SMILES Search**
    - Use SMILES notation for precise structure specification
    - Examples: `C6H6` (benzene), `CC=O` (acetaldehyde), `CC(=O)OC1=CC=CC=C1C(=O)O` (aspirin)
    - Useful for specific structural queries
@@ -360,7 +461,7 @@ PubChem integration allows direct access to over 100 million chemical structures
 
 - **Connection Issues**: Check internet connectivity if searches fail
 - **Name Not Found**: Try alternative names or systematic nomenclature
-- **SMILES Issues**: 
+- **SMILES Issues**:
   - Auto-detected SMILES searches may return unexpected compounds due to database indexing
   - **Solution**: Click the search type selector on the right and choose "SMILES" for more predictable results
   - Multiple compounds may match the same SMILES pattern
