@@ -30,6 +30,15 @@ function copyElemCoInput() {
     document.getElementById('status').innerHTML = 'Input copied to clipboard';
 }
 
+function runJuliaCalculation() {
+    // This function is defined in index.html and will be called from there
+    if (typeof window.runJuliaCalculation === 'function') {
+        window.runJuliaCalculation();
+    } else {
+        document.getElementById('status').innerHTML = 'Julia calculation function not available';
+    }
+}
+
 // Add event listeners for input changes when the DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     const method = document.getElementById('elemco-method');
