@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **User Preferences System**: Comprehensive settings panel for customizing application behavior
+  - Persistent storage of user preferences using localStorage
+  - Display preferences (startup display mode, spin animation)
+  - ElemCo.jl defaults (method, basis set, density fitting)
+  - Application settings (Julia command configuration)
+- **ElemCo.jl Calculation Runner**: Integrated calculation execution directly from the application
+  - Direct execution of ElemCo.jl calculations from generated input files
+  - Real-time progress monitoring and output display
+  - Automatic temporary file management
+- **Julia Command Customization**: Flexible Julia executable configuration
+  - Support for custom Julia installation paths
+  - Command-line argument support for Julia invocation
+  - Persistent storage of Julia command preferences
+- **Windows Subsystem for Linux (WSL) Support**: Seamless integration with WSL environments
+  - Automatic path translation for Windows temp files to WSL-compatible paths
+  - Support for WSL Julia commands (e.g., `wsl julia`, `wsl --shell-type login julia`)
+  - WSL-specific error handling and troubleshooting guidance
+  - Support for WSL distribution-specific commands
+- **Enhanced Error Handling**: Improved error reporting and troubleshooting
+  - Detailed error messages for calculation failures
+  - WSL-specific troubleshooting information
+  - Julia installation and configuration guidance
+
+### Changed
+
+- **UI Layout**: Moved and renamed "Prefs" button to "Settings" and positioned it next to the "Console" button
+- **Settings Access**: Centralized all user preferences in a single, organized settings panel
+- **ElemCo.jl Workflow**: Enhanced from input generation only to full calculation execution capability
+
+### Fixed
+
+- Improved robustness of Julia command parsing and execution
+- Enhanced error handling for various Julia installation scenarios
+- Better handling of file paths in cross-platform and WSL environments
+
 ## [1.1.0] - 2025-01-10
 
 ### Added
@@ -68,6 +105,7 @@ First stable release with all core features implemented:
 - Export capabilities for structures and visualizations
 
 ### Added
+
 - Integrated ElemCo.jl input generation feature:
   - Support for HF, MP2, DCSD, CCSD(T), CCSDT, and DC-CCSDT methods
   - Density fitting (DF) options for supported methods
@@ -77,11 +115,13 @@ First stable release with all core features implemented:
   - Copy to clipboard functionality
 
 ### Changed
+
 - Renamed application from "JSmol Electron Viewer" to "jlmol"
 
 ## [0.1.4] - 2025-04-24
 
 ### Fixed
+
 - The electron apps are now built correctly
 - Better handling of window resizing
 
