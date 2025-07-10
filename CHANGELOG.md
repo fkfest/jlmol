@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.1] - 2025-07-10
+
+### Added
+
+- Script for running ElemCo.jl calculations remotely on Linux machines via SSH.
+
+### Fixed
+
+- WSL command execution for Julia to correctly handle commands that do not explicitly contain the word "julia" (e.g., using a full path to the executable within WSL).
+
 ## [1.2.0] - 2025-07-09
 
 ### Added
