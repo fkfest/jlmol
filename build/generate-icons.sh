@@ -5,7 +5,7 @@ mkdir -p build/icons
 
 # Generate PNG icons in different sizes from SVG with transparency
 for size in 16 32 48 64 128 256 512 1024; do
-  magick "build/icon_benzene.svg" -background none -resize ${size}x${size} "build/icons/${size}x${size}.png"
+  magick "build/icon.svg" -background none -resize ${size}x${size} "build/icons/${size}x${size}.png"
 done
 
 # Generate Windows .ico file (using only standard Windows icon sizes)
