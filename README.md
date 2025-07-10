@@ -321,6 +321,21 @@ For Windows users running Julia under WSL, jlmol provides seamless integration:
 - **WSL Command Support**: Configure Julia commands like `wsl julia` or `wsl --shell-type login julia`
 - **Error Handling**: Detailed troubleshooting information for WSL-specific issues
 
+#### Remote Execution on Linux Machines
+
+For running calculations on a remote Linux machine, you can use the `runremote` script located in the `scripts` directory. This script uses `ssh` and `scp` to execute the calculation remotely. It works the best if you have a passwordless SSH setup to the remote machine.
+
+1. **Configure the script**: Open `scripts/runremote` and set the following variables at the top of the file:
+   - `REMOTE_USER`: Your username on the remote machine.
+   - `REMOTE_HOST`: The hostname or IP address of the remote machine.
+   - `REMOTE_WORKDIR`: A working directory on the remote machine where calculation files will be stored.
+
+2. **Configure jlmol**: In the jlmol settings, set the Julia command to execute the script. You might need to provide the full path to the script.
+   - On Linux/macOS: `/path/to/jlmol/scripts/runremote julia`
+   - On Windows: `bash /path/to/jlmol/scripts/runremote julia` (if you have bash, e.g. from Git for Windows) or `wsl --shell-type login runremote julia` (if you have WSL configured and runremote is in your PATH)
+
+This setup allows you to leverage more powerful remote resources for your calculations directly from the jlmol interface.
+
 ## User Preferences and Settings
 
 jlmol includes a comprehensive settings system that allows you to customize the application behavior and set up calculation environments.

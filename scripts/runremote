@@ -1,0 +1,27 @@
+#!/bin/bash
+# Usage: runremote <command> <file>
+# This script runs a command on a remote cluster and executes a file on it.
+# It assumes that the user has SSH access to the cluster and that the necessary environment is set up.
+# # Example: runremote julia myscript.jl
+
+REMOTE_USER=$USER  # Set your remote username here
+REMOTE_HOST="SET_YOUR_REMOTE_HOST_HERE"  # e.g., "remote.cluster.edu"
+REMOTE_WORKDIR="/scratch/$REMOTE_USER/runremote" # Set your remote working directory here
+
+# Check if the correct number of arguments is provided
+if [ "$#" -ne 2 ]; then
+    echo "Usage: $0 <command> <file>"
+    exit 1
+fi
+
+# if second argument is a file, copy it to the remote directory
+if [ -f "$2" ]; then
+  scp "$2" $REMOTE_USER@$REMOTE_HOST:$REMOTE_WORKDIR
+  FILENAME=$(basename "$2")
+  ssh $REMOTE_USER@$REMOTE_HOST "$1" $REMOTE_WORKDIR/$FILENAME
+  # remove the file after execution
+  ssh $REMOTE_USER@$REMOTE_HOST "rm -f $REMOTE_WORKDIR/$FILENAME"
+else
+  # if second argument is not a file, just run the command
+  ssh $REMOTE_USER@$REMOTE_HOST "$1" "$2"
+fi

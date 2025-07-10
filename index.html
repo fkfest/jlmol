@@ -463,24 +463,33 @@
         .elemco-input-group.vertical {
             flex-direction: column;
             align-items: stretch;
-            gap: 8px;
+            gap: 4px;
         }
         .elemco-input-group.vertical > * {
             width: 100%;
         }
         .elemco-input-group.vertical label {
             min-width: unset;
-            margin-bottom: 4px;
+            margin-bottom: 8px;
+            font-weight: bold;
         }
         .elemco-input-group.vertical textarea {
             height: 150px;
             min-height: 120px;
             resize: vertical;
+            padding: 8px;
+            font-family: monospace;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin: 0;
         }
         .elemco-input-group.vertical .preview-note {
             margin-top: 8px;
             color: #666;
             font-size: 0.9em;
+            padding: 4px;
+            background-color: #f8f8f8;
+            border-radius: 4px;
         }
         .elemco-input-group input,
         .elemco-input-group select,
@@ -3498,16 +3507,9 @@ ${xyzData.trim()}
                 let baseCommand, versionCheckArgs;
                 if (isWSL) {
                     baseCommand = 'wsl';
-                    // Find where 'julia' appears in the command parts
-                    const juliaIndex = commandParts.findIndex(part => part.toLowerCase() === 'julia');
-                    if (juliaIndex > 0) {
-                        // WSL has arguments like: wsl --shell-type login julia
-                        const wslArgs = commandParts.slice(1, juliaIndex); // e.g., ['--shell-type', 'login']
-                        versionCheckArgs = [...wslArgs, 'julia', '--version'];
-                    } else {
-                        // Simple case: wsl julia
-                        versionCheckArgs = ['julia', '--version'];
-                    }
+                    // The command is something like "wsl -d <distro> julia" or "wsl /path/to/julia"
+                    // commandParts[0] is "wsl", the rest are arguments for wsl.
+                    versionCheckArgs = [...commandParts.slice(1), '--version'];
                 } else if (commandParts.length > 1) {
                     baseCommand = commandParts[0];
                     versionCheckArgs = [...commandParts.slice(1), '--version'];
@@ -3537,15 +3539,9 @@ ${xyzData.trim()}
                     // Prepare arguments for actual execution
                     let execArgs;
                     if (isWSL) {
-                        const juliaIndex = commandParts.findIndex(part => part.toLowerCase() === 'julia');
-                        if (juliaIndex > 0) {
-                            // WSL has arguments like: wsl --shell-type login julia file.jl
-                            const wslArgs = commandParts.slice(1, juliaIndex); // e.g., ['--shell-type', 'login']
-                            execArgs = [...wslArgs, 'julia', filePathForCommand];
-                        } else {
-                            // Simple case: wsl julia file.jl
-                            execArgs = ['julia', filePathForCommand];
-                        }
+                        // The command is something like "wsl -d <distro> julia" or "wsl julia"
+                        // commandParts[0] is "wsl", the rest are arguments for wsl.
+                        execArgs = [...commandParts.slice(1), filePathForCommand];
                     } else if (commandParts.length > 1) {
                         execArgs = [...commandParts.slice(1), tempFile];
                     } else {
