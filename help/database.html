@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JLmol Help - PubChem Database Integration</title>
+    <meta name="description" content="Help page for JLmol's PubChem database integration.">
+    <link rel="stylesheet" href="../styles.css">
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+    <style>
+        body {
+            background: linear-gradient(135deg, #f0f4f8 0%, #e0e7ef 100%);
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px 60px 20px;
+        }
+        .section-title {
+            font-size: 2.7rem;
+            font-weight: 800;
+            color: #4F46E5;
+            margin-bottom: 2.5rem;
+            letter-spacing: -1px;
+            text-align: center;
+        }
+        .help-content {
+            background: #fff;
+            border-radius: 18px;
+            box-shadow: 0 6px 32px rgba(79,70,229,0.08), 0 1.5px 6px rgba(0,0,0,0.04);
+            padding: 2.5rem 2rem 2rem 2rem;
+            margin-bottom: 2rem;
+        }
+        .help-content h3 {
+            color: #6366f1;
+            font-size: 1.35rem;
+            font-weight: 700;
+            margin-top: 2.2rem;
+            margin-bottom: 1rem;
+        }
+        .help-content ul {
+            padding-left: 1.2rem;
+            margin-bottom: 1.5rem;
+        }
+        .help-content li {
+            margin-bottom: 0.7rem;
+            font-size: 1.08rem;
+            color: #374151;
+        }
+        .help-content p {
+            font-size: 1.13rem;
+            color: #374151;
+            margin-bottom: 1.5rem;
+        }
+        .help-content a {
+            color: #4F46E5;
+            text-decoration: underline;
+            transition: color 0.2s;
+        }
+        .help-content a:hover {
+            color: #3730a3;
+        }
+        nav {
+            box-shadow: 0 2px 12px rgba(79,70,229,0.07);
+        }
+        .nav-links a {
+            font-weight: 600;
+            color: #6366f1;
+            border-radius: 6px;
+            padding: 0.4rem 1rem;
+            transition: background 0.2s, color 0.2s;
+        }
+        .nav-links a:hover, .nav-links a.active {
+            background: #eef2ff;
+            color: #3730a3;
+        }
+        @media (max-width: 600px) {
+            .container { padding: 20px 4vw 40px 4vw; }
+            .help-content { padding: 1.2rem 0.7rem; }
+            .section-title { font-size: 2rem; }
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="nav-container">
+            <a href="../index.html" class="logo" style="display: flex; align-items: center; gap: 0.5rem;">
+                <img src="../favicon.svg" alt="JLmol Logo" style="width:32px;height:32px;vertical-align:middle;" />
+                <span style="font-weight: bold; color: #4F46E5; font-size: 1.3rem; letter-spacing: -1px;">JLmol</span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="../index.html#features">Features</a></li>
+                <li><a href="../index.html#news">News</a></li>
+                <li><a href="../index.html#demo">Demo</a></li>
+                <li><a href="../index.html#download">Download</a></li>
+                <li><a href="../help.html">Help</a></li>
+                <li><a href="https://app.jlmol.com" target="_blank" rel="noopener noreferrer">Try Online</a></li>
+                <li><a href="https://github.com/fkfest/jlmol" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+            </ul>
+        </div>
+    </nav>
+    <div class="container" style="padding-top: 120px;">
+        <h1 class="section-title">PubChem Database Integration</h1>
+        <div class="help-content">
+            <p>JLmol integrates a robust PubChem search and retrieval system, allowing you to fetch molecular structures directly from the world's largest open chemical database. The search interface is designed for both speed and flexibility, supporting multiple query types and advanced error handling.</p>
+            <h3>Supported Search Types:</h3>
+            <ul>
+                <li><strong>Compound ID (CID):</strong> Enter a numeric PubChem CID for precise retrieval (e.g., <code>1983</code> for caffeine).</li>
+                <li><strong>Chemical Name:</strong> Use IUPAC, common, or trade names (e.g., <code>aspirin</code>, <code>acetaminophen</code>).</li>
+                <li><strong>Formula:</strong> Input molecular formulas (e.g., <code>C2H5OH</code> for ethanol).</li>
+                <li><strong>SMILES:</strong> Paste SMILES strings for exact structure matches (e.g., <code>CC(=O)O</code> for acetic acid).</li>
+            </ul>
+            <h3>Interface Features:</h3>
+            <ul>
+                <li><strong>Unified Search Field:</strong> Enter any supported query type in a single field. The app auto-detects the type or lets you force a specific mode.</li>
+                <li><strong>Type Selector:</strong> Override auto-detection to force CID, Name, or SMILES search.</li>
+                <li><strong>Quick Load:</strong> Press Enter to instantly fetch and display the molecule.</li>
+                <li><strong>Error Handling:</strong> Clear feedback for network issues, invalid queries, or not found results.</li>
+                <li><strong>Network Robustness:</strong> Handles PubChem downtime or slow responses gracefully.</li>
+            </ul>
+            <h3>Technical Details:</h3>
+            <ul>
+                <li>Uses PubChem PUG REST API for all queries.</li>
+                <li>Automatically parses and converts downloaded structures to supported formats for visualization and editing.</li>
+                <li>Supports batch queries and large molecule retrieval (subject to PubChem limits).</li>
+            </ul>
+            <h3>Best Practices & Troubleshooting:</h3>
+            <ul>
+                <li>Use CID for the most reliable and unambiguous results.</li>
+                <li>If a search fails, try alternate names or SMILES for the same compound.</li>
+                <li>Downloaded structures can be immediately edited or exported in other formats.</li>
+                <li>For very large molecules, consider using a simplified display style for performance.</li>
+            </ul>
+            <h3>References:</h3>
+            <ul>
+                <li><a href="https://pubchem.ncbi.nlm.nih.gov/" target="_blank">PubChem Database</a></li>
+                <li><a href="https://pubchemdocs.ncbi.nlm.nih.gov/pug-rest" target="_blank">PubChem PUG REST API</a></li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

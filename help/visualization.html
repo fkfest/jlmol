@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JLmol Help - Advanced 3D Visualization</title>
+    <meta name="description" content="Help page for JLmol's advanced 3D visualization features.">
+    <link rel="stylesheet" href="../styles.css">
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+    <style>
+        body {
+            background: linear-gradient(135deg, #f0f4f8 0%, #e0e7ef 100%);
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px 60px 20px;
+        }
+        .section-title {
+            font-size: 2.7rem;
+            font-weight: 800;
+            color: #4F46E5;
+            margin-bottom: 2.5rem;
+            letter-spacing: -1px;
+            text-align: center;
+        }
+        .help-content {
+            background: #fff;
+            border-radius: 18px;
+            box-shadow: 0 6px 32px rgba(79,70,229,0.08), 0 1.5px 6px rgba(0,0,0,0.04);
+            padding: 2.5rem 2rem 2rem 2rem;
+            margin-bottom: 2rem;
+        }
+        .help-content h3 {
+            color: #6366f1;
+            font-size: 1.35rem;
+            font-weight: 700;
+            margin-top: 2.2rem;
+            margin-bottom: 1rem;
+        }
+        .help-content ul {
+            padding-left: 1.2rem;
+            margin-bottom: 1.5rem;
+        }
+        .help-content li {
+            margin-bottom: 0.7rem;
+            font-size: 1.08rem;
+            color: #374151;
+        }
+        .help-content p {
+            font-size: 1.13rem;
+            color: #374151;
+            margin-bottom: 1.5rem;
+        }
+        .help-content a {
+            color: #4F46E5;
+            text-decoration: underline;
+            transition: color 0.2s;
+        }
+        .help-content a:hover {
+            color: #3730a3;
+        }
+        nav {
+            box-shadow: 0 2px 12px rgba(79,70,229,0.07);
+        }
+        .nav-links a {
+            font-weight: 600;
+            color: #6366f1;
+            border-radius: 6px;
+            padding: 0.4rem 1rem;
+            transition: background 0.2s, color 0.2s;
+        }
+        .nav-links a:hover, .nav-links a.active {
+            background: #eef2ff;
+            color: #3730a3;
+        }
+        @media (max-width: 600px) {
+            .container { padding: 20px 4vw 40px 4vw; }
+            .help-content { padding: 1.2rem 0.7rem; }
+            .section-title { font-size: 2rem; }
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="nav-container">
+            <a href="../index.html" class="logo" style="display: flex; align-items: center; gap: 0.5rem;">
+                <img src="../favicon.svg" alt="JLmol Logo" style="width:32px;height:32px;vertical-align:middle;" />
+                <span style="font-weight: bold; color: #4F46E5; font-size: 1.3rem; letter-spacing: -1px;">JLmol</span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="../index.html#features">Features</a></li>
+                <li><a href="../index.html#news">News</a></li>
+                <li><a href="../index.html#demo">Demo</a></li>
+                <li><a href="../index.html#download">Download</a></li>
+                <li><a href="../help.html">Help</a></li>
+                <li><a href="https://app.jlmol.com" target="_blank" rel="noopener noreferrer">Try Online</a></li>
+                <li><a href="https://github.com/fkfest/jlmol" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+            </ul>
+        </div>
+    </nav>
+    <div class="container" style="padding-top: 120px;">
+        <h1 class="section-title">Advanced 3D Visualization</h1>
+        <div class="help-content">
+            <p>JLmol provides powerful 3D molecular visualization capabilities powered by JSmol, a JavaScript port of the popular Jmol engine. This enables interactive, high-performance molecular graphics in a native desktop environment, with support for a wide range of chemical data formats and advanced rendering options.</p>
+            <h3>Key Features:</h3>
+            <ul>
+                <li><strong>Multiple Display Styles:</strong> Ball & stick, wireframe, spacefill, sticks, cartoon, and more. Switch styles to highlight different molecular features.</li>
+                <li><strong>Interactive Controls:</strong> Rotate, zoom, and pan using mouse, trackpad, or keyboard shortcuts. Fine-tune the view for presentations or analysis.</li>
+                <li><strong>Spin Animation:</strong> Enable continuous spin for dynamic inspection of molecular geometry.</li>
+                <li><strong>Drag and Drop:</strong> Instantly load local files (XYZ, PDB, MOL, CIF, MOLDEN) by dragging them into the app window.</li>
+                <li><strong>Cross-Platform:</strong> Native experience on Windows, macOS, and Linux, with hardware-accelerated graphics.</li>
+                <li><strong>Real-Time Updates:</strong> Visualization updates live as you edit structures or coordinates.</li>
+                <li><strong>Structure Optimization:</strong> Built-in geometry optimization for imported or edited molecules.</li>
+            </ul>
+            <h3>Supported File Formats & Details:</h3>
+            <ul>
+                <li><strong>XYZ:</strong> Simple atomic coordinate format, ideal for quick viewing and editing.</li>
+                <li><strong>PDB:</strong> Protein Data Bank format, supports biomolecules, chains, and secondary structure rendering (cartoon/ribbon).</li>
+                <li><strong>MOL:</strong> Common for small molecules, supports bond orders and atom types.</li>
+                <li><strong>CIF:</strong> Crystallographic Information File, for crystal structures and symmetry.</li>
+                <li><strong>MOLDEN:</strong> Used for quantum chemistry results, including orbitals and vibrational modes.</li>
+            </ul>
+            <h3>Technical Controls & Shortcuts:</h3>
+            <ul>
+                <li><strong>Mouse:</strong> Left-drag to rotate, right-drag to pan, scroll to zoom.</li>
+                <li><strong>Keyboard:</strong> Arrow keys for rotation, +/- for zoom, spacebar to toggle spin.</li>
+                <li><strong>Display Menu:</strong> Right-click for context menu with style, color, and export options.</li>
+                <li><strong>Export:</strong> Save high-resolution images or export current view as PNG/SVG.</li>
+            </ul>
+            <h3>Performance & Troubleshooting:</h3>
+            <ul>
+                <li>For large biomolecules, use simplified styles (wireframe, cartoon) for better performance.</li>
+                <li>If graphics are slow, check your system's hardware acceleration settings.</li>
+                <li>Some CIF or MOLDEN files may require cleaning or conversion for best results.</li>
+            </ul>
+            <h3>Limitations & Compatibility:</h3>
+            <ul>
+                <li>JSmol engine is highly compatible, but some exotic file features (e.g., nonstandard residues) may not render perfectly.</li>
+                <li>For best results, use standard-compliant files and check the README for known issues.</li>
+            </ul>
+            <h3>Best Practices:</h3>
+            <ul>
+                <li>Optimize structures before visualization for accurate geometry.</li>
+                <li>Use the export feature to create publication-quality images.</li>
+                <li>Combine with the editing suite for a full workflow from sketch to analysis.</li>
+            </ul>
+            <h3>References:</h3>
+            <ul>
+                <li><a href="http://jmol.sourceforge.net/" target="_blank">Jmol Project</a></li>
+                <li><a href="http://jsmol.sourceforge.net/" target="_blank">JSmol Documentation</a></li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

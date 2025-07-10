@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JLmol Help - Structure Editing Suite</title>
+    <meta name="description" content="Help page for JLmol's structure editing suite.">
+    <link rel="stylesheet" href="../styles.css">
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+    <style>
+        body {
+            background: linear-gradient(135deg, #f0f4f8 0%, #e0e7ef 100%);
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px 60px 20px;
+        }
+        .section-title {
+            font-size: 2.7rem;
+            font-weight: 800;
+            color: #4F46E5;
+            margin-bottom: 2.5rem;
+            letter-spacing: -1px;
+            text-align: center;
+        }
+        .help-content {
+            background: #fff;
+            border-radius: 18px;
+            box-shadow: 0 6px 32px rgba(79,70,229,0.08), 0 1.5px 6px rgba(0,0,0,0.04);
+            padding: 2.5rem 2rem 2rem 2rem;
+            margin-bottom: 2rem;
+        }
+        .help-content h3 {
+            color: #6366f1;
+            font-size: 1.35rem;
+            font-weight: 700;
+            margin-top: 2.2rem;
+            margin-bottom: 1rem;
+        }
+        .help-content ul {
+            padding-left: 1.2rem;
+            margin-bottom: 1.5rem;
+        }
+        .help-content li {
+            margin-bottom: 0.7rem;
+            font-size: 1.08rem;
+            color: #374151;
+        }
+        .help-content p {
+            font-size: 1.13rem;
+            color: #374151;
+            margin-bottom: 1.5rem;
+        }
+        .help-content a {
+            color: #4F46E5;
+            text-decoration: underline;
+            transition: color 0.2s;
+        }
+        .help-content a:hover {
+            color: #3730a3;
+        }
+        nav {
+            box-shadow: 0 2px 12px rgba(79,70,229,0.07);
+        }
+        .nav-links a {
+            font-weight: 600;
+            color: #6366f1;
+            border-radius: 6px;
+            padding: 0.4rem 1rem;
+            transition: background 0.2s, color 0.2s;
+        }
+        .nav-links a:hover, .nav-links a.active {
+            background: #eef2ff;
+            color: #3730a3;
+        }
+        @media (max-width: 600px) {
+            .container { padding: 20px 4vw 40px 4vw; }
+            .help-content { padding: 1.2rem 0.7rem; }
+            .section-title { font-size: 2rem; }
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="nav-container">
+            <a href="../index.html" class="logo" style="display: flex; align-items: center; gap: 0.5rem;">
+                <img src="../favicon.svg" alt="JLmol Logo" style="width:32px;height:32px;vertical-align:middle;" />
+                <span style="font-weight: bold; color: #4F46E5; font-size: 1.3rem; letter-spacing: -1px;">JLmol</span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="../index.html#features">Features</a></li>
+                <li><a href="../index.html#news">News</a></li>
+                <li><a href="../index.html#demo">Demo</a></li>
+                <li><a href="../index.html#download">Download</a></li>
+                <li><a href="../help.html">Help</a></li>
+                <li><a href="https://app.jlmol.com" target="_blank" rel="noopener noreferrer">Try Online</a></li>
+                <li><a href="https://github.com/fkfest/jlmol" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+            </ul>
+        </div>
+    </nav>
+    <div class="container" style="padding-top: 120px;">
+        <h1 class="section-title">Structure Editing Suite</h1>
+        <div class="help-content">
+            <p>JLmol features a comprehensive editing suite for both 2D and 3D molecular structures, designed for chemists, educators, and researchers who need precise control and rapid prototyping. The editing tools are tightly integrated with the visualization engine for real-time feedback and seamless workflow.</p>
+            <h3>JSME 2D Editor:</h3>
+            <ul>
+                <li>Draw and edit molecules using a modern, touch-friendly interface.</li>
+                <li>Standard tools: atom/bond placement, ring templates, eraser, clean-up, and undo/redo.</li>
+                <li>Automatic conversion of 2D sketches to 3D coordinates for immediate visualization.</li>
+                <li>Supports copy/paste of SMILES and other formats for rapid structure entry.</li>
+            </ul>
+            <h3>ModelKit 3D Editor:</h3>
+            <ul>
+                <li>Directly manipulate atoms and bonds in 3D space with drag-and-drop.</li>
+                <li>Automatic geometry optimization after each move for realistic structures.</li>
+                <li>Add/delete atoms, change element types, modify bond orders, and create rings.</li>
+                <li>Context menu (right-click) for advanced editing: atom properties, bond types, and more.</li>
+            </ul>
+            <h3>Enhanced XYZ Editor:</h3>
+            <ul>
+                <li>Edit atomic coordinates in a spreadsheet-like interface.</li>
+                <li>Live preview of changes in the 3D viewer as you type.</li>
+                <li>Atom selection, drag-to-reorder, and batch editing supported.</li>
+                <li>Save/export edited structures in multiple formats.</li>
+            </ul>
+            <h3>Technical Details:</h3>
+            <ul>
+                <li>2D/3D editors are synchronized: changes in one are reflected in the other.</li>
+                <li>Geometry optimization uses built-in force fields for rapid minimization.</li>
+                <li>Supports standard valence rules and error checking for chemical validity.</li>
+            </ul>
+            <h3>Best Practices & Troubleshooting:</h3>
+            <ul>
+                <li>Use the 2D editor for quick sketches and the 3D editor for detailed conformational work.</li>
+                <li>Optimize geometry after major edits to avoid unrealistic structures.</li>
+                <li>If a structure fails to optimize, check for valence errors or overlapping atoms.</li>
+                <li>Use the XYZ editor for precise coordinate adjustments or to import data from other sources.</li>
+            </ul>
+            <h3>References:</h3>
+            <ul>
+                <li><a href="https://jsme-editor.github.io/" target="_blank">JSME Editor Documentation</a></li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

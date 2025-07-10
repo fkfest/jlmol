@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JLmol Help - Multi-Format Support</title>
+    <meta name="description" content="Help page for JLmol's multi-format support.">
+    <link rel="stylesheet" href="../styles.css">
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+    <style>
+        body {
+            background: linear-gradient(135deg, #f0f4f8 0%, #e0e7ef 100%);
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px 60px 20px;
+        }
+        .section-title {
+            font-size: 2.7rem;
+            font-weight: 800;
+            color: #4F46E5;
+            margin-bottom: 2.5rem;
+            letter-spacing: -1px;
+            text-align: center;
+        }
+        .help-content {
+            background: #fff;
+            border-radius: 18px;
+            box-shadow: 0 6px 32px rgba(79,70,229,0.08), 0 1.5px 6px rgba(0,0,0,0.04);
+            padding: 2.5rem 2rem 2rem 2rem;
+            margin-bottom: 2rem;
+        }
+        .help-content h3 {
+            color: #6366f1;
+            font-size: 1.35rem;
+            font-weight: 700;
+            margin-top: 2.2rem;
+            margin-bottom: 1rem;
+        }
+        .help-content ul {
+            padding-left: 1.2rem;
+            margin-bottom: 1.5rem;
+        }
+        .help-content li {
+            margin-bottom: 0.7rem;
+            font-size: 1.08rem;
+            color: #374151;
+        }
+        .help-content p {
+            font-size: 1.13rem;
+            color: #374151;
+            margin-bottom: 1.5rem;
+        }
+        .help-content a {
+            color: #4F46E5;
+            text-decoration: underline;
+            transition: color 0.2s;
+        }
+        .help-content a:hover {
+            color: #3730a3;
+        }
+        nav {
+            box-shadow: 0 2px 12px rgba(79,70,229,0.07);
+        }
+        .nav-links a {
+            font-weight: 600;
+            color: #6366f1;
+            border-radius: 6px;
+            padding: 0.4rem 1rem;
+            transition: background 0.2s, color 0.2s;
+        }
+        .nav-links a:hover, .nav-links a.active {
+            background: #eef2ff;
+            color: #3730a3;
+        }
+        @media (max-width: 600px) {
+            .container { padding: 20px 4vw 40px 4vw; }
+            .help-content { padding: 1.2rem 0.7rem; }
+            .section-title { font-size: 2rem; }
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="nav-container">
+            <a href="../index.html" class="logo" style="display: flex; align-items: center; gap: 0.5rem;">
+                <img src="../favicon.svg" alt="JLmol Logo" style="width:32px;height:32px;vertical-align:middle;" />
+                <span style="font-weight: bold; color: #4F46E5; font-size: 1.3rem; letter-spacing: -1px;">JLmol</span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="../index.html#features">Features</a></li>
+                <li><a href="../index.html#news">News</a></li>
+                <li><a href="../index.html#demo">Demo</a></li>
+                <li><a href="../index.html#download">Download</a></li>
+                <li><a href="../help.html">Help</a></li>
+                <li><a href="https://app.jlmol.com" target="_blank" rel="noopener noreferrer">Try Online</a></li>
+                <li><a href="https://github.com/fkfest/jlmol" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+            </ul>
+        </div>
+    </nav>
+    <div class="container" style="padding-top: 120px;">
+        <h1 class="section-title">Multi-Format Support</h1>
+        <div class="help-content">
+            <p>JLmol supports a wide range of chemical file formats for both import and export, making it easy to integrate with other tools and databases. Each format has its own strengths and is suited for different workflows in chemistry and computational research.</p>
+            <h3>Supported Formats & Details:</h3>
+            <ul>
+                <li><strong>XYZ:</strong> Simple text format for atomic coordinates. Fast to load and edit, but lacks bond information.</li>
+                <li><strong>PDB:</strong> Protein Data Bank format, supports biomolecules, chains, and secondary structure. Ideal for proteins and nucleic acids.</li>
+                <li><strong>MOL:</strong> Common for small molecules, includes atom types and bond orders. Widely used in cheminformatics.</li>
+                <li><strong>CIF:</strong> Crystallographic Information File, for crystal structures, symmetry, and unit cell data. Used in solid-state chemistry.</li>
+                <li><strong>MOLDEN:</strong> Quantum chemistry output, includes orbitals and vibrational modes. Required for advanced analysis in JLmol.</li>
+            </ul>
+            <h3>How to Use:</h3>
+            <ul>
+                <li>Load files via the file menu or drag-and-drop. JLmol auto-detects the format and parses accordingly.</li>
+                <li>Edit and save structures in your preferred format for use in other software.</li>
+                <li>Switch between formats to ensure compatibility with your workflow or collaborators.</li>
+            </ul>
+            <h3>Technical Details:</h3>
+            <ul>
+                <li>Automatic format detection based on file extension and content.</li>
+                <li>Preserves as much information as possible when converting between formats, but some data (e.g., PDB chain info) may be lost in simpler formats.</li>
+                <li>Handles large files efficiently, but performance may vary with very large biomolecules or crystals.</li>
+            </ul>
+            <h3>Best Practices & Troubleshooting:</h3>
+            <ul>
+                <li>Use XYZ for quick edits and small molecules, PDB for proteins, and MOLDEN for quantum chemistry results.</li>
+                <li>If a file fails to load, check for formatting errors or try converting to a simpler format.</li>
+                <li>For best results, use standard-compliant files and avoid exotic or proprietary extensions.</li>
+            </ul>
+            <h3>References:</h3>
+            <ul>
+                <li><a href="https://www.iucr.org/resources/cif" target="_blank">CIF Format Reference</a></li>
+                <li><a href="https://www.wwpdb.org/documentation/file-format" target="_blank">PDB Format Reference</a></li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

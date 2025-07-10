@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JLmol Help - ElemCo.jl Integration</title>
+    <meta name="description" content="Help page for JLmol's ElemCo.jl integration.">
+    <link rel="stylesheet" href="../styles.css">
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+    <style>
+        body {
+            background: linear-gradient(135deg, #f0f4f8 0%, #e0e7ef 100%);
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px 60px 20px;
+        }
+        .section-title {
+            font-size: 2.7rem;
+            font-weight: 800;
+            color: #4F46E5;
+            margin-bottom: 2.5rem;
+            letter-spacing: -1px;
+            text-align: center;
+        }
+        .help-content {
+            background: #fff;
+            border-radius: 18px;
+            box-shadow: 0 6px 32px rgba(79,70,229,0.08), 0 1.5px 6px rgba(0,0,0,0.04);
+            padding: 2.5rem 2rem 2rem 2rem;
+            margin-bottom: 2rem;
+        }
+        .help-content h3 {
+            color: #6366f1;
+            font-size: 1.35rem;
+            font-weight: 700;
+            margin-top: 2.2rem;
+            margin-bottom: 1rem;
+        }
+        .help-content ul {
+            padding-left: 1.2rem;
+            margin-bottom: 1.5rem;
+        }
+        .help-content li {
+            margin-bottom: 0.7rem;
+            font-size: 1.08rem;
+            color: #374151;
+        }
+        .help-content p {
+            font-size: 1.13rem;
+            color: #374151;
+            margin-bottom: 1.5rem;
+        }
+        .help-content a {
+            color: #4F46E5;
+            text-decoration: underline;
+            transition: color 0.2s;
+        }
+        .help-content a:hover {
+            color: #3730a3;
+        }
+        nav {
+            box-shadow: 0 2px 12px rgba(79,70,229,0.07);
+        }
+        .nav-links a {
+            font-weight: 600;
+            color: #6366f1;
+            border-radius: 6px;
+            padding: 0.4rem 1rem;
+            transition: background 0.2s, color 0.2s;
+        }
+        .nav-links a:hover, .nav-links a.active {
+            background: #eef2ff;
+            color: #3730a3;
+        }
+        @media (max-width: 600px) {
+            .container { padding: 20px 4vw 40px 4vw; }
+            .help-content { padding: 1.2rem 0.7rem; }
+            .section-title { font-size: 2rem; }
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="nav-container">
+            <a href="../index.html" class="logo" style="display: flex; align-items: center; gap: 0.5rem;">
+                <img src="../favicon.svg" alt="JLmol Logo" style="width:32px;height:32px;vertical-align:middle;" />
+                <span style="font-weight: bold; color: #4F46E5; font-size: 1.3rem; letter-spacing: -1px;">JLmol</span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="../index.html#features">Features</a></li>
+                <li><a href="../index.html#news">News</a></li>
+                <li><a href="../index.html#demo">Demo</a></li>
+                <li><a href="../index.html#download">Download</a></li>
+                <li><a href="../help.html">Help</a></li>
+                <li><a href="https://app.jlmol.com" target="_blank" rel="noopener noreferrer">Try Online</a></li>
+                <li><a href="https://github.com/fkfest/jlmol" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+            </ul>
+        </div>
+    </nav>
+    <div class="container" style="padding-top: 120px;">
+        <h1 class="section-title">ElemCo.jl Integration</h1>
+        <div class="help-content">
+            <p>JLmol offers deep integration with <strong>ElemCo.jl</strong>, a modern Julia-based quantum chemistry package. This enables users to go from structure visualization to high-level computation and back, all within a single interface. The integration is designed for both beginners and advanced users, with support for local, WSL, and remote execution.</p>
+            <h3>Input Generation:</h3>
+            <ul>
+                <li>Automatically generate ElemCo.jl input files from any loaded structure.</li>
+                <li>Select quantum chemistry methods: HF, MP2, CCSD, CCSD(T), and more.</li>
+                <li>Choose basis sets and toggle density fitting for supported methods.</li>
+                <li>Inputs are formatted for direct use with ElemCo.jl, minimizing manual editing.</li>
+            </ul>
+            <h3>Calculation Runner:</h3>
+            <ul>
+                <li>Run calculations locally, in WSL (Windows Subsystem for Linux), or remotely via SSH.</li>
+                <li>Customizable Julia command and environment for advanced workflows.</li>
+                <li>Integrated log viewer for monitoring calculation progress and troubleshooting errors.</li>
+                <li>Supports batch jobs and large molecule calculations (subject to system resources).</li>
+            </ul>
+            <h3>User Preferences & Technical Details:</h3>
+            <ul>
+                <li>Configure Julia executable path, default methods, and basis sets in the settings panel.</li>
+                <li>Preferences are saved between sessions for a persistent workflow.</li>
+                <li>Calculation output can be visualized directly (orbitals, energies, etc.).</li>
+                <li>Handles errors gracefully and provides detailed feedback for failed jobs.</li>
+            </ul>
+            <h3>Best Practices & Troubleshooting:</h3>
+            <ul>
+                <li>Set up your Julia environment and ElemCo.jl installation before running calculations.</li>
+                <li>For remote jobs, ensure SSH keys and permissions are configured correctly.</li>
+                <li>Check calculation logs for errors or warnings if results are unexpected.</li>
+                <li>Use the integrated runner for rapid prototyping and the command line for large-scale jobs.</li>
+            </ul>
+            <h3>References:</h3>
+            <ul>
+                <li><a href="https://github.com/fkfest/ElemCo.jl" target="_blank">ElemCo.jl on GitHub</a></li>
+                <li><a href="https://elem.co.il/" target="_blank">ElemCo.jl Official Documentation</a></li>
+                <li><a href="https://julialang.org/" target="_blank">Julia Language</a></li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

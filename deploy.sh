@@ -83,6 +83,13 @@ copy_file "about.html" "$DEPLOY_DIR/about.html" "About page (about.html)"
 copy_file "robots.txt" "$DEPLOY_DIR/robots.txt" "SEO robots configuration (robots.txt)"
 copy_file "sitemap.xml" "$DEPLOY_DIR/sitemap.xml" "Search engine sitemap (sitemap.xml)"
 copy_file ".htaccess" "$DEPLOY_DIR/.htaccess" "Apache configuration (.htaccess)"
+copy_file "favicon.svg" "$DEPLOY_DIR/favicon.svg" "Favicon (favicon.svg)"
+
+# Copy help pages and directory
+mkdir -p "$DEPLOY_DIR/help"
+for helpfile in help/*.html; do
+    copy_file "$helpfile" "$DEPLOY_DIR/$helpfile" "Help page ($helpfile)"
+done
 
 # Create a deployment info file
 echo -e "${BLUE}📋 Creating deployment information...${NC}"
@@ -182,6 +189,8 @@ put about.html
 put robots.txt
 put sitemap.xml
 put .htaccess
+put favicon.svg
+put help/*.html
 ls
 quit
 EOF_FTP

@@ -15,7 +15,7 @@
     <meta name="referrer" content="strict-origin-when-cross-origin">
     
     <!-- Favicon -->
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='40' fill='%234F46E5'/><circle cx='35' cy='35' r='8' fill='%23FBBF24'/><circle cx='65' cy='35' r='8' fill='%23EF4444'/><circle cx='50' cy='65' r='8' fill='%2310B981'/></svg>">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
     
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
@@ -107,6 +107,13 @@
             color: #4F46E5;
         }
         
+        .nav-links .help-link a {
+            background-color: #eef2ff;
+            color: #4F46E5;
+            padding: 8px 16px;
+            border-radius: 50px;
+        }
+
         /* Hero Section */
         .hero {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -196,7 +203,7 @@
         }
         
         /* Features Section */
-        .features {
+        .features-section {
             padding: 80px 0;
             background: white;
         }
@@ -207,6 +214,13 @@
             font-weight: 700;
             margin-bottom: 3rem;
             color: #1f2937;
+        }
+
+        .section-subtitle {
+            text-align: center;
+            font-size: 1.125rem;
+            margin-bottom: 4rem;
+            color: #6b7280;
         }
         
         .features-grid {
@@ -251,10 +265,66 @@
         }
         
         .feature-card p {
+            color: #4b5563;
+            margin-bottom: 1rem;
+        }
+
+        .learn-more-link {
+            color: #4F46E5;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.3s;
+        }
+
+        .learn-more-link:hover {
+            color: #3730a3;
+            text-decoration: underline;
+        }
+
+        /* News Section */
+        .news-section {
+            background: #f8fafc;
+            padding: 80px 0;
+        }
+
+        .news-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .news-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .news-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .news-card h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #1f2937;
+        }
+
+        .news-card p {
             color: #6b7280;
             line-height: 1.6;
         }
-        
+
+        .news-date {
+            font-size: 0.9rem;
+            color: #9ca3af;
+            margin-bottom: 0.5rem;
+        }
+
         /* Demo Section */
         .demo {
             background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
@@ -487,12 +557,13 @@
     <!-- Navigation -->
     <nav>
         <div class="nav-container">
-            <a href="#" class="logo">
-                <div class="logo-icon">JL</div>
-                JLmol
+            <a href="#" class="logo" style="display: flex; align-items: center; gap: 0.5rem;">
+                <img src="favicon.svg" alt="JLmol Logo" style="width:32px;height:32px;vertical-align:middle;" />
+                <span style="font-weight: bold; color: #4F46E5; font-size: 1.3rem; letter-spacing: -1px;">JLmol</span>
             </a>
             <ul class="nav-links">
                 <li><a href="#features">Features</a></li>
+                <li><a href="#news">News</a></li>
                 <li><a href="#demo">Demo</a></li>
                 <li><a href="#download">Download</a></li>
                 <li><a href="https://app.jlmol.com" target="_blank" rel="noopener noreferrer">Try Online</a></li>
@@ -525,44 +596,83 @@
     </section>
 
     <!-- Features Section -->
-    <section id="features" class="features">
+    <section id="features" class="features-section">
         <div class="container">
             <h2 class="section-title">Powerful Features for Molecular Science</h2>
+            <p class="section-subtitle">Everything you need to visualize, edit, and analyze molecular structures.</p>
             <div class="features-grid">
+                <!-- Feature 1: 3D Visualization -->
                 <div class="feature-card">
                     <div class="feature-icon">🧬</div>
                     <h3>Advanced 3D Visualization</h3>
-                    <p>Powerful JSmol molecular visualization with multiple display styles including ball & stick, wireframe, and spacefill. Interactive controls for rotation, zoom, and spin animation.</p>
+                    <p>High-quality, interactive 3D rendering of molecules with multiple display styles (ball & stick, spacefill, etc.).</p>
+                    <a href="help/visualization.html" class="learn-more-link">Learn More &rarr;</a>
                 </div>
-                
+
+                <!-- Feature 2: PubChem Integration -->
                 <div class="feature-card">
                     <div class="feature-icon">🔍</div>
                     <h3>PubChem Database Integration</h3>
-                    <p>Direct access to molecular structures from PubChem. Search by compound ID, chemical name, formula, or SMILES notation with intelligent auto-detection.</p>
+                    <p>Directly search and load molecules from the PubChem database by name, formula, or ID.</p>
+                    <a href="help/database.html" class="learn-more-link">Learn More &rarr;</a>
                 </div>
-                
+
+                <!-- Feature 3: Structure Editing -->
                 <div class="feature-card">
                     <div class="feature-icon">✏️</div>
                     <h3>Structure Editing Suite</h3>
-                    <p>Integrated JSME 2D editor, ModelKit 3D editor, and enhanced XYZ editor. Real-time synchronization between 2D and 3D views with automatic optimization.</p>
+                    <p>Create and modify molecules with a 2D editor, a 3D ModelKit, and a live-preview XYZ editor.</p>
+                    <a href="help/editing.html" class="learn-more-link">Learn More &rarr;</a>
                 </div>
-                
+
+                <!-- Feature 4: Orbital Visualization -->
                 <div class="feature-card">
                     <div class="feature-icon">⚛️</div>
                     <h3>Orbital Visualization</h3>
-                    <p>Advanced orbital visualization with HOMO/LUMO identification, easy navigation with arrow keys, and energy level display for quantum chemistry analysis.</p>
+                    <p>Analyze quantum chemistry results by visualizing molecular orbitals, including HOMO/LUMO levels.</p>
+                    <a href="help/orbitals.html" class="learn-more-link">Learn More &rarr;</a>
                 </div>
-                
+
+                <!-- Feature 5: Multi-Format Support -->
                 <div class="feature-card">
                     <div class="feature-icon">📁</div>
                     <h3>Multi-Format Support</h3>
-                    <p>Support for multiple file formats including XYZ, PDB, MOL, CIF, and MOLDEN. Drag and drop file loading for seamless workflow integration.</p>
+                    <p>Load and save structures in various common formats like XYZ, PDB, MOL, CIF, and MOLDEN.</p>
+                    <a href="help/formats.html" class="learn-more-link">Learn More &rarr;</a>
                 </div>
-                
+
+                <!-- Feature 6: ElemCo.jl Integration -->
                 <div class="feature-card">
                     <div class="feature-icon">⚡</div>
                     <h3>ElemCo.jl Integration</h3>
-                    <p>Built-in support for generating ElemCo.jl input files with common quantum chemistry methods (HF, MP2, CCSD) and basis set selection.</p>
+                    <p>Generate inputs and run quantum chemistry calculations with ElemCo.jl directly from the app, with local and remote execution support.</p>
+                    <a href="help/elemco.html" class="learn-more-link">Learn More &rarr;</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- News Section -->
+    <section id="news" class="news-section">
+        <div class="container">
+            <h2 class="section-title">What's New</h2>
+            <div class="news-grid">
+                <div class="news-card">
+                    <p class="news-date">July 2025</p>
+                    <h3>Integrated ElemCo.jl Runner</h3>
+                    <p>Run ElemCo.jl quantum chemistry calculations directly from within jlmol. Includes support for Windows Subsystem for Linux (WSL) and remote execution on other machines via SSH.</p>
+                </div>
+                
+                <div class="news-card">
+                    <p class="news-date">July 2025</p>
+                    <h3>Persistent User Preferences</h3>
+                    <p>Customize your experience with the new settings panel. Your preferences for display styles, calculation defaults, and Julia command paths are now saved between sessions.</p>
+                </div>
+                
+                <div class="news-card">
+                    <p class="news-date">July 2025</p>
+                    <h3>Advanced Calculation Support</h3>
+                    <p>Added support for more ElemCo.jl methods and options, giving you more power and flexibility for your computational chemistry research.</p>
                 </div>
             </div>
         </div>
