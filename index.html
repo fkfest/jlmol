@@ -1060,7 +1060,6 @@
         var jmolApplet0;
         var isSpinning = false;
         var displayMode = 'default'; // Track current display mode
-        var lastDisplayMode = 'default'; // Store last used display mode
         var currentZoom = 100;
         var isDragMinimize = false; // Track drag-minimize state
         var Info = {
@@ -1083,10 +1082,20 @@
                 setTimeout(() => {
                     if (displayMode === undefined || displayMode === null) {
                         displayMode = 'default';
-                        lastDisplayMode = 'default';
                     }
                     console.log('JSmol ready: Setting initial display mode to', displayMode);
                     setDisplayMode(displayMode);
+                    
+                    // Initialize MOL file data if there's already a structure loaded
+                    try {
+                        const atomCount = Jmol.evaluateVar(jmolApplet0, '{*}.length');
+                        if (atomCount && atomCount > 0) {
+                            lastMolFile = Jmol.evaluateVar(jmolApplet0, 'write("mol")').trim();
+                            debugLog('Init', 'Initialized lastMolFile on JSmol ready, length:', lastMolFile ? lastMolFile.length : 0);
+                        }
+                    } catch (initMolError) {
+                        console.error('Error initializing MOL file data on JSmol ready:', initMolError);
+                    }
                 }, 500);
             },
             script: "set debugScript off; set antialiasDisplay; set zoomLarge false; set picking ON"
@@ -1187,9 +1196,66 @@
         // Add variable to store XYZ data
         var lastXYZData = null;
         var originalAtomNames = null; // Store original numbered atom names
-        window.originalAtomNames = null; // Make sure it's accessible globally
         var originalXYZContent = null; // Store original XYZ file content
         var shouldUseNumberedAtoms = false; // Flag to track if numbered atoms should be used (only for XYZ files)
+        
+        // Debug function to test MOL file export quality - call from console with: window.testMolExport()
+        window.testMolExport = function() {
+            console.log('=== MOL Export Test ===');
+            if (jmolApplet0 && jmolApplet0._ready) {
+                try {
+                    const atomCount = Jmol.evaluateVar(jmolApplet0, '{*}.length');
+                    console.log('Atom count:', atomCount);
+                    
+                    if (atomCount > 0) {
+                        console.log('Testing MOL export before refreshAtomNames...');
+                        const molBefore = Jmol.evaluateVar(jmolApplet0, 'write("mol")').trim();
+                        console.log('MOL before - length:', molBefore ? molBefore.length : 'null');
+                        console.log('MOL before - valid:', !!(molBefore && molBefore.includes('V2000')));
+                        
+                        console.log('Calling refreshAtomNames...');
+                        refreshAtomNames();
+                        
+                        console.log('Testing MOL export after refreshAtomNames...');
+                        const molAfter = Jmol.evaluateVar(jmolApplet0, 'write("mol")').trim();
+                        console.log('MOL after - length:', molAfter ? molAfter.length : 'null');
+                        console.log('MOL after - valid:', !!(molAfter && molAfter.includes('V2000')));
+                        
+                        console.log('MOL data changed:', molBefore !== molAfter);
+                        
+                        if (molBefore !== molAfter) {
+                            console.log('=== MOL DATA CHANGED! ===');
+                            console.log('Before preview:', molBefore ? molBefore.substring(0, 200) : 'null');
+                            console.log('After preview:', molAfter ? molAfter.substring(0, 200) : 'null');
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error in MOL export test:', e);
+                }
+            } else {
+                console.log('JSmol not ready');
+            }
+            console.log('=== End MOL Export Test ===');
+        };
+        
+        // Utility function to manage atom names consistently
+        function setOriginalAtomNames(names) {
+            originalAtomNames = names;
+            window.originalAtomNames = names; // Make sure it's accessible globally
+        }
+        
+        function clearOriginalAtomNames() {
+            originalAtomNames = null;
+            window.originalAtomNames = null;
+        }
+        
+        // Debug utility function
+        function debugLog(category, message, data = null) {
+            if (window.jlmolDebug) {
+                const timestamp = new Date().toISOString().substr(14, 9);
+                console.log(`[${timestamp}] ${category}: ${message}`, data ? data : '');
+            }
+        }
         
         // Add frame rate limiting to prevent excessive GPU usage
         var lastFrameTime = 0;
@@ -1247,8 +1313,7 @@
                 }
                 
                 // Store the original data
-                originalAtomNames = extractedNames;
-                window.originalAtomNames = extractedNames; // Make sure it's globally accessible
+                setOriginalAtomNames(extractedNames);
                 originalXYZContent = xyzContent;
                 
                 // Clear database metadata since this is not a database load
@@ -1271,6 +1336,14 @@
                     setTimeout(() => {
                         refreshAtomNames();
                         console.log('loadXYZWithNumberedAtoms: Atom names refreshed after loading');
+                        
+                        // Update MOL file data for JSME integration after structure loading
+                        try {
+                            lastMolFile = Jmol.evaluateVar(jmolApplet0, 'write("mol")').trim();
+                            debugLog('XYZ', 'Updated lastMolFile after loading XYZ with numbered atoms');
+                        } catch (molError) {
+                            console.error('Error updating MOL file data in loadXYZWithNumberedAtoms:', molError);
+                        }
                         
                         // Restore display mode after everything is loaded
                         setTimeout(() => {
@@ -1384,8 +1457,7 @@
                     
                     if (hasNumberedNames) {
                         console.log('refreshAtomNames: Found numbered names, preserving them');
-                        originalAtomNames = currentNames;
-                        window.originalAtomNames = currentNames;
+                        setOriginalAtomNames(currentNames);
                         return true;
                     } else {
                         // Apply the corrected non-numbered names back to JSmol if needed
@@ -1406,8 +1478,7 @@
                         }
                         
                         // Store the corrected names
-                        originalAtomNames = currentNames;
-                        window.originalAtomNames = currentNames;
+                        setOriginalAtomNames(currentNames);
                         return true;
                     }
                 }
@@ -1476,7 +1547,6 @@
                 $("#viewer-inner").html(Jmol.getAppletHtml("jmolApplet0", Info));
                 initDraggable();
                 initResizeObserver();
-                setTimeout(initElemCoPanel, 500); // Add initialization here too
                 
                 // Add performance monitoring
                 let frameCount = 0;
@@ -1596,7 +1666,6 @@
                 }
                 
                 displayMode = mode;
-                lastDisplayMode = mode;
                 
                 console.log('setDisplayMode: Successfully set to', mode);
                 
@@ -1667,8 +1736,7 @@
                             loadXYZWithNumberedAtoms(fileContent);
                         } else {
                             // Clear numbered atom names for non-XYZ files
-                            originalAtomNames = null;
-                            window.originalAtomNames = null;
+                            clearOriginalAtomNames();
                             originalXYZContent = null;
                             shouldUseNumberedAtoms = false; // Non-XYZ files should not use numbered atoms
                             
@@ -1683,6 +1751,14 @@
                             setTimeout(() => {
                                 refreshAtomNames();
                                 console.log('handleFileSelect: Atom names refreshed for non-XYZ file');
+                                
+                                // Update MOL file data for JSME integration after file loading
+                                try {
+                                    lastMolFile = Jmol.evaluateVar(jmolApplet0, 'write("mol")').trim();
+                                    debugLog('File', 'Updated lastMolFile after loading non-XYZ file');
+                                } catch (molError) {
+                                    console.error('Error updating MOL file data in handleFileSelect:', molError);
+                                }
                             }, 100);
                         }
                         
@@ -1706,8 +1782,7 @@
                 const currentDisplayMode = displayMode || 'default';
                 
                 // Clear any existing numbered atom names since this is a sample load
-                originalAtomNames = null;
-                window.originalAtomNames = null;
+                clearOriginalAtomNames();
                 originalXYZContent = null;
                 shouldUseNumberedAtoms = false; // Sample loads should not use numbered atoms
                 
@@ -1726,6 +1801,14 @@
                     setTimeout(() => {
                         refreshAtomNames();
                         console.log('loadSample: Atom names refreshed to remove numbered indices');
+                        
+                        // Update MOL file data for JSME integration after sample loading
+                        try {
+                            lastMolFile = Jmol.evaluateVar(jmolApplet0, 'write("mol")').trim();
+                            debugLog('Sample', 'Updated lastMolFile after loading sample');
+                        } catch (molError) {
+                            console.error('Error updating MOL file data in loadSample:', molError);
+                        }
                     }, 100);
                 }, 200);
                 
@@ -1833,9 +1916,7 @@
                 const currentDisplayMode = displayMode || 'default';
                 
                 // Clear any existing numbered atom names since this is a database load
-                originalAtomNames = null;
-                window.originalAtomNames = null;
-                originalXYZContent = null;
+                clearOriginalAtomNames();
                 shouldUseNumberedAtoms = false; // Database loads should not use numbered atoms
                 console.log('loadFromDatabase: Set shouldUseNumberedAtoms to false for database load');
                 
@@ -1855,6 +1936,14 @@
                     setTimeout(() => {
                         refreshAtomNames();
                         console.log('loadFromDatabase: Atom names refreshed to remove numbered indices');
+                        
+                        // Update MOL file data for JSME integration after database loading
+                        try {
+                            lastMolFile = Jmol.evaluateVar(jmolApplet0, 'write("mol")').trim();
+                            debugLog('Database', 'Updated lastMolFile after loading from database');
+                        } catch (molError) {
+                            console.error('Error updating MOL file data in loadFromDatabase:', molError);
+                        }
                     }, 100);
                 }, 1000);
                 
@@ -2096,7 +2185,6 @@
         }
         
         function toggleSearchTypeDropdown() {
-            console.log('toggleSearchTypeDropdown called!'); // Debug log
             const dropdown = document.getElementById('searchTypeDropdown');
             const button = document.getElementById('searchTypeSelectorButton');
             
@@ -2346,9 +2434,6 @@
             editorPanel.style.display = 'block';
             
             try {
-                // Refresh atom names to ensure they're properly maintained
-                refreshAtomNames();
-                
                 // Get atom count first
                 const atomCount = Jmol.evaluateVar(jmolApplet0, '{*}.length');
                 
@@ -2451,6 +2536,15 @@
                 xyzContent.style.display = 'block';
                 document.getElementById('toggle-edit-mode').textContent = 'Switch to Edit Mode';
                 
+                // Update MOL file data for JSME integration when XYZ editor is opened
+                // Do this LAST to ensure we get the current state without any modifications
+                try {
+                    lastMolFile = Jmol.evaluateVar(jmolApplet0, 'write("mol")').trim();
+                    debugLog('XYZ', 'Updated lastMolFile when opening XYZ editor, length:', lastMolFile ? lastMolFile.length : 0);
+                } catch (molError) {
+                    console.error('Error updating MOL file data in showXYZEditor:', molError);
+                }
+                
             } catch (err) {
                 document.getElementById('status').innerHTML = 'Error getting structure data: ' + err.message;
             }
@@ -2526,8 +2620,7 @@
                 Jmol.script(jmolApplet0, 'load inline "' + tempXyzData + '"');
                 
                 // Update stored original names
-                originalAtomNames = newOriginalNames;
-                window.originalAtomNames = newOriginalNames; // Make sure it's globally accessible
+                setOriginalAtomNames(newOriginalNames);
                 originalXYZContent = xyzData;
                 
                 // Apply the numbered atom names after a short delay
@@ -2541,6 +2634,19 @@
                     setTimeout(() => {
                         refreshAtomNames();
                         console.log('updateStructure: Atom names refreshed after update');
+                        
+                        // Update MOL file data for JSME integration after structure changes
+                        try {
+                            lastMolFile = Jmol.evaluateVar(jmolApplet0, 'write("mol")').trim();
+                            debugLog('XYZ', 'Updated lastMolFile for JSME integration');
+                            
+                            // If JSME editor is currently visible, refresh it with the new structure
+                            if (!is3D && jsmeApplet) {
+                                refreshJSMEFromJSmol();
+                            }
+                        } catch (molError) {
+                            console.error('Error updating MOL file data:', molError);
+                        }
                     }, 100);
                     
                     document.getElementById('status').innerHTML = 'Structure updated successfully with preserved atom names';
@@ -2581,8 +2687,9 @@
         function hideXYZEditor() {
             // Don't clear the data when hiding the editor
             document.getElementById('editor-panel').style.display = 'none';
-            // Clear selections when closing editor
-            Jmol.script(jmolApplet0, 'select none; halos off');
+            // Clear selections when closing editor - COMMENTED OUT as it corrupts JSmol state
+            // Jmol.script(jmolApplet0, 'select none; halos off');
+            debugLog('XYZ', 'XYZ editor hidden without clearing selections');
         }
 
         function saveXYZ() {
@@ -2725,8 +2832,15 @@
         // JSME initialization and conversion functions
         function convertJsmolToJSME(callback) {
             try {
+                debugLog('Starting JSmol to JSME conversion');
+                
+                // Ensure we're working with the latest structure data
+                Jmol.script(jmolApplet0, 'select all; set atomNameFormat user');
+                
                 // First try to get a 2D MOL file
                 let molData = Jmol.evaluateVar(jmolApplet0, 'write("mol")').trim();
+                
+                debugLog('Initial MOL data length:', molData ? molData.length : 0);
                 
                 // If we got valid MOL data, try to clean it up
                 if (molData && molData.includes('V2000')) {
@@ -2740,16 +2854,19 @@
                     // Use the cleaned version if it's valid
                     if (cleanMolData && cleanMolData.includes('V2000')) {
                         molData = cleanMolData;
+                        debugLog('Using cleaned MOL data, length:', molData.length);
                     }
                     
                     callback(molData);
                 } else {
                     console.error('Failed to get valid MOL data from JSmol');
                     document.getElementById('status').innerHTML = 'Error: Could not convert 3D structure to 2D';
+                    debugLog('Conversion failed - no valid MOL data');
                 }
             } catch (e) {
                 console.error('Error converting JSmol to JSME:', e);
                 document.getElementById('status').innerHTML = 'Error converting structure';
+                debugLog('Conversion error:', e.message);
             }
         }
 
@@ -2817,6 +2934,20 @@
             }
         }
 
+        // Utility function to refresh JSME editor with current JSmol structure
+        function refreshJSMEFromJSmol() {
+            if (!is3D && jsmeApplet) {
+                debugLog('Refreshing JSME editor with current JSmol structure');
+                convertJsmolToJSME(molFile => {
+                    if (molFile && jsmeApplet && typeof jsmeApplet.readMolFile === 'function') {
+                        jsmeApplet.readMolFile(molFile);
+                        lastMolFile = molFile;
+                        debugLog('JSME editor refreshed with new structure data');
+                    }
+                });
+            }
+        }
+
         // Update toggle2D3D function
         function toggle2D3D() {
             // Check if there's a molecule loaded by getting XYZ data
@@ -2877,7 +3008,7 @@
                             
                             // Restore the last used display mode
                             setTimeout(() => {
-                                setDisplayMode(lastDisplayMode || 'default');
+                                setDisplayMode(displayMode || 'default');
                                 if (width > 0 && height > 0) {
                                     Jmol.resizeApplet(jmolApplet0, [width, height]);
                                 }
@@ -2889,7 +3020,13 @@
             } else {
                 // Switch to 2D (JSME) - only try to convert if there's a structure
                 if (atomCount > 0) {
+                    // Force refresh of JSmol structure to get latest data
+                    Jmol.script(jmolApplet0, 'select all; refresh');
+                    
+                    // Always perform fresh conversion from current JSmol state
                     convertJsmolToJSME(molFile => {
+                        debugLog('Converting to 2D with fresh MOL data length:', molFile ? molFile.length : 0);
+                        
                         viewer.style.display = 'none';
                         jsmeContainer.style.display = 'block';
                         jsmeContainer.innerHTML = ''; // Clear old instance
@@ -2901,6 +3038,7 @@
                             if (width > 0 && height > 0) {
                                 lastMolFile = molFile;
                                 jsmeApplet = initJSME("jsmeContainer", width, height, molFile);
+                                debugLog('JSME editor initialized with structure data');
                             }
                         }, 150);
                     });
@@ -2923,57 +3061,66 @@
 
         // Update window.jsmeOnLoad to use the new initJSME function
         window.jsmeOnLoad = function() {
-            // Add delay and multiple retries for Electron
+            // Add delay and multiple retries for Electron with proper dependency checking
             let attempts = 0;
-            const maxAttempts = 3;
+            const maxAttempts = 10;
             
             function tryInitJSME() {
+                attempts++;
                 const container = document.getElementById('jsmeContainer');
+                
+                if (!container) {
+                    if (attempts < maxAttempts) {
+                        setTimeout(tryInitJSME, 250);
+                    }
+                    return;
+                }
+                
                 const width = container.offsetWidth;
                 const height = container.offsetHeight;
                 
-                if (width > 0 && height > 0) {
+                if (width > 0 && height > 0 && typeof JSApplet !== 'undefined' && JSApplet.JSME) {
                     try {
                         jsmeApplet = initJSME("jsmeContainer", width, height);
                         console.log("JSME initialized successfully");
                     } catch (e) {
                         console.error("JSME init error:", e);
                         if (attempts < maxAttempts) {
-                            attempts++;
-                            setTimeout(tryInitJSME, 500); // Retry after 500ms
+                            setTimeout(tryInitJSME, 250);
                         }
                     }
                 } else {
                     if (attempts < maxAttempts) {
-                        attempts++;
-                        setTimeout(tryInitJSME, 500);
+                        setTimeout(tryInitJSME, 250);
+                    } else {
+                        console.warn('JSME initialization failed: container not ready or JSApplet not loaded after', maxAttempts, 'attempts');
                     }
                 }
             }
 
             // Initial delay for Electron to ensure DOM is ready
-            setTimeout(tryInitJSME, 250);
+            tryInitJSME();
         };
 
         function showElemCoPanel() {
-            console.log('showElemCoPanel: Opening ElemCo panel');
+            debugLog('ElemCo', 'Opening panel');
             const panel = document.getElementById('elemcoPanel');
             if (panel) {
                 panel.style.display = 'block';
                 
                 // Reinitialize panel elements to ensure they're set up properly
-                console.log('showElemCoPanel: Initializing panel elements');
+                debugLog('ElemCo', 'Initializing panel elements');
                 initElemCoPanel();
                 
                 // Force refresh molecular data detection with multiple attempts
-                console.log('showElemCoPanel: Starting molecular data refresh sequence');
+                debugLog('ElemCo', 'Starting molecular data refresh sequence');
                 
                 // Immediate attempt
                 updateElemCoInput();
                 
                 // Delayed attempt 1 - sometimes JSmol needs time to update
                 setTimeout(() => {
-                    console.log('showElemCoPanel: First delayed attempt');
+                    debugLog('ElemCo', 'First delayed attempt');
                     updateElemCoInput();
                 }, 100);
                 
@@ -3040,22 +3187,30 @@
             const charge = document.getElementById('elemco-charge');
             const multiplicity = document.getElementById('elemco-multiplicity');
 
-            // Remove old listeners if they exist
-            const oldListener = function() {};
-            method?.removeEventListener('change', oldListener);
-            aoBasis?.removeEventListener('change', oldListener);
-            jkfitBasis?.removeEventListener('change', oldListener);
-            mpfitBasis?.removeEventListener('change', oldListener);
-            charge?.removeEventListener('input', oldListener);
-            multiplicity?.removeEventListener('input', oldListener);
+            // Store references to listeners for proper cleanup
+            const elements = [
+                { element: method, event: 'change', handler: updateElemCoInput },
+                { element: aoBasis, event: 'change', handler: updateElemCoInput },
+                { element: jkfitBasis, event: 'change', handler: updateElemCoInput },
+                { element: mpfitBasis, event: 'change', handler: updateElemCoInput },
+                { element: charge, event: 'input', handler: updateElemCoInput },
+                { element: multiplicity, event: 'input', handler: updateElemCoInput }
+            ];
 
-            // Add new listeners
-            method?.addEventListener('change', updateElemCoInput);
-            aoBasis?.addEventListener('change', updateElemCoInput);
-            jkfitBasis?.addEventListener('change', updateElemCoInput);
-            mpfitBasis?.addEventListener('change', updateElemCoInput);
-            charge?.addEventListener('input', updateElemCoInput);
-            multiplicity?.addEventListener('input', updateElemCoInput);
+            // Remove old listeners if they exist
+            elements.forEach(({ element, event, handler }) => {
+                if (element && element._elemcoHandler) {
+                    element.removeEventListener(event, element._elemcoHandler);
+                }
+            });
+
+            // Add new listeners and store references
+            elements.forEach(({ element, event, handler }) => {
+                if (element) {
+                    element._elemcoHandler = handler;
+                    element.addEventListener(event, handler);
+                }
+            });
         }
 
         // Function to update method options based on DF toggle
@@ -3141,13 +3296,13 @@
         
         // Function to generate XYZ content with numbered atoms if available
         function getXYZDataWithNumberedAtoms() {
-            console.log('getXYZDataWithNumberedAtoms: Starting data retrieval');
-            console.log('getXYZDataWithNumberedAtoms: shouldUseNumberedAtoms flag is:', shouldUseNumberedAtoms);
+            debugLog('XYZ', 'Starting data retrieval');
+            debugLog('XYZ', `shouldUseNumberedAtoms flag: ${shouldUseNumberedAtoms}`);
             
             try {
                 // First check if there are any atoms at all
                 const atomCount = Jmol.evaluateVar(jmolApplet0, '{*}.length');
-                console.log('getXYZDataWithNumberedAtoms: Atom count from JSmol:', atomCount);
+                debugLog('XYZ', `Atom count from JSmol: ${atomCount}`);
                 
                 if (!atomCount || atomCount === 0) {
                     console.warn('No atoms found in JSmol');
@@ -3308,7 +3463,7 @@
         }
 
         function updateElemCoInput() {
-            console.log('updateElemCoInput: Starting input generation');
+            debugLog('ElemCo', 'Starting input generation');
             
             const dfEnabled = document.getElementById('elemco-df').checked;
             const method = document.getElementById('elemco-method').value;
@@ -3319,16 +3474,16 @@
             const multiplicity = parseInt(document.getElementById('elemco-multiplicity').value) || 0;
 
             // Get current molecular structure from JSmol (with numbered atoms if available)
-            console.log('updateElemCoInput: Calling getXYZDataWithNumberedAtoms');
+            debugLog('ElemCo', 'Calling getXYZDataWithNumberedAtoms');
             const xyzData = getXYZDataWithNumberedAtoms();
             
             if (!xyzData || xyzData.trim().length === 0) {
-                console.warn('updateElemCoInput: No XYZ data received');
+                debugLog('ElemCo', 'No XYZ data received', 'warning');
                 document.getElementById('elemco-input').value = '# Please load a molecule first';
                 return;
             }
             
-            console.log('updateElemCoInput: Received XYZ data, length:', xyzData.length);
+            debugLog('ElemCo', `Received XYZ data, length: ${xyzData.length}`);
             
             // Double-check that we have valid XYZ data
             const lines = xyzData.trim().split('\n');
@@ -3374,7 +3529,7 @@
                 return;
             }
             
-            console.log('updateElemCoInput: XYZ data validation passed. Atoms:', atomCount, 'Valid lines:', validAtomLines);
+            debugLog('ElemCo', `XYZ data validation passed. Atoms: ${atomCount}, Valid lines: ${validAtomLines}`);
         
             // Format ElemCo.jl input with complete XYZ specification
             let elemcoInput = `using ElemCo
@@ -3425,7 +3580,7 @@ ${xyzData.trim()}
             const inputArea = document.getElementById('elemco-input');
             if (inputArea) {
                 inputArea.value = elemcoInput;
-                console.log('updateElemCoInput: Successfully generated ElemCo input');
+                debugLog('ElemCo', 'Successfully generated input');
             } else {
                 console.error('updateElemCoInput: Could not find elemco-input textarea');
             }
@@ -3482,22 +3637,81 @@ ${xyzData.trim()}
             const prefs = getPreferences();
             const juliaCommand = prefs.juliaCommand || 'julia';
             
+            let tempFile = null;
+            
+            // Cleanup function to be called in all exit scenarios
+            function cleanupTempFile() {
+                if (tempFile) {
+                    try {
+                        fs.unlinkSync(tempFile);
+                        console.log('Temporary file cleaned up:', tempFile);
+                    } catch (e) {
+                        console.warn('Could not delete temporary file:', tempFile, e);
+                    }
+                    tempFile = null;
+                }
+            }
+            
+            // Ensure cleanup happens even if process is terminated
+            process.on('exit', cleanupTempFile);
+            process.on('SIGINT', cleanupTempFile);
+            process.on('SIGTERM', cleanupTempFile);
+            
             try {
-                // Parse Julia command to handle WSL and other complex commands
-                const commandParts = juliaCommand.trim().split(/\s+/);
+                // Parse Julia command to handle WSL and other complex commands with proper quote handling
+                function parseCommand(cmd) {
+                    const parts = [];
+                    let current = '';
+                    let inQuotes = false;
+                    let quoteChar = '';
+                    
+                    for (let i = 0; i < cmd.length; i++) {
+                        const char = cmd[i];
+                        
+                        if ((char === '"' || char === "'") && !inQuotes) {
+                            inQuotes = true;
+                            quoteChar = char;
+                        } else if (char === quoteChar && inQuotes) {
+                            inQuotes = false;
+                            quoteChar = '';
+                        } else if (char === ' ' && !inQuotes) {
+                            if (current.trim()) {
+                                parts.push(current.trim());
+                                current = '';
+                            }
+                        } else {
+                            current += char;
+                        }
+                    }
+                    
+                    if (current.trim()) {
+                        parts.push(current.trim());
+                    }
+                    
+                    return parts;
+                }
+                
+                const commandParts = parseCommand(juliaCommand.trim());
                 const isWSL = commandParts[0].toLowerCase() === 'wsl';
                 
                 // Create temporary file for Julia code
                 const tempDir = os.tmpdir();
-                const tempFile = path.join(tempDir, `jlmol_calculation_${Date.now()}.jl`);
+                tempFile = path.join(tempDir, `jlmol_calculation_${Date.now()}.jl`);
                 fs.writeFileSync(tempFile, juliaCode);
                 
                 // For WSL, convert Windows path to WSL path
                 let filePathForCommand = tempFile;
                 if (isWSL) {
                     // Convert Windows path to WSL path format
-                    // e.g., C:\Users\... -> /mnt/c/Users/...
-                    filePathForCommand = tempFile.replace(/^([A-Z]):\\/, '/mnt/$1/').replace(/\\/g, '/').toLowerCase();
+                    // Handle both uppercase and lowercase drive letters
+                    // e.g., C:\Users\... or c:\Users\... -> /mnt/c/Users/...
+                    if (/^[A-Za-z]:/.test(tempFile)) {
+                        const driveLetter = tempFile.charAt(0).toLowerCase();
+                        filePathForCommand = tempFile.replace(/^[A-Za-z]:/, `/mnt/${driveLetter}`).replace(/\\/g, '/');
+                    } else {
+                        // If path doesn't start with drive letter, assume it's already Unix-style
+                        filePathForCommand = tempFile.replace(/\\/g, '/');
+                    }
                 }
                 
                 outputTextarea.value = `=== JLMol Julia Calculation ===\nTimestamp: ${new Date().toISOString()}\nJulia command: ${juliaCommand}\nTemporary file: ${tempFile}\n${isWSL ? `WSL path: ${filePathForCommand}\n` : ''}Full command: ${juliaCommand} "${filePathForCommand}"\n\n--- Starting calculation ---\n`;
@@ -3558,16 +3772,33 @@ ${xyzData.trim()}
                     let output = '';
                     let errorOutput = '';
                     let startTime = Date.now();
+                    let outputBuffer = '';
+                    let lastUpdateTime = Date.now();
+                    
+                    // Function to update UI with buffered output (throttled)
+                    function updateOutput() {
+                        if (outputBuffer.length > 0) {
+                            outputTextarea.value += outputBuffer;
+                            outputBuffer = '';
+                            outputTextarea.scrollTop = outputTextarea.scrollHeight;
+                        }
+                    }
                     
                     juliaProcess.stdout.on('data', (data) => {
                         const text = data.toString();
                         output += text;
-                        outputTextarea.value += text;
-                        outputTextarea.scrollTop = outputTextarea.scrollHeight;
+                        outputBuffer += text;
                         
-                        // Update status with progress indication
-                        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-                        document.getElementById('status').innerHTML = `Calculation running... (${elapsed}s)`;
+                        // Update UI every 100ms to prevent freezing
+                        const now = Date.now();
+                        if (now - lastUpdateTime > 100) {
+                            updateOutput();
+                            lastUpdateTime = now;
+                            
+                            // Update status with progress indication
+                            const elapsed = ((now - startTime) / 1000).toFixed(1);
+                            document.getElementById('status').innerHTML = `Calculation running... (${elapsed}s)`;
+                        }
                     });
                     
                     juliaProcess.stderr.on('data', (data) => {
@@ -3587,13 +3818,8 @@ ${xyzData.trim()}
                         const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
                         
                         // Clean up temporary file
-                        try {
-                            fs.unlinkSync(tempFile);
-                            outputTextarea.value += `\n--- Cleanup: Temporary file deleted ---\n`;
-                        } catch (e) {
-                            console.warn('Could not delete temporary file:', e);
-                            outputTextarea.value += `\n--- Warning: Could not delete temporary file ---\n`;
-                        }
+                        cleanupTempFile();
+                        outputTextarea.value += `\n--- Cleanup: Temporary file deleted ---\n`;
                         
                         if (code === 0) {
                             outputTextarea.value += `\n=== CALCULATION COMPLETED SUCCESSFULLY ===\nElapsed time: ${elapsed} seconds\nExit code: ${code}`;
@@ -3606,7 +3832,13 @@ ${xyzData.trim()}
                     });
                     
                     juliaProcess.on('error', (error) => {
-                        throw new Error(`Failed to execute Julia: ${error.message}`);
+                        // Clean up temporary file on error
+                        cleanupTempFile();
+                        
+                        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+                        outputTextarea.value += `\n=== PROCESS ERROR ===\nElapsed time: ${elapsed} seconds\nError: ${error.message}\n\nTroubleshooting:\n- Check if Julia is properly installed\n- Verify the Julia command path in Settings\n- Ensure Julia has necessary permissions`;
+                        document.getElementById('status').innerHTML = `Julia process error: ${error.message}`;
+                        outputTextarea.scrollTop = outputTextarea.scrollHeight;
                     });
                 });
                 
@@ -3696,15 +3928,50 @@ and eliminates the need for manual steps.`;
         // Add initialization to both window.onload and document.ready
         if (typeof window !== 'undefined') {
             window.addEventListener('load', function() {
-                setTimeout(initElemCoPanel, 500); // Delay to ensure DOM is ready
-                setTimeout(updateInputPlaceholder, 200); // Initialize placeholder text
-                setTimeout(setupDatabaseInputHandlers, 300); // Ensure dropdown handlers are set up
-                
-                // Initialize user preferences
-                setTimeout(() => {
-                    initPreferences();
-                }, 400);
+                // Use a proper initialization sequence with dependency checking
+                initializeApplication();
             });
+        }
+        
+        // Proper initialization function with dependency checking
+        function initializeApplication() {
+            let initAttempts = 0;
+            const maxAttempts = 20; // Allow up to 2 seconds (20 * 100ms)
+            
+            function attemptInit() {
+                initAttempts++;
+                
+                // Check if required DOM elements exist
+                const elemcoPanel = document.getElementById('elemcoPanel');
+                const searchInput = document.getElementById('pubchemInput');
+                
+                if (elemcoPanel && searchInput) {
+                    // All required elements are available, proceed with initialization
+                    try {
+                        initElemCoPanel();
+                        updateInputPlaceholder();
+                        setupDatabaseInputHandlers();
+                        initPreferences();
+                        console.log('Application initialized successfully');
+                    } catch (error) {
+                        console.warn('Error during initialization:', error);
+                        // Retry if we haven't exceeded max attempts
+                        if (initAttempts < maxAttempts) {
+                            setTimeout(attemptInit, 100);
+                        }
+                    }
+                } else {
+                    // Required elements not ready yet, retry if we haven't exceeded max attempts
+                    if (initAttempts < maxAttempts) {
+                        setTimeout(attemptInit, 100);
+                    } else {
+                        console.warn('Application initialization failed: required DOM elements not found after', maxAttempts, 'attempts');
+                    }
+                }
+            }
+            
+            // Start initialization
+            attemptInit();
         }
         
         // User Preferences System - Core Functions
