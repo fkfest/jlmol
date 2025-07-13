@@ -1263,36 +1263,105 @@
         // Function to export the current view as an image
         function exportImage() {
             try {
-                // Get the image data using the correct JSmol API method
-                var imageData = Jmol.getPropertyAsString(jmolApplet0, "image");
+                // Get user preferences for export format and transparency
+                const prefs = getPreferences();
+                const exportFormat = prefs.exportFormat || 'png';
+                const useTransparentBackground = prefs.exportTransparentBackground !== false;
                 
-                // Convert the raw image data to a proper data URL
-                if (!imageData.startsWith('data:')) {
-                    imageData = 'data:image/png;base64,' + imageData;
+                // Handle background setting for exports that need white background
+                const needsWhiteBackground = exportFormat === 'jpg' || (exportFormat === 'png' && !useTransparentBackground);
+                let currentBg = null;
+                
+                if (needsWhiteBackground) {
+                    currentBg = Jmol.evaluateVar(jmolApplet0, "background");
+                    Jmol.script(jmolApplet0, "background white");
                 }
                 
-                // Create a temporary link element
-                var link = document.createElement('a');
-                link.href = imageData;
-                link.download = 'molecule.png';
+                // Get the image data from JSmol
+                // Note: JSmol.getPropertyAsString with "image" returns JPEG data
+                var imageData = Jmol.getPropertyAsString(jmolApplet0, "image");
                 
-                // This is required for Firefox
-                link.target = '_blank';
+                // Restore original background if it was changed
+                if (currentBg !== null) {
+                    Jmol.script(jmolApplet0, `background ${currentBg}`);
+                }
                 
-                // Append to body, click, and remove
-                document.body.appendChild(link);
-                link.click();
+                // Convert to proper data URL if needed
+                if (!imageData.startsWith('data:')) {
+                    imageData = 'data:image/jpeg;base64,' + imageData;
+                }
                 
-                // Small delay before removing the link to ensure the download starts
-                setTimeout(() => {
-                    document.body.removeChild(link);
-                }, 100);
+                // Handle format conversion
+                if (exportFormat === 'png') {
+                    // Convert JPEG to PNG for proper format and transparency support
+                    convertAndDownload(imageData, 'png', useTransparentBackground);
+                } else {
+                    // Direct JPEG download
+                    downloadImage(imageData, 'molecule.jpg', 'jpg', false);
+                }
                 
-                document.getElementById('status').innerHTML = 'Image exported successfully';
             } catch (err) {
                 document.getElementById('status').innerHTML = 'Error exporting image: ' + err.message;
                 console.error('Export error:', err);
             }
+        }
+        
+        // Convert image format and handle transparency
+        function convertAndDownload(jpegDataUrl, targetFormat, useTransparent) {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+            
+            img.onload = function() {
+                canvas.width = img.width;
+                canvas.height = img.height;
+                
+                // For PNG with white background, fill canvas with white first
+                if (targetFormat === 'png' && !useTransparent) {
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                }
+                // For transparent PNG, we leave canvas transparent (default)
+                
+                // Draw the image
+                ctx.drawImage(img, 0, 0);
+                
+                // Convert to target format
+                let outputData;
+                if (targetFormat === 'png') {
+                    outputData = canvas.toDataURL('image/png');
+                } else {
+                    outputData = canvas.toDataURL('image/jpeg', 0.9);
+                }
+                
+                const filename = `molecule.${targetFormat}`;
+                downloadImage(outputData, filename, targetFormat, useTransparent);
+            };
+            
+            img.src = jpegDataUrl;
+        }
+        
+        // Helper function to handle the actual download
+        function downloadImage(imageData, filename, format, transparent) {
+            // Create a temporary link element
+            var link = document.createElement('a');
+            link.href = imageData;
+            link.download = filename;
+            
+            // This is required for Firefox
+            link.target = '_blank';
+            
+            // Append to body, click, and remove
+            document.body.appendChild(link);
+            link.click();
+            
+            // Small delay before removing the link to ensure the download starts
+            setTimeout(() => {
+                document.body.removeChild(link);
+            }, 100);
+            
+            const transparencyNote = (format === 'png' && transparent) ? ' with transparent background' : '';
+            document.getElementById('status').innerHTML = `${format.toUpperCase()} image exported successfully${transparencyNote}`;
         }
 
         // Add variable to store XYZ data
@@ -4128,6 +4197,7 @@ and eliminates the need for manual steps.`;
             showTooltips: true,
             confirmOverwrite: true,
             exportFormat: 'png',
+            exportTransparentBackground: true,
             
             // Display settings
             autoSpin: false,
@@ -4212,6 +4282,9 @@ and eliminates the need for manual steps.`;
             
             const exportFormatSelect = document.getElementById('pref-export-format');
             if (exportFormatSelect) exportFormatSelect.value = prefs.exportFormat || 'png';
+            
+            const exportTransparentCheckbox = document.getElementById('pref-export-transparent');
+            if (exportTransparentCheckbox) exportTransparentCheckbox.checked = prefs.exportTransparentBackground !== false;
             
             // Display settings  
             const autoSpinCheckbox = document.getElementById('pref-auto-spin');
@@ -4333,6 +4406,9 @@ and eliminates the need for manual steps.`;
             
             const exportFormatSelect = document.getElementById('pref-export-format');
             if (exportFormatSelect) prefs.exportFormat = exportFormatSelect.value;
+            
+            const exportTransparentCheckbox = document.getElementById('pref-export-transparent');
+            if (exportTransparentCheckbox) prefs.exportTransparentBackground = exportTransparentCheckbox.checked;
             
             // Display settings
             const autoSpinCheckbox = document.getElementById('pref-auto-spin');
@@ -4915,6 +4991,13 @@ and eliminates the need for manual steps.`;
                             <option value="mol">MOL File</option>
                         </select>
                         <div class="preference-description">Default file format for exports</div>
+                    </div>
+                    <div class="preference-item">
+                        <label class="preference-checkbox-label">
+                            <input type="checkbox" id="pref-export-transparent">
+                            <span>Export PNG with transparent background</span>
+                        </label>
+                        <div class="preference-description">Export PNG images with transparent background (JPEG always uses white background)</div>
                     </div>
                 </div>
             </div>
