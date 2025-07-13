@@ -1159,81 +1159,49 @@
         var displayMode = 'default'; // Track current display mode
         var currentZoom = 100;
         var isDragMinimize = false; // Track drag-minimize state
-        
-        // Initialize JSmol configuration with user preferences
-        function createJSmolInfo() {
-            // Load preferences early to configure JSmol
-            const prefs = typeof getPreferences === 'function' ? getPreferences() : loadPreferences();
-            
-            // Convert hex color to JSmol format
-            const bgColor = prefs.bgColor || '#FFFFFF';
-            const jsmolColor = bgColor.replace('#', '0x');
-            
-            return {
-                width: "100%",
-                height: "100%",
-                debug: prefs.debugMode || false,
-                color: jsmolColor,
-                use: "HTML5",
-                j2sPath: "jsmol/j2s",
-                addSelectionOptions: true,
-                serverURL: "https://jlmol.com/php/jsmol.php",
-                disableJ2SLoadMonitor: true,
-                disableInitialConsole: true,
-                allowJavaScript: true,
-                readyFunction: function(applet) {
-                    jmolApplet0._ready = true;
-                    console.log('JSmol initialization complete');
+        var Info = {
+            width: "100%",
+            height: "100%",
+            debug: false,
+            color: "0xFFFFFF",
+            use: "HTML5",
+            j2sPath: "jsmol/j2s",
+            addSelectionOptions: true,
+            serverURL: "https://jlmol.com/php/jsmol.php",
+            disableJ2SLoadMonitor: true,
+            disableInitialConsole: true,
+            allowJavaScript: true,
+            readyFunction: function(applet) {
+                jmolApplet0._ready = true;
+                console.log('JSmol initialization complete');
+                
+                // Set initial display mode after JSmol is ready
+                setTimeout(() => {
+                    if (displayMode === undefined || displayMode === null) {
+                        displayMode = 'default';
+                    }
+                    console.log('JSmol ready: Setting initial display mode to', displayMode);
+                    setDisplayMode(displayMode);
                     
-                    // Apply preferences after JSmol is ready
-                    setTimeout(() => {
-                        if (displayMode === undefined || displayMode === null) {
-                            displayMode = 'default';
-                        }
-                        console.log('JSmol ready: Setting initial display mode to', displayMode);
-                        setDisplayMode(displayMode);
-                        
-                        // Apply all JSmol preferences
+                    // Apply JSmol preferences when ready
+                    if (typeof applyJSmolPreferences === 'function') {
                         applyJSmolPreferences();
-                        
-                        // Initialize MOL file data if there's already a structure loaded
-                        try {
-                            const atomCount = Jmol.evaluateVar(jmolApplet0, '{*}.length');
-                            if (atomCount && atomCount > 0) {
-                                lastMolFile = Jmol.evaluateVar(jmolApplet0, 'write("mol")').trim();
-                                debugLog('Init', 'Initialized lastMolFile on JSmol ready, length:', lastMolFile ? lastMolFile.length : 0);
-                            }
-                        } catch (initMolError) {
-                            console.error('Error initializing MOL file data on JSmol ready:', initMolError);
+                    }
+                    
+                    // Initialize MOL file data if there's already a structure loaded
+                    try {
+                        const atomCount = Jmol.evaluateVar(jmolApplet0, '{*}.length');
+                        if (atomCount && atomCount > 0) {
+                            lastMolFile = Jmol.evaluateVar(jmolApplet0, 'write("mol")').trim();
+                            debugLog('Init', 'Initialized lastMolFile on JSmol ready, length:', lastMolFile ? lastMolFile.length : 0);
                         }
-                    }, 500);
-                },
-                script: buildInitialJSmolScript(prefs)
-            };
-        }
-        
-        // Build initial JSmol script based on preferences
-        function buildInitialJSmolScript(prefs) {
-            let script = "set debugScript off; set zoomLarge false; set picking ON;";
-            
-            // Apply antialiasing preference
-            if (prefs.antialiasing !== false) {
-                script += " set antialiasDisplay on;";
-            } else {
-                script += " set antialiasDisplay off;";
-            }
-            
-            // Apply zoom level preference
-            const zoomLevel = parseInt(prefs.zoomLevel) || 100;
-            if (zoomLevel !== 100) {
-                script += ` zoom ${zoomLevel};`;
-            }
-            
-            return script;
-        }
-        
-        // Initialize Info object
-        var Info = createJSmolInfo();
+                    } catch (initMolError) {
+                        console.error('Error initializing MOL file data on JSmol ready:', initMolError);
+                    }
+                }, 500);
+            },
+            script: "set debugScript off; set antialiasDisplay; set zoomLarge false; set picking ON"
+        };
 
         /*
          * FIXES FOR ELEMCO.JL INTEGRATION WITH NUMBERED ATOMS
@@ -4173,93 +4141,12 @@ and eliminates the need for manual steps.`;
         
         function updateBackgroundColor(color) {
             if (jmolApplet0 && jmolApplet0._ready) {
-                Jmol.script(jmolApplet0, `background ${color}`);
-            }
-        }
-        
-        // Apply antialiasing setting to JSmol
-        function applyAntialiasing(enabled) {
-            if (jmolApplet0 && jmolApplet0._ready) {
-                const command = enabled ? "set antialiasDisplay on" : "set antialiasDisplay off";
-                Jmol.script(jmolApplet0, command);
-                console.log('Applied antialiasing:', enabled);
-            }
-        }
-        
-        // Apply zoom level to JSmol
-        function applyZoomLevel(zoomLevel) {
-            if (jmolApplet0 && jmolApplet0._ready) {
-                const zoom = parseInt(zoomLevel) || 100;
-                Jmol.script(jmolApplet0, `zoom ${zoom}`);
-                console.log('Applied zoom level:', zoom);
-            }
-        }
-        
-        // Apply atom labels setting to JSmol
-        function applyAtomLabels(showLabels) {
-            if (jmolApplet0 && jmolApplet0._ready) {
-                if (showLabels) {
-                    Jmol.script(jmolApplet0, "label %e");
-                } else {
-                    Jmol.script(jmolApplet0, "label off");
-                }
-                console.log('Applied atom labels:', showLabels);
-            }
-        }
-        
-        // Apply display mode to JSmol
-        function applyDisplayMode(mode) {
-            if (jmolApplet0 && jmolApplet0._ready && typeof setDisplayMode === 'function') {
-                try {
-                    setDisplayMode(mode);
-                    console.log('Applied display mode:', mode);
-                } catch (e) {
-                    console.warn('Could not apply display mode:', e);
-                }
-            }
-        }
-        
-        // Comprehensive function to apply all JSmol preferences
-        function applyJSmolPreferences() {
-            const prefs = getPreferences();
-            
-            console.log('Applying JSmol preferences:', {
-                bgColor: prefs.bgColor,
-                antialiasing: prefs.antialiasing,
-                zoomLevel: prefs.zoomLevel,
-                showLabels: prefs.showLabels,
-                defaultDisplayMode: prefs.defaultDisplayMode,
-                autoSpin: prefs.autoSpin
-            });
-            
-            // Apply background color
-            if (prefs.bgColor) {
-                updateBackgroundColor(prefs.bgColor);
-            }
-            
-            // Apply antialiasing
-            if (prefs.antialiasing !== undefined) {
-                applyAntialiasing(prefs.antialiasing);
-            }
-            
-            // Apply zoom level
-            if (prefs.zoomLevel) {
-                applyZoomLevel(prefs.zoomLevel);
-            }
-            
-            // Apply atom labels
-            if (prefs.showLabels !== undefined) {
-                applyAtomLabels(prefs.showLabels);
-            }
-            
-            // Apply display mode
-            if (prefs.defaultDisplayMode) {
-                applyDisplayMode(prefs.defaultDisplayMode);
-            }
-            
-            // Apply auto-spin if enabled
-            if (prefs.autoSpin && !isSpinning) {
-                setTimeout(() => toggleSpin(), 1000); // Delay to ensure molecule is loaded
+                // Convert hex color to JSmol format
+                const jsmolColor = color.replace('#', '0x');
+                Jmol.script(jmolApplet0, `background ${jsmolColor}`);
+                
+                // Update the preference
+                updatePreference('bgColor', color);
             }
         }
         
@@ -4294,6 +4181,7 @@ and eliminates the need for manual steps.`;
                 // Add change listener for immediate display mode update
                 displayModeSelect.addEventListener('change', function() {
                     applyDisplayMode(this.value);
+                    updatePreference('defaultDisplayMode', this.value);
                 });
             }
             
@@ -4317,16 +4205,6 @@ and eliminates the need for manual steps.`;
                 bgColorInput.addEventListener('change', function() {
                     bgColorPreview.style.backgroundColor = this.value;
                     updateBackgroundColor(this.value);
-                    // Also update the JSmol Info object for future reinitializations
-                    if (typeof Info !== 'undefined') {
-                        Info.color = this.value.replace('#', '0x');
-                    }
-                });
-                
-                // Add input listener for real-time preview while dragging
-                bgColorInput.addEventListener('input', function() {
-                    bgColorPreview.style.backgroundColor = this.value;
-                    updateBackgroundColor(this.value);
                 });
             }
             
@@ -4336,7 +4214,11 @@ and eliminates the need for manual steps.`;
                 
                 // Add change listener for immediate antialiasing update
                 antialiasingCheckbox.addEventListener('change', function() {
-                    applyAntialiasing(this.checked);
+                    if (jmolApplet0 && jmolApplet0._ready) {
+                        const antialiasingCmd = this.checked ? 'on' : 'off';
+                        Jmol.script(jmolApplet0, `set antialiasDisplay ${antialiasingCmd}`);
+                        updatePreference('antialiasing', this.checked);
+                    }
                 });
             }
             
@@ -4347,26 +4229,6 @@ and eliminates the need for manual steps.`;
                 // Add change listener for immediate zoom level update
                 zoomLevelSelect.addEventListener('change', function() {
                     applyZoomLevel(this.value);
-                });
-            }
-            
-            const showLabelsCheckbox = document.getElementById('pref-show-labels');
-            if (showLabelsCheckbox) {
-                showLabelsCheckbox.checked = prefs.showLabels || false;
-                
-                // Add change listener for immediate label update
-                showLabelsCheckbox.addEventListener('change', function() {
-                    applyAtomLabels(this.checked);
-                });
-            }
-            
-            const displayModeSelect = document.getElementById('pref-display-mode');
-            if (displayModeSelect) {
-                displayModeSelect.value = prefs.defaultDisplayMode || 'ball&stick';
-                
-                // Add change listener for immediate display mode update
-                displayModeSelect.addEventListener('change', function() {
-                    applyDisplayMode(this.value);
                 });
             }
             
@@ -4504,16 +4366,29 @@ and eliminates the need for manual steps.`;
         function applyPreferences() {
             const prefs = getPreferences();
             
-            // Apply JSmol-specific preferences
-            if (jmolApplet0 && jmolApplet0._ready) {
-                applyJSmolPreferences();
-            } else {
-                // If JSmol isn't ready yet, apply preferences when it becomes ready
-                console.log('JSmol not ready, preferences will be applied when ready');
+            // Apply auto-spin preference if enabled
+            if (prefs.autoSpin && !isSpinning) {
+                toggleSpin();
             }
             
-            // Apply debug mode immediately
+            // Apply background color
+            if (prefs.bgColor && jmolApplet0 && jmolApplet0._ready) {
+                updateBackgroundColor(prefs.bgColor);
+            }
+            
+            // Apply debug mode
             window.jlmolDebug = prefs.debugMode || false;
+            
+            // Apply display mode if set
+            if (prefs.defaultDisplayMode) {
+                try {
+                    if (displayMode !== prefs.defaultDisplayMode) {
+                        console.log('Applying preferred display mode:', prefs.defaultDisplayMode);
+                    }
+                } catch (e) {
+                    console.warn('Could not apply display mode preference:', e);
+                }
+            }
             
             // Apply default basis set to ElemCo panel
             try {
@@ -4544,7 +4419,7 @@ and eliminates the need for manual steps.`;
             }
         }
         
-        // Load preferences from localStorage with early availability
+        // Load preferences from localStorage
         function loadPreferences() {
             try {
                 const saved = localStorage.getItem('jlmol-preferences');
@@ -4556,13 +4431,6 @@ and eliminates the need for manual steps.`;
             }
             return { ...DEFAULT_PREFERENCES };
         }
-        
-        // Initialize preferences as early as possible
-        (function() {
-            if (typeof window !== 'undefined' && !window.userPreferences) {
-                window.userPreferences = loadPreferences();
-            }
-        })();
         
         // Save preferences to localStorage
         function savePreferences(preferences) {
@@ -4582,6 +4450,116 @@ and eliminates the need for manual steps.`;
             return window.userPreferences || loadPreferences();
         }
         
+        // Apply JSmol-specific preferences to the viewer
+        function applyJSmolPreferences() {
+            if (!jmolApplet0 || !jmolApplet0._ready) {
+                console.log('JSmol not ready, skipping preference application');
+                return;
+            }
+            
+            const prefs = getPreferences();
+            
+            try {
+                // Apply background color
+                if (prefs.bgColor) {
+                    const jsmolColor = prefs.bgColor.replace('#', '0x');
+                    Jmol.script(jmolApplet0, `background ${jsmolColor}`);
+                    console.log('Applied background color:', prefs.bgColor);
+                }
+                
+                // Apply antialiasing
+                if (prefs.antialiasing !== undefined) {
+                    const antialiasingCmd = prefs.antialiasing ? 'on' : 'off';
+                    Jmol.script(jmolApplet0, `set antialiasDisplay ${antialiasingCmd}`);
+                    console.log('Applied antialiasing:', prefs.antialiasing);
+                }
+                
+                // Apply atom labels
+                if (prefs.showLabels) {
+                    Jmol.script(jmolApplet0, 'label %e');
+                    console.log('Applied atom labels: ON');
+                } else {
+                    Jmol.script(jmolApplet0, 'label off');
+                }
+                
+                // Apply display mode
+                if (prefs.defaultDisplayMode) {
+                    applyDisplayMode(prefs.defaultDisplayMode);
+                    console.log('Applied display mode:', prefs.defaultDisplayMode);
+                }
+                
+                // Apply zoom level
+                if (prefs.zoomLevel && prefs.zoomLevel !== '100') {
+                    const zoom = parseInt(prefs.zoomLevel);
+                    Jmol.script(jmolApplet0, `zoom ${zoom}`);
+                    console.log('Applied zoom level:', zoom);
+                }
+                
+                // Apply auto-spin
+                if (prefs.autoSpin && !isSpinning) {
+                    Jmol.script(jmolApplet0, 'spin on');
+                    isSpinning = true;
+                    console.log('Applied auto-spin: ON');
+                }
+                
+            } catch (error) {
+                console.error('Error applying JSmol preferences:', error);
+            }
+        }
+        
+        // Helper function to apply display mode
+        function applyDisplayMode(mode) {
+            if (!jmolApplet0 || !jmolApplet0._ready) return;
+            
+            try {
+                switch (mode) {
+                    case 'wireframe':
+                        Jmol.script(jmolApplet0, 'wireframe only');
+                        break;
+                    case 'ball&stick':
+                        Jmol.script(jmolApplet0, 'wireframe 0.15; spacefill 20%');
+                        break;
+                    case 'spacefill':
+                        Jmol.script(jmolApplet0, 'spacefill only');
+                        break;
+                    default:
+                        Jmol.script(jmolApplet0, 'wireframe 0.15; spacefill 20%');
+                }
+                displayMode = mode;
+            } catch (error) {
+                console.error('Error applying display mode:', error);
+            }
+        }
+        
+        // Helper function to apply zoom level
+        function applyZoomLevel(zoomLevel) {
+            if (!jmolApplet0 || !jmolApplet0._ready) return;
+            
+            try {
+                const zoom = parseInt(zoomLevel);
+                Jmol.script(jmolApplet0, `zoom ${zoom}`);
+                updatePreference('zoomLevel', zoomLevel);
+            } catch (error) {
+                console.error('Error applying zoom level:', error);
+            }
+        }
+        
+        // Helper function to apply atom labels
+        function applyAtomLabels(showLabels) {
+            if (!jmolApplet0 || !jmolApplet0._ready) return;
+            
+            try {
+                if (showLabels) {
+                    Jmol.script(jmolApplet0, 'label %e');
+                } else {
+                    Jmol.script(jmolApplet0, 'label off');
+                }
+                updatePreference('showLabels', showLabels);
+            } catch (error) {
+                console.error('Error applying atom labels:', error);
+            }
+        }
+        
         // Update a specific preference
         function updatePreference(key, value) {
             const preferences = getPreferences();
@@ -4592,13 +4570,8 @@ and eliminates the need for manual steps.`;
         
         // Initialize preferences
         function initPreferences() {
-            // Load preferences early
+            // Load preferences
             window.userPreferences = loadPreferences();
-            
-            // Reinitialize JSmol Info object with updated preferences
-            if (typeof createJSmolInfo === 'function') {
-                Info = createJSmolInfo();
-            }
             
             // Apply preferences
             applyPreferences();
