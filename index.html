@@ -1268,69 +1268,100 @@
                 const exportFormat = prefs.exportFormat || 'png';
                 const useTransparentBackground = prefs.exportTransparentBackground !== false;
                 
-                let imageData;
-                let fileExtension;
-                let mimeType;
+                // Handle background setting for exports that need white background
+                const needsWhiteBackground = exportFormat === 'jpg' || (exportFormat === 'png' && !useTransparentBackground);
+                let currentBg = null;
                 
-                if (exportFormat === 'png') {
-                    // Export as PNG with proper transparency support
-                    if (useTransparentBackground) {
-                        // For transparent background, we need to use a specific JSmol command
-                        imageData = Jmol.getPropertyAsString(jmolApplet0, "image;PNG");
-                    } else {
-                        // For white background PNG
-                        const currentBg = Jmol.evaluateVar(jmolApplet0, "background");
-                        Jmol.script(jmolApplet0, "background white");
-                        imageData = Jmol.getPropertyAsString(jmolApplet0, "image;PNG");
-                        // Restore original background
-                        Jmol.script(jmolApplet0, `background ${currentBg}`);
-                    }
-                    fileExtension = 'png';
-                    mimeType = 'image/png';
-                } else if (exportFormat === 'jpg') {
-                    // Export as JPEG (always with white background as JPEG doesn't support transparency)
-                    const currentBg = Jmol.evaluateVar(jmolApplet0, "background");
+                if (needsWhiteBackground) {
+                    currentBg = Jmol.evaluateVar(jmolApplet0, "background");
                     Jmol.script(jmolApplet0, "background white");
-                    imageData = Jmol.getPropertyAsString(jmolApplet0, "image;JPG");
-                    // Restore original background
+                }
+                
+                // Get the image data from JSmol
+                // Note: JSmol.getPropertyAsString with "image" returns JPEG data
+                var imageData = Jmol.getPropertyAsString(jmolApplet0, "image");
+                
+                // Restore original background if it was changed
+                if (currentBg !== null) {
                     Jmol.script(jmolApplet0, `background ${currentBg}`);
-                    fileExtension = 'jpg';
-                    mimeType = 'image/jpeg';
-                } else {
-                    // Fallback to PNG for other formats
-                    imageData = Jmol.getPropertyAsString(jmolApplet0, "image;PNG");
-                    fileExtension = 'png';
-                    mimeType = 'image/png';
                 }
                 
-                // Convert the raw image data to a proper data URL if needed
+                // Convert to proper data URL if needed
                 if (!imageData.startsWith('data:')) {
-                    imageData = `data:${mimeType};base64,${imageData}`;
+                    imageData = 'data:image/jpeg;base64,' + imageData;
                 }
                 
-                // Create a temporary link element
-                var link = document.createElement('a');
-                link.href = imageData;
-                link.download = `molecule.${fileExtension}`;
+                // Handle format conversion
+                if (exportFormat === 'png') {
+                    // Convert JPEG to PNG for proper format and transparency support
+                    convertAndDownload(imageData, 'png', useTransparentBackground);
+                } else {
+                    // Direct JPEG download
+                    downloadImage(imageData, 'molecule.jpg', 'jpg', false);
+                }
                 
-                // This is required for Firefox
-                link.target = '_blank';
-                
-                // Append to body, click, and remove
-                document.body.appendChild(link);
-                link.click();
-                
-                // Small delay before removing the link to ensure the download starts
-                setTimeout(() => {
-                    document.body.removeChild(link);
-                }, 100);
-                
-                const transparencyNote = (exportFormat === 'png' && useTransparentBackground) ? ' with transparent background' : '';
-                document.getElementById('status').innerHTML = `${exportFormat.toUpperCase()} image exported successfully${transparencyNote}`;
             } catch (err) {
                 document.getElementById('status').innerHTML = 'Error exporting image: ' + err.message;
                 console.error('Export error:', err);
             }
+        }
+        
+        // Convert image format and handle transparency
+        function convertAndDownload(jpegDataUrl, targetFormat, useTransparent) {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+            
+            img.onload = function() {
+                canvas.width = img.width;
+                canvas.height = img.height;
+                
+                // For PNG with white background, fill canvas with white first
+                if (targetFormat === 'png' && !useTransparent) {
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                }
+                // For transparent PNG, we leave canvas transparent (default)
+                
+                // Draw the image
+                ctx.drawImage(img, 0, 0);
+                
+                // Convert to target format
+                let outputData;
+                if (targetFormat === 'png') {
+                    outputData = canvas.toDataURL('image/png');
+                } else {
+                    outputData = canvas.toDataURL('image/jpeg', 0.9);
+                }
+                
+                const filename = `molecule.${targetFormat}`;
+                downloadImage(outputData, filename, targetFormat, useTransparent);
+            };
+            
+            img.src = jpegDataUrl;
+        }
+        
+        // Helper function to handle the actual download
+        function downloadImage(imageData, filename, format, transparent) {
+            // Create a temporary link element
+            var link = document.createElement('a');
+            link.href = imageData;
+            link.download = filename;
+            
+            // This is required for Firefox
+            link.target = '_blank';
+            
+            // Append to body, click, and remove
+            document.body.appendChild(link);
+            link.click();
+            
+            // Small delay before removing the link to ensure the download starts
+            setTimeout(() => {
+                document.body.removeChild(link);
+            }, 100);
+            
+            const transparencyNote = (format === 'png' && transparent) ? ' with transparent background' : '';
+            document.getElementById('status').innerHTML = `${format.toUpperCase()} image exported successfully${transparencyNote}`;
         }
 
         // Add variable to store XYZ data
