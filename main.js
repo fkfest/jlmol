@@ -144,6 +144,14 @@ function createWindow() {
                                     setTimeout(() => {
                                         Jmol.script(jmolApplet0, 'load inline "' + content + '" filter "NOSORT";');
                                         Jmol.script(jmolApplet0, 'set echo top left; echo "";');
+                                        
+                                        // Apply JSmol preferences after loading
+                                        setTimeout(() => {
+                                            if (typeof applyJSmolPreferences === 'function') {
+                                                applyJSmolPreferences();
+                                                console.log('Command-line loading: Applied JSmol preferences');
+                                            }
+                                        }, 500);
                                     }, 100);
                                 } catch (err) {
                                     console.error('Error loading molecule:', err);

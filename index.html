@@ -1451,6 +1451,12 @@
                         setTimeout(() => {
                             console.log('loadXYZWithNumberedAtoms: Restoring display mode:', currentDisplayMode);
                             setDisplayMode(currentDisplayMode);
+                            
+                            // Apply all JSmol preferences after loading
+                            if (typeof applyJSmolPreferences === 'function') {
+                                applyJSmolPreferences();
+                                console.log('loadXYZWithNumberedAtoms: Applied JSmol preferences');
+                            }
                         }, 100);
                     }, 100);
                 }, 100);
@@ -1467,6 +1473,12 @@
                 setTimeout(() => {
                     console.log('loadXYZWithNumberedAtoms fallback: Restoring display mode:', currentDisplayMode);
                     setDisplayMode(currentDisplayMode);
+                    
+                    // Apply all JSmol preferences after fallback loading
+                    if (typeof applyJSmolPreferences === 'function') {
+                        applyJSmolPreferences();
+                        console.log('loadXYZWithNumberedAtoms fallback: Applied JSmol preferences');
+                    }
                 }, 200);
             }
         }
@@ -1868,6 +1880,12 @@
                         setTimeout(() => {
                             console.log('handleFileSelect: Restoring display mode:', currentDisplayMode);
                             setDisplayMode(currentDisplayMode);
+                            
+                            // Apply all JSmol preferences after loading
+                            if (typeof applyJSmolPreferences === 'function') {
+                                applyJSmolPreferences();
+                                console.log('handleFileSelect: Applied JSmol preferences');
+                            }
                         }, 300);
                         
                     } catch (err) {
@@ -1898,6 +1916,12 @@
                 setTimeout(() => {
                     console.log('loadSample: Restoring display mode:', currentDisplayMode);
                     setDisplayMode(currentDisplayMode);
+                    
+                    // Apply all JSmol preferences after loading
+                    if (typeof applyJSmolPreferences === 'function') {
+                        applyJSmolPreferences();
+                        console.log('loadSample: Applied JSmol preferences');
+                    }
                     
                     // Refresh atom names to remove any numbered indices
                     setTimeout(() => {
@@ -2033,6 +2057,12 @@
                 setTimeout(() => {
                     setDisplayMode(currentDisplayMode);
                     document.getElementById('status').innerHTML = 'Structure loaded successfully from PubChem';
+                    
+                    // Apply all JSmol preferences after loading
+                    if (typeof applyJSmolPreferences === 'function') {
+                        applyJSmolPreferences();
+                        console.log('loadFromDatabase: Applied JSmol preferences');
+                    }
                     
                     // Refresh atom names to remove any numbered indices
                     setTimeout(() => {
@@ -2737,6 +2767,12 @@
                         refreshAtomNames();
                         console.log('updateStructure: Atom names refreshed after update');
                         
+                        // Apply all JSmol preferences after structure update
+                        if (typeof applyJSmolPreferences === 'function') {
+                            applyJSmolPreferences();
+                            console.log('updateStructure: Applied JSmol preferences');
+                        }
+                        
                         // Update MOL file data for JSME integration after structure changes
                         try {
                             lastMolFile = Jmol.evaluateVar(jmolApplet0, 'write("mol")').trim();
@@ -3111,6 +3147,13 @@
                             // Restore the last used display mode
                             setTimeout(() => {
                                 setDisplayMode(displayMode || 'default');
+                                
+                                // Apply all JSmol preferences after 2D to 3D conversion
+                                if (typeof applyJSmolPreferences === 'function') {
+                                    applyJSmolPreferences();
+                                    console.log('toggle2D3D: Applied JSmol preferences after 2D to 3D conversion');
+                                }
+                                
                                 if (width > 0 && height > 0) {
                                     Jmol.resizeApplet(jmolApplet0, [width, height]);
                                 }
