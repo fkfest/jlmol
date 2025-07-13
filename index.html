@@ -949,8 +949,8 @@
 
         #preferencesPanel {
             position: fixed;
-            width: 400px;
-            padding: 10px;
+            width: 450px;
+            padding: 0;
             display: none;
             background: white;
             border: 1px solid #ccc;
@@ -960,56 +960,120 @@
             left: 140px;
             resize: both;
             overflow: auto;
-            min-width: 300px;
-            min-height: 300px;
+            min-width: 400px;
+            min-height: 400px;
+            border-radius: 8px;
         }
 
         #preferences-header {
             cursor: move;
-            padding: 10px;
-            background: #f0f0f0;
-            margin: -10px -10px 10px -10px;
+            padding: 12px 15px;
+            background: linear-gradient(to bottom, #f8f8f8, #e8e8e8);
+            margin: 0;
             display: flex;
             justify-content: space-between;
             align-items: center;
             border-bottom: 1px solid #ccc;
             -webkit-user-select: none;
             user-select: none;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .preferences-tabs {
+            display: flex;
+            background: #f0f0f0;
+            border-bottom: 1px solid #ccc;
+            margin: 0;
+            padding: 0;
+        }
+
+        .preferences-tab {
+            flex: 1;
+            padding: 12px 8px;
+            text-align: center;
+            background: #f0f0f0;
+            border: none;
+            border-right: 1px solid #ccc;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            color: #666;
+            transition: all 0.2s ease;
+        }
+
+        .preferences-tab:last-child {
+            border-right: none;
+        }
+
+        .preferences-tab:hover {
+            background: #e8e8e8;
+            color: #333;
+        }
+
+        .preferences-tab.active {
+            background: white;
+            color: #333;
+            border-bottom: 2px solid #4CAF50;
+            font-weight: 600;
+        }
+
+        .preferences-content {
+            padding: 15px;
+            min-height: 300px;
+        }
+
+        .preferences-tab-content {
+            display: none;
+        }
+
+        .preferences-tab-content.active {
+            display: block;
         }
 
         .preference-section {
             margin-bottom: 20px;
-            padding: 10px;
+            padding: 12px;
             border: 1px solid #e0e0e0;
-            border-radius: 4px;
-            background: #f9f9f9;
+            border-radius: 6px;
+            background: #fafafa;
         }
 
         .preference-section h4 {
-            margin: 0 0 10px 0;
+            margin: 0 0 12px 0;
             color: #333;
             font-size: 14px;
+            font-weight: 600;
+            border-bottom: 1px solid #e0e0e0;
+            padding-bottom: 6px;
         }
 
         .preference-item {
             margin-bottom: 12px;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
         }
 
         .preference-label {
-            min-width: 120px;
+            min-width: 130px;
             font-size: 13px;
             color: #555;
+            font-weight: 500;
         }
 
         .preference-select, .preference-input {
             flex: 1;
-            padding: 4px 8px;
+            padding: 6px 10px;
             border: 1px solid #ccc;
-            border-radius: 3px;
+            border-radius: 4px;
             font-size: 13px;
+            background: white;
+        }
+
+        .preference-select:focus, .preference-input:focus {
+            outline: none;
+            border-color: #4CAF50;
+            box-shadow: 0 0 3px rgba(76, 175, 80, 0.3);
         }
 
         .preference-input {
@@ -1019,9 +1083,15 @@
         .preference-checkbox-label {
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
             font-size: 13px;
             cursor: pointer;
+            font-weight: 500;
+        }
+
+        .preference-checkbox-label input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
         }
 
         .preference-buttons {
@@ -1029,17 +1099,21 @@
             gap: 10px;
             justify-content: flex-end;
             margin-top: 20px;
-            padding-top: 10px;
+            padding: 15px;
             border-top: 1px solid #e0e0e0;
+            background: #f8f8f8;
+            border-radius: 0 0 8px 8px;
         }
 
         .preference-save-button, .preference-reset-button, .preference-close-button {
-            padding: 6px 12px;
+            padding: 8px 16px;
             border: 1px solid #ccc;
-            border-radius: 3px;
+            border-radius: 4px;
             background: #f5f5f5;
             cursor: pointer;
             font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s ease;
         }
 
         .preference-save-button {
@@ -1050,10 +1124,33 @@
 
         .preference-save-button:hover {
             background: #45a049;
+            transform: translateY(-1px);
         }
 
         .preference-reset-button:hover, .preference-close-button:hover {
             background: #e0e0e0;
+            transform: translateY(-1px);
+        }
+
+        .color-input-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .color-preview {
+            width: 30px;
+            height: 30px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .preference-description {
+            font-size: 11px;
+            color: #777;
+            margin-top: 4px;
+            font-style: italic;
         }
     </style>
     <script type="text/javascript">
@@ -1085,6 +1182,11 @@
                     }
                     console.log('JSmol ready: Setting initial display mode to', displayMode);
                     setDisplayMode(displayMode);
+                    
+                    // Apply JSmol preferences when ready
+                    if (typeof applyJSmolPreferences === 'function') {
+                        applyJSmolPreferences();
+                    }
                     
                     // Initialize MOL file data if there's already a structure loaded
                     try {
@@ -1349,6 +1451,12 @@
                         setTimeout(() => {
                             console.log('loadXYZWithNumberedAtoms: Restoring display mode:', currentDisplayMode);
                             setDisplayMode(currentDisplayMode);
+                            
+                            // Apply all JSmol preferences after loading
+                            if (typeof applyJSmolPreferences === 'function') {
+                                applyJSmolPreferences();
+                                console.log('loadXYZWithNumberedAtoms: Applied JSmol preferences');
+                            }
                         }, 100);
                     }, 100);
                 }, 100);
@@ -1365,6 +1473,12 @@
                 setTimeout(() => {
                     console.log('loadXYZWithNumberedAtoms fallback: Restoring display mode:', currentDisplayMode);
                     setDisplayMode(currentDisplayMode);
+                    
+                    // Apply all JSmol preferences after fallback loading
+                    if (typeof applyJSmolPreferences === 'function') {
+                        applyJSmolPreferences();
+                        console.log('loadXYZWithNumberedAtoms fallback: Applied JSmol preferences');
+                    }
                 }, 200);
             }
         }
@@ -1766,6 +1880,12 @@
                         setTimeout(() => {
                             console.log('handleFileSelect: Restoring display mode:', currentDisplayMode);
                             setDisplayMode(currentDisplayMode);
+                            
+                            // Apply all JSmol preferences after loading
+                            if (typeof applyJSmolPreferences === 'function') {
+                                applyJSmolPreferences();
+                                console.log('handleFileSelect: Applied JSmol preferences');
+                            }
                         }, 300);
                         
                     } catch (err) {
@@ -1796,6 +1916,12 @@
                 setTimeout(() => {
                     console.log('loadSample: Restoring display mode:', currentDisplayMode);
                     setDisplayMode(currentDisplayMode);
+                    
+                    // Apply all JSmol preferences after loading
+                    if (typeof applyJSmolPreferences === 'function') {
+                        applyJSmolPreferences();
+                        console.log('loadSample: Applied JSmol preferences');
+                    }
                     
                     // Refresh atom names to remove any numbered indices
                     setTimeout(() => {
@@ -1931,6 +2057,12 @@
                 setTimeout(() => {
                     setDisplayMode(currentDisplayMode);
                     document.getElementById('status').innerHTML = 'Structure loaded successfully from PubChem';
+                    
+                    // Apply all JSmol preferences after loading
+                    if (typeof applyJSmolPreferences === 'function') {
+                        applyJSmolPreferences();
+                        console.log('loadFromDatabase: Applied JSmol preferences');
+                    }
                     
                     // Refresh atom names to remove any numbered indices
                     setTimeout(() => {
@@ -2635,6 +2767,12 @@
                         refreshAtomNames();
                         console.log('updateStructure: Atom names refreshed after update');
                         
+                        // Apply all JSmol preferences after structure update
+                        if (typeof applyJSmolPreferences === 'function') {
+                            applyJSmolPreferences();
+                            console.log('updateStructure: Applied JSmol preferences');
+                        }
+                        
                         // Update MOL file data for JSME integration after structure changes
                         try {
                             lastMolFile = Jmol.evaluateVar(jmolApplet0, 'write("mol")').trim();
@@ -3009,6 +3147,13 @@
                             // Restore the last used display mode
                             setTimeout(() => {
                                 setDisplayMode(displayMode || 'default');
+                                
+                                // Apply all JSmol preferences after 2D to 3D conversion
+                                if (typeof applyJSmolPreferences === 'function') {
+                                    applyJSmolPreferences();
+                                    console.log('toggle2D3D: Applied JSmol preferences after 2D to 3D conversion');
+                                }
+                                
                                 if (width > 0 && height > 0) {
                                     Jmol.resizeApplet(jmolApplet0, [width, height]);
                                 }
@@ -3976,15 +4121,346 @@ and eliminates the need for manual steps.`;
         
         // User Preferences System - Core Functions
         const DEFAULT_PREFERENCES = {
+            // General settings
             theme: 'default',
+            autoLoadLastMolecule: false,
+            saveWindowPositions: true,
+            showTooltips: true,
+            confirmOverwrite: true,
+            exportFormat: 'png',
+            
+            // Display settings
             autoSpin: false,
             defaultDisplayMode: 'ball&stick',
+            showLabels: false,
+            bgColor: '#FFFFFF',
+            antialiasing: true,
+            zoomLevel: '100',
+            
+            // Advanced settings
+            hardwareAcceleration: true,
+            renderQuality: 'medium',
+            memoryLimit: 2048,
+            debugMode: false,
+            detailedLogging: false,
+            
+            // ElemCo.jl settings
             defaultBasisSet: 'cc-pVDZ',
             defaultMethod: 'HF',
-            saveWindowPositions: true,
-            autoLoadLastMolecule: false,
-            juliaCommand: 'julia'
+            juliaCommand: 'julia',
+            calcTimeout: 5,
+            useDF: false,
+            autoClearOutput: true,
+            saveOutput: false
         };
+        
+        // Switch between preference tabs
+        function switchPreferencesTab(tabName) {
+            // Remove active class from all tabs and contents
+            document.querySelectorAll('.preferences-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.preferences-tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Add active class to clicked tab and corresponding content
+            event.target.classList.add('active');
+            document.getElementById(`preferences-${tabName}`).classList.add('active');
+        }
+        
+        // Color picker handling
+        function openColorPicker(inputId) {
+            document.getElementById(inputId).click();
+        }
+        
+        function resetBackgroundColor() {
+            const colorInput = document.getElementById('pref-bg-color');
+            const colorPreview = document.getElementById('bg-color-preview');
+            colorInput.value = '#FFFFFF';
+            colorPreview.style.backgroundColor = '#FFFFFF';
+            updateBackgroundColor('#FFFFFF');
+        }
+        
+        function updateBackgroundColor(color) {
+            if (jmolApplet0 && jmolApplet0._ready) {
+                // Convert hex color to JSmol format
+                const jsmolColor = color.replace('#', '0x');
+                Jmol.script(jmolApplet0, `background ${jsmolColor}`);
+                
+                // Update the preference
+                updatePreference('bgColor', color);
+            }
+        }
+        
+        // Enhanced preference loading and saving
+        function loadPreferencesIntoUI() {
+            const prefs = getPreferences();
+            
+            // General settings
+            const autoLoadCheckbox = document.getElementById('pref-auto-load');
+            if (autoLoadCheckbox) autoLoadCheckbox.checked = prefs.autoLoadLastMolecule || false;
+            
+            const savePositionsCheckbox = document.getElementById('pref-save-positions');
+            if (savePositionsCheckbox) savePositionsCheckbox.checked = prefs.saveWindowPositions !== false;
+            
+            const showTooltipsCheckbox = document.getElementById('pref-show-tooltips');
+            if (showTooltipsCheckbox) showTooltipsCheckbox.checked = prefs.showTooltips !== false;
+            
+            const confirmOverwriteCheckbox = document.getElementById('pref-confirm-overwrite');
+            if (confirmOverwriteCheckbox) confirmOverwriteCheckbox.checked = prefs.confirmOverwrite !== false;
+            
+            const exportFormatSelect = document.getElementById('pref-export-format');
+            if (exportFormatSelect) exportFormatSelect.value = prefs.exportFormat || 'png';
+            
+            // Display settings  
+            const autoSpinCheckbox = document.getElementById('pref-auto-spin');
+            if (autoSpinCheckbox) autoSpinCheckbox.checked = prefs.autoSpin || false;
+            
+            const displayModeSelect = document.getElementById('pref-display-mode');
+            if (displayModeSelect) {
+                displayModeSelect.value = prefs.defaultDisplayMode || 'ball&stick';
+                
+                // Add change listener for immediate display mode update
+                displayModeSelect.addEventListener('change', function() {
+                    applyDisplayMode(this.value);
+                    updatePreference('defaultDisplayMode', this.value);
+                });
+            }
+            
+            const showLabelsCheckbox = document.getElementById('pref-show-labels');
+            if (showLabelsCheckbox) {
+                showLabelsCheckbox.checked = prefs.showLabels || false;
+                
+                // Add change listener for immediate label update
+                showLabelsCheckbox.addEventListener('change', function() {
+                    applyAtomLabels(this.checked);
+                });
+            }
+            
+            const bgColorInput = document.getElementById('pref-bg-color');
+            const bgColorPreview = document.getElementById('bg-color-preview');
+            if (bgColorInput && bgColorPreview) {
+                bgColorInput.value = prefs.bgColor || '#FFFFFF';
+                bgColorPreview.style.backgroundColor = prefs.bgColor || '#FFFFFF';
+                
+                // Add change listener for immediate background update
+                bgColorInput.addEventListener('change', function() {
+                    bgColorPreview.style.backgroundColor = this.value;
+                    updateBackgroundColor(this.value);
+                });
+            }
+            
+            const antialiasingCheckbox = document.getElementById('pref-antialiasing');
+            if (antialiasingCheckbox) {
+                antialiasingCheckbox.checked = prefs.antialiasing !== false;
+                
+                // Add change listener for immediate antialiasing update
+                antialiasingCheckbox.addEventListener('change', function() {
+                    if (jmolApplet0 && jmolApplet0._ready) {
+                        const antialiasingCmd = this.checked ? 'on' : 'off';
+                        Jmol.script(jmolApplet0, `set antialiasDisplay ${antialiasingCmd}`);
+                        updatePreference('antialiasing', this.checked);
+                    }
+                });
+            }
+            
+            const zoomLevelSelect = document.getElementById('pref-zoom-level');
+            if (zoomLevelSelect) {
+                zoomLevelSelect.value = prefs.zoomLevel || '100';
+                
+                // Add change listener for immediate zoom level update
+                zoomLevelSelect.addEventListener('change', function() {
+                    applyZoomLevel(this.value);
+                });
+            }
+            
+            // Advanced settings
+            const hardwareAccelCheckbox = document.getElementById('pref-hardware-acceleration');
+            if (hardwareAccelCheckbox) hardwareAccelCheckbox.checked = prefs.hardwareAcceleration !== false;
+            
+            const renderQualitySelect = document.getElementById('pref-render-quality');
+            if (renderQualitySelect) renderQualitySelect.value = prefs.renderQuality || 'medium';
+            
+            const memoryLimitInput = document.getElementById('pref-memory-limit');
+            if (memoryLimitInput) memoryLimitInput.value = prefs.memoryLimit || 2048;
+            
+            const debugModeCheckbox = document.getElementById('pref-debug-mode');
+            if (debugModeCheckbox) debugModeCheckbox.checked = prefs.debugMode || false;
+            
+            const detailedLoggingCheckbox = document.getElementById('pref-detailed-logging');
+            if (detailedLoggingCheckbox) detailedLoggingCheckbox.checked = prefs.detailedLogging || false;
+            
+            // ElemCo.jl settings
+            const basisSetSelect = document.getElementById('pref-basis-set');
+            if (basisSetSelect) basisSetSelect.value = prefs.defaultBasisSet || 'cc-pVDZ';
+            
+            const methodSelect = document.getElementById('pref-method');
+            if (methodSelect) methodSelect.value = prefs.defaultMethod || 'HF';
+            
+            const juliaCommandInput = document.getElementById('pref-julia-command');
+            if (juliaCommandInput) juliaCommandInput.value = prefs.juliaCommand || 'julia';
+            
+            const calcTimeoutInput = document.getElementById('pref-calc-timeout');
+            if (calcTimeoutInput) calcTimeoutInput.value = prefs.calcTimeout || 5;
+            
+            const useDFCheckbox = document.getElementById('pref-use-df');
+            if (useDFCheckbox) useDFCheckbox.checked = prefs.useDF || false;
+            
+            const autoClearOutputCheckbox = document.getElementById('pref-auto-clear-output');
+            if (autoClearOutputCheckbox) autoClearOutputCheckbox.checked = prefs.autoClearOutput !== false;
+            
+            const saveOutputCheckbox = document.getElementById('pref-save-output');
+            if (saveOutputCheckbox) saveOutputCheckbox.checked = prefs.saveOutput || false;
+        }
+        
+        // Save preferences from UI - enhanced version
+        function savePreferencesFromUI() {
+            const prefs = getPreferences();
+            
+            // General settings
+            const autoLoadCheckbox = document.getElementById('pref-auto-load');
+            if (autoLoadCheckbox) prefs.autoLoadLastMolecule = autoLoadCheckbox.checked;
+            
+            const savePositionsCheckbox = document.getElementById('pref-save-positions');
+            if (savePositionsCheckbox) prefs.saveWindowPositions = savePositionsCheckbox.checked;
+            
+            const showTooltipsCheckbox = document.getElementById('pref-show-tooltips');
+            if (showTooltipsCheckbox) prefs.showTooltips = showTooltipsCheckbox.checked;
+            
+            const confirmOverwriteCheckbox = document.getElementById('pref-confirm-overwrite');
+            if (confirmOverwriteCheckbox) prefs.confirmOverwrite = confirmOverwriteCheckbox.checked;
+            
+            const exportFormatSelect = document.getElementById('pref-export-format');
+            if (exportFormatSelect) prefs.exportFormat = exportFormatSelect.value;
+            
+            // Display settings
+            const autoSpinCheckbox = document.getElementById('pref-auto-spin');
+            if (autoSpinCheckbox) prefs.autoSpin = autoSpinCheckbox.checked;
+            
+            const displayModeSelect = document.getElementById('pref-display-mode');
+            if (displayModeSelect) prefs.defaultDisplayMode = displayModeSelect.value;
+            
+            const showLabelsCheckbox = document.getElementById('pref-show-labels');
+            if (showLabelsCheckbox) prefs.showLabels = showLabelsCheckbox.checked;
+            
+            const bgColorInput = document.getElementById('pref-bg-color');
+            if (bgColorInput) prefs.bgColor = bgColorInput.value;
+            
+            const antialiasingCheckbox = document.getElementById('pref-antialiasing');
+            if (antialiasingCheckbox) prefs.antialiasing = antialiasingCheckbox.checked;
+            
+            const zoomLevelSelect = document.getElementById('pref-zoom-level');
+            if (zoomLevelSelect) prefs.zoomLevel = zoomLevelSelect.value;
+            
+            // Advanced settings
+            const hardwareAccelCheckbox = document.getElementById('pref-hardware-acceleration');
+            if (hardwareAccelCheckbox) prefs.hardwareAcceleration = hardwareAccelCheckbox.checked;
+            
+            const renderQualitySelect = document.getElementById('pref-render-quality');
+            if (renderQualitySelect) prefs.renderQuality = renderQualitySelect.value;
+            
+            const memoryLimitInput = document.getElementById('pref-memory-limit');
+            if (memoryLimitInput) prefs.memoryLimit = parseInt(memoryLimitInput.value) || 2048;
+            
+            const debugModeCheckbox = document.getElementById('pref-debug-mode');
+            if (debugModeCheckbox) {
+                prefs.debugMode = debugModeCheckbox.checked;
+                window.jlmolDebug = debugModeCheckbox.checked; // Apply immediately
+            }
+            
+            const detailedLoggingCheckbox = document.getElementById('pref-detailed-logging');
+            if (detailedLoggingCheckbox) prefs.detailedLogging = detailedLoggingCheckbox.checked;
+            
+            // ElemCo.jl settings
+            const basisSetSelect = document.getElementById('pref-basis-set');
+            if (basisSetSelect) prefs.defaultBasisSet = basisSetSelect.value;
+            
+            const methodSelect = document.getElementById('pref-method');
+            if (methodSelect) prefs.defaultMethod = methodSelect.value;
+            
+            const juliaCommandInput = document.getElementById('pref-julia-command');
+            if (juliaCommandInput) prefs.juliaCommand = juliaCommandInput.value.trim() || 'julia';
+            
+            const calcTimeoutInput = document.getElementById('pref-calc-timeout');
+            if (calcTimeoutInput) prefs.calcTimeout = parseInt(calcTimeoutInput.value) || 5;
+            
+            const useDFCheckbox = document.getElementById('pref-use-df');
+            if (useDFCheckbox) prefs.useDF = useDFCheckbox.checked;
+            
+            const autoClearOutputCheckbox = document.getElementById('pref-auto-clear-output');
+            if (autoClearOutputCheckbox) prefs.autoClearOutput = autoClearOutputCheckbox.checked;
+            
+            const saveOutputCheckbox = document.getElementById('pref-save-output');
+            if (saveOutputCheckbox) prefs.saveOutput = saveOutputCheckbox.checked;
+            
+            // Save to storage
+            window.userPreferences = prefs;
+            savePreferences(prefs);
+            
+            // Apply preferences immediately
+            applyPreferences();
+            
+            // Hide panel after saving
+            hidePreferencesPanel();
+        }
+        
+        // Enhanced apply preferences function
+        function applyPreferences() {
+            const prefs = getPreferences();
+            
+            // Apply auto-spin preference if enabled
+            if (prefs.autoSpin && !isSpinning) {
+                toggleSpin();
+            }
+            
+            // Apply background color
+            if (prefs.bgColor && jmolApplet0 && jmolApplet0._ready) {
+                updateBackgroundColor(prefs.bgColor);
+            }
+            
+            // Apply debug mode
+            window.jlmolDebug = prefs.debugMode || false;
+            
+            // Apply display mode if set
+            if (prefs.defaultDisplayMode) {
+                try {
+                    if (displayMode !== prefs.defaultDisplayMode) {
+                        console.log('Applying preferred display mode:', prefs.defaultDisplayMode);
+                    }
+                } catch (e) {
+                    console.warn('Could not apply display mode preference:', e);
+                }
+            }
+            
+            // Apply default basis set to ElemCo panel
+            try {
+                const basisSelect = document.getElementById('elemco-basis');
+                if (basisSelect && prefs.defaultBasisSet) {
+                    basisSelect.value = prefs.defaultBasisSet;
+                }
+                
+                // Apply default method to ElemCo panel
+                const methodSelect = document.getElementById('elemco-method');
+                if (methodSelect && prefs.defaultMethod) {
+                    methodSelect.value = prefs.defaultMethod;
+                }
+                
+                // Apply DF preference
+                const dfCheckbox = document.getElementById('elemco-df');
+                if (dfCheckbox && prefs.useDF !== undefined) {
+                    dfCheckbox.checked = prefs.useDF;
+                    updateMethodOptions(); // Update available methods based on DF setting
+                }
+                
+                // Update ElemCo input with these preferences
+                if ((basisSelect || methodSelect) && typeof updateElemCoInput === 'function') {
+                    updateElemCoInput();
+                }
+            } catch (e) {
+                console.warn('Could not apply ElemCo preferences:', e);
+            }
+        }
         
         // Load preferences from localStorage
         function loadPreferences() {
@@ -4017,6 +4493,116 @@ and eliminates the need for manual steps.`;
             return window.userPreferences || loadPreferences();
         }
         
+        // Apply JSmol-specific preferences to the viewer
+        function applyJSmolPreferences() {
+            if (!jmolApplet0 || !jmolApplet0._ready) {
+                console.log('JSmol not ready, skipping preference application');
+                return;
+            }
+            
+            const prefs = getPreferences();
+            
+            try {
+                // Apply background color
+                if (prefs.bgColor) {
+                    const jsmolColor = prefs.bgColor.replace('#', '0x');
+                    Jmol.script(jmolApplet0, `background ${jsmolColor}`);
+                    console.log('Applied background color:', prefs.bgColor);
+                }
+                
+                // Apply antialiasing
+                if (prefs.antialiasing !== undefined) {
+                    const antialiasingCmd = prefs.antialiasing ? 'on' : 'off';
+                    Jmol.script(jmolApplet0, `set antialiasDisplay ${antialiasingCmd}`);
+                    console.log('Applied antialiasing:', prefs.antialiasing);
+                }
+                
+                // Apply atom labels
+                if (prefs.showLabels) {
+                    Jmol.script(jmolApplet0, 'label %e');
+                    console.log('Applied atom labels: ON');
+                } else {
+                    Jmol.script(jmolApplet0, 'label off');
+                }
+                
+                // Apply display mode
+                if (prefs.defaultDisplayMode) {
+                    applyDisplayMode(prefs.defaultDisplayMode);
+                    console.log('Applied display mode:', prefs.defaultDisplayMode);
+                }
+                
+                // Apply zoom level
+                if (prefs.zoomLevel && prefs.zoomLevel !== '100') {
+                    const zoom = parseInt(prefs.zoomLevel);
+                    Jmol.script(jmolApplet0, `zoom ${zoom}`);
+                    console.log('Applied zoom level:', zoom);
+                }
+                
+                // Apply auto-spin
+                if (prefs.autoSpin && !isSpinning) {
+                    Jmol.script(jmolApplet0, 'spin on');
+                    isSpinning = true;
+                    console.log('Applied auto-spin: ON');
+                }
+                
+            } catch (error) {
+                console.error('Error applying JSmol preferences:', error);
+            }
+        }
+        
+        // Helper function to apply display mode
+        function applyDisplayMode(mode) {
+            if (!jmolApplet0 || !jmolApplet0._ready) return;
+            
+            try {
+                switch (mode) {
+                    case 'wireframe':
+                        Jmol.script(jmolApplet0, 'wireframe only');
+                        break;
+                    case 'ball&stick':
+                        Jmol.script(jmolApplet0, 'wireframe 0.15; spacefill 20%');
+                        break;
+                    case 'spacefill':
+                        Jmol.script(jmolApplet0, 'spacefill only');
+                        break;
+                    default:
+                        Jmol.script(jmolApplet0, 'wireframe 0.15; spacefill 20%');
+                }
+                displayMode = mode;
+            } catch (error) {
+                console.error('Error applying display mode:', error);
+            }
+        }
+        
+        // Helper function to apply zoom level
+        function applyZoomLevel(zoomLevel) {
+            if (!jmolApplet0 || !jmolApplet0._ready) return;
+            
+            try {
+                const zoom = parseInt(zoomLevel);
+                Jmol.script(jmolApplet0, `zoom ${zoom}`);
+                updatePreference('zoomLevel', zoomLevel);
+            } catch (error) {
+                console.error('Error applying zoom level:', error);
+            }
+        }
+        
+        // Helper function to apply atom labels
+        function applyAtomLabels(showLabels) {
+            if (!jmolApplet0 || !jmolApplet0._ready) return;
+            
+            try {
+                if (showLabels) {
+                    Jmol.script(jmolApplet0, 'label %e');
+                } else {
+                    Jmol.script(jmolApplet0, 'label off');
+                }
+                updatePreference('showLabels', showLabels);
+            } catch (error) {
+                console.error('Error applying atom labels:', error);
+            }
+        }
+        
         // Update a specific preference
         function updatePreference(key, value) {
             const preferences = getPreferences();
@@ -4036,52 +4622,6 @@ and eliminates the need for manual steps.`;
             console.log('User preferences initialized');
         }
         
-        // Apply preferences to current UI state
-        function applyPreferences() {
-            const prefs = getPreferences();
-            
-            // Apply auto-spin preference if enabled
-            if (prefs.autoSpin && !isSpinning) {
-                toggleSpin();
-            }
-            
-            // Apply display mode if set
-            if (prefs.defaultDisplayMode) {
-                // Use existing display mode functions if they're compatible
-                try {
-                    // Only set if current mode doesn't match preference
-                    if (displayMode !== prefs.defaultDisplayMode) {
-                        // This should use existing functionality instead of directly setting
-                        console.log('Applying preferred display mode:', prefs.defaultDisplayMode);
-                        // Will implement integration with existing display mode later
-                    }
-                } catch (e) {
-                    console.warn('Could not apply display mode preference:', e);
-                }
-            }
-            
-            // Apply default basis set to ElemCo panel
-            try {
-                const basisSelect = document.getElementById('elemco-basis');
-                if (basisSelect && prefs.defaultBasisSet) {
-                    basisSelect.value = prefs.defaultBasisSet;
-                }
-                
-                // Apply default method to ElemCo panel
-                const methodSelect = document.getElementById('elemco-method');
-                if (methodSelect && prefs.defaultMethod) {
-                    methodSelect.value = prefs.defaultMethod;
-                }
-                
-                // Update ElemCo input with these preferences
-                if ((basisSelect || methodSelect) && typeof updateElemCoInput === 'function') {
-                    updateElemCoInput();
-                }
-            } catch (e) {
-                console.warn('Could not apply ElemCo preferences:', e);
-            }
-        }
-        
         // Show preferences panel
         function showPreferencesPanel() {
             const panel = document.getElementById('preferencesPanel');
@@ -4099,70 +4639,6 @@ and eliminates the need for manual steps.`;
             if (panel) {
                 panel.style.display = 'none';
             }
-        }
-        
-        // Load current preferences into the UI
-        function loadPreferencesIntoUI() {
-            const prefs = getPreferences();
-            
-            // Load each preference into corresponding UI element
-            const autoSpinCheckbox = document.getElementById('pref-auto-spin');
-            if (autoSpinCheckbox) autoSpinCheckbox.checked = prefs.autoSpin;
-            
-            const displayModeSelect = document.getElementById('pref-display-mode');
-            if (displayModeSelect) displayModeSelect.value = prefs.defaultDisplayMode;
-            
-            const basisSetSelect = document.getElementById('pref-basis-set');
-            if (basisSetSelect) basisSetSelect.value = prefs.defaultBasisSet;
-            
-            const methodSelect = document.getElementById('pref-method');
-            if (methodSelect) methodSelect.value = prefs.defaultMethod;
-            
-            const savePositionsCheckbox = document.getElementById('pref-save-positions');
-            if (savePositionsCheckbox) savePositionsCheckbox.checked = prefs.saveWindowPositions;
-            
-            const autoLoadCheckbox = document.getElementById('pref-auto-load');
-            if (autoLoadCheckbox) autoLoadCheckbox.checked = prefs.autoLoadLastMolecule;
-            
-            const juliaCommandInput = document.getElementById('pref-julia-command');
-            if (juliaCommandInput) juliaCommandInput.value = prefs.juliaCommand;
-        }
-        
-        // Save preferences from UI
-        function savePreferencesFromUI() {
-            const prefs = getPreferences();
-            
-            // Read values from UI elements
-            const autoSpinCheckbox = document.getElementById('pref-auto-spin');
-            if (autoSpinCheckbox) prefs.autoSpin = autoSpinCheckbox.checked;
-            
-            const displayModeSelect = document.getElementById('pref-display-mode');
-            if (displayModeSelect) prefs.defaultDisplayMode = displayModeSelect.value;
-            
-            const basisSetSelect = document.getElementById('pref-basis-set');
-            if (basisSetSelect) prefs.defaultBasisSet = basisSetSelect.value;
-            
-            const methodSelect = document.getElementById('pref-method');
-            if (methodSelect) prefs.defaultMethod = methodSelect.value;
-            
-            const savePositionsCheckbox = document.getElementById('pref-save-positions');
-            if (savePositionsCheckbox) prefs.saveWindowPositions = savePositionsCheckbox.checked;
-            
-            const autoLoadCheckbox = document.getElementById('pref-auto-load');
-            if (autoLoadCheckbox) prefs.autoLoadLastMolecule = autoLoadCheckbox.checked;
-            
-            const juliaCommandInput = document.getElementById('pref-julia-command');
-            if (juliaCommandInput) prefs.juliaCommand = juliaCommandInput.value.trim() || 'julia';
-            
-            // Save to storage
-            window.userPreferences = prefs;
-            savePreferences(prefs);
-            
-            // Apply preferences immediately
-            applyPreferences();
-            
-            // Hide panel after saving
-            hidePreferencesPanel();
         }
         
         // Reset preferences to defaults
@@ -4386,63 +4862,234 @@ and eliminates the need for manual steps.`;
             <button onclick="hidePreferencesPanel()" title="Close preferences panel" class="preference-close-button">Close</button>
         </div>
         
-        <div class="preference-section">
-            <h4>Display Settings</h4>
-            <div class="preference-item">
-                <label class="preference-checkbox-label">
-                    <input type="checkbox" id="pref-auto-spin">
-                    <span>Auto-spin molecules when loaded</span>
-                </label>
-            </div>
-            <div class="preference-item">
-                <label class="preference-label">Default display mode:</label>
-                <select id="pref-display-mode" class="preference-select">
-                    <option value="ball&stick">Ball & Stick</option>
-                    <option value="wireframe">Wireframe</option>
-                    <option value="spacefill">Spacefill</option>
-                </select>
-            </div>
+        <div class="preferences-tabs">
+            <button class="preferences-tab active" onclick="switchPreferencesTab('general')">General</button>
+            <button class="preferences-tab" onclick="switchPreferencesTab('display')">Display</button>
+            <button class="preferences-tab" onclick="switchPreferencesTab('advanced')">Advanced</button>
+            <button class="preferences-tab" onclick="switchPreferencesTab('elemco')">ElemCo.jl</button>
         </div>
         
-        <div class="preference-section">
-            <h4>ElemCo.jl Defaults</h4>
-            <div class="preference-item">
-                <label class="preference-label">Default basis set:</label>
-                <select id="pref-basis-set" class="preference-select">
-                    <option value="cc-pVDZ">cc-pVDZ</option>
-                    <option value="cc-pVTZ">cc-pVTZ</option>
-                    <option value="aug-cc-pVDZ">aug-cc-pVDZ</option>
-                    <option value="aug-cc-pVTZ">aug-cc-pVTZ</option>
-                </select>
+        <div class="preferences-content">
+            <!-- General Settings Tab -->
+            <div id="preferences-general" class="preferences-tab-content active">
+                <div class="preference-section">
+                    <h4>Application Behavior</h4>
+                    <div class="preference-item">
+                        <label class="preference-checkbox-label">
+                            <input type="checkbox" id="pref-auto-load">
+                            <span>Auto-load last molecule on startup</span>
+                        </label>
+                        <div class="preference-description">Automatically load the most recently opened molecule when the application starts</div>
+                    </div>
+                    <div class="preference-item">
+                        <label class="preference-checkbox-label">
+                            <input type="checkbox" id="pref-save-positions">
+                            <span>Remember window positions</span>
+                        </label>
+                        <div class="preference-description">Save and restore the positions of panels and windows</div>
+                    </div>
+                    <div class="preference-item">
+                        <label class="preference-checkbox-label">
+                            <input type="checkbox" id="pref-show-tooltips">
+                            <span>Show tooltips on hover</span>
+                        </label>
+                        <div class="preference-description">Display helpful tooltips when hovering over buttons and controls</div>
+                    </div>
+                </div>
+                
+                <div class="preference-section">
+                    <h4>File Handling</h4>
+                    <div class="preference-item">
+                        <label class="preference-checkbox-label">
+                            <input type="checkbox" id="pref-confirm-overwrite">
+                            <span>Confirm before overwriting files</span>
+                        </label>
+                        <div class="preference-description">Ask for confirmation before overwriting existing files</div>
+                    </div>
+                    <div class="preference-item">
+                        <label class="preference-label">Default export format:</label>
+                        <select id="pref-export-format" class="preference-select">
+                            <option value="png">PNG Image</option>
+                            <option value="jpg">JPEG Image</option>
+                            <option value="xyz">XYZ Coordinates</option>
+                            <option value="mol">MOL File</option>
+                        </select>
+                        <div class="preference-description">Default file format for exports</div>
+                    </div>
+                </div>
             </div>
-            <div class="preference-item">
-                <label class="preference-label">Default method:</label>
-                <select id="pref-method" class="preference-select">
-                    <option value="HF">HF</option>
-                    <option value="MP2">MP2</option>
-                    <option value="DCSD">DCSD</option>
-                    <option value="CCSD(T)">CCSD(T)</option>
-                </select>
+            
+            <!-- Display Settings Tab -->
+            <div id="preferences-display" class="preferences-tab-content">
+                <div class="preference-section">
+                    <h4>Molecular Display</h4>
+                    <div class="preference-item">
+                        <label class="preference-label">Default display mode:</label>
+                        <select id="pref-display-mode" class="preference-select">
+                            <option value="ball&stick">Ball & Stick</option>
+                            <option value="wireframe">Wireframe</option>
+                            <option value="spacefill">Spacefill</option>
+                        </select>
+                        <div class="preference-description">Default molecular representation when loading structures</div>
+                    </div>
+                    <div class="preference-item">
+                        <label class="preference-checkbox-label">
+                            <input type="checkbox" id="pref-auto-spin">
+                            <span>Auto-spin molecules when loaded</span>
+                        </label>
+                        <div class="preference-description">Automatically start rotation animation for new molecules</div>
+                    </div>
+                    <div class="preference-item">
+                        <label class="preference-checkbox-label">
+                            <input type="checkbox" id="pref-show-labels">
+                            <span>Show atom labels by default</span>
+                        </label>
+                        <div class="preference-description">Display element symbols on atoms</div>
+                    </div>
+                </div>
+                
+                <div class="preference-section">
+                    <h4>JSmol Configuration</h4>
+                    <div class="preference-item">
+                        <label class="preference-label">Background color:</label>
+                        <div class="color-input-group">
+                            <div class="color-preview" id="bg-color-preview" onclick="openColorPicker('pref-bg-color')"></div>
+                            <input type="color" id="pref-bg-color" class="preference-input" value="#FFFFFF">
+                            <button onclick="resetBackgroundColor()" style="padding: 4px 8px; font-size: 11px;">Reset</button>
+                        </div>
+                        <div class="preference-description">Background color for the molecular viewer</div>
+                    </div>
+                    <div class="preference-item">
+                        <label class="preference-checkbox-label">
+                            <input type="checkbox" id="pref-antialiasing">
+                            <span>Enable antialiasing</span>
+                        </label>
+                        <div class="preference-description">Smooth edges for better visual quality (may affect performance)</div>
+                    </div>
+                    <div class="preference-item">
+                        <label class="preference-label">Default zoom level:</label>
+                        <select id="pref-zoom-level" class="preference-select">
+                            <option value="50">50%</option>
+                            <option value="75">75%</option>
+                            <option value="100">100%</option>
+                            <option value="125">125%</option>
+                            <option value="150">150%</option>
+                        </select>
+                        <div class="preference-description">Initial zoom level for loaded molecules</div>
+                    </div>
+                </div>
             </div>
-        </div>
-        
-        <div class="preference-section">
-            <h4>Application Settings</h4>
-            <div class="preference-item">
-                <label class="preference-label">Julia command:</label>
-                <input type="text" id="pref-julia-command" class="preference-input" placeholder="julia" title="Julia command or path (e.g., julia, /usr/local/bin/julia, julia.exe, or 'wsl julia' for WSL)">
+            
+            <!-- Advanced Settings Tab -->
+            <div id="preferences-advanced" class="preferences-tab-content">
+                <div class="preference-section">
+                    <h4>Performance</h4>
+                    <div class="preference-item">
+                        <label class="preference-checkbox-label">
+                            <input type="checkbox" id="pref-hardware-acceleration">
+                            <span>Enable hardware acceleration</span>
+                        </label>
+                        <div class="preference-description">Use GPU acceleration for better performance (restart required)</div>
+                    </div>
+                    <div class="preference-item">
+                        <label class="preference-label">Render quality:</label>
+                        <select id="pref-render-quality" class="preference-select">
+                            <option value="low">Low (Fast)</option>
+                            <option value="medium">Medium</option>
+                            <option value="high">High (Slow)</option>
+                        </select>
+                        <div class="preference-description">Rendering quality vs performance tradeoff</div>
+                    </div>
+                    <div class="preference-item">
+                        <label class="preference-label">Memory limit (MB):</label>
+                        <input type="number" id="pref-memory-limit" class="preference-input" min="512" max="8192" step="256" value="2048">
+                        <div class="preference-description">Maximum memory usage for molecular structures</div>
+                    </div>
+                </div>
+                
+                <div class="preference-section">
+                    <h4>Developer Options</h4>
+                    <div class="preference-item">
+                        <label class="preference-checkbox-label">
+                            <input type="checkbox" id="pref-debug-mode">
+                            <span>Enable debug mode</span>
+                        </label>
+                        <div class="preference-description">Show additional debug information in console</div>
+                    </div>
+                    <div class="preference-item">
+                        <label class="preference-checkbox-label">
+                            <input type="checkbox" id="pref-detailed-logging">
+                            <span>Detailed error logging</span>
+                        </label>
+                        <div class="preference-description">Log detailed error information for troubleshooting</div>
+                    </div>
+                </div>
             </div>
-            <div class="preference-item">
-                <label class="preference-checkbox-label">
-                    <input type="checkbox" id="pref-save-positions">
-                    <span>Remember window positions</span>
-                </label>
-            </div>
-            <div class="preference-item">
-                <label class="preference-checkbox-label">
-                    <input type="checkbox" id="pref-auto-load">
-                    <span>Auto-load last molecule on startup</span>
-                </label>
+            
+            <!-- ElemCo.jl Settings Tab -->
+            <div id="preferences-elemco" class="preferences-tab-content">
+                <div class="preference-section">
+                    <h4>Julia Configuration</h4>
+                    <div class="preference-item">
+                        <label class="preference-label">Julia command:</label>
+                        <input type="text" id="pref-julia-command" class="preference-input" placeholder="julia" title="Julia command or path (e.g., julia, /usr/local/bin/julia, julia.exe, or 'wsl julia' for WSL)">
+                        <div class="preference-description">Command or path to Julia executable (supports WSL)</div>
+                    </div>
+                    <div class="preference-item">
+                        <label class="preference-label">Calculation timeout (min):</label>
+                        <input type="number" id="pref-calc-timeout" class="preference-input" min="1" max="60" value="5">
+                        <div class="preference-description">Maximum time to wait for calculations to complete</div>
+                    </div>
+                </div>
+                
+                <div class="preference-section">
+                    <h4>Default Calculation Settings</h4>
+                    <div class="preference-item">
+                        <label class="preference-label">Default basis set:</label>
+                        <select id="pref-basis-set" class="preference-select">
+                            <option value="cc-pVDZ">cc-pVDZ</option>
+                            <option value="cc-pVTZ">cc-pVTZ</option>
+                            <option value="aug-cc-pVDZ">aug-cc-pVDZ</option>
+                            <option value="aug-cc-pVTZ">aug-cc-pVTZ</option>
+                        </select>
+                        <div class="preference-description">Default basis set for new calculations</div>
+                    </div>
+                    <div class="preference-item">
+                        <label class="preference-label">Default method:</label>
+                        <select id="pref-method" class="preference-select">
+                            <option value="HF">HF</option>
+                            <option value="MP2">MP2</option>
+                            <option value="DCSD">DCSD</option>
+                            <option value="CCSD(T)">CCSD(T)</option>
+                        </select>
+                        <div class="preference-description">Default calculation method</div>
+                    </div>
+                    <div class="preference-item">
+                        <label class="preference-checkbox-label">
+                            <input type="checkbox" id="pref-use-df">
+                            <span>Use density fitting by default</span>
+                        </label>
+                        <div class="preference-description">Enable density fitting approximation for faster calculations</div>
+                    </div>
+                </div>
+                
+                <div class="preference-section">
+                    <h4>Output Settings</h4>
+                    <div class="preference-item">
+                        <label class="preference-checkbox-label">
+                            <input type="checkbox" id="pref-auto-clear-output">
+                            <span>Auto-clear output on new calculation</span>
+                        </label>
+                        <div class="preference-description">Automatically clear previous output when starting new calculations</div>
+                    </div>
+                    <div class="preference-item">
+                        <label class="preference-checkbox-label">
+                            <input type="checkbox" id="pref-save-output">
+                            <span>Auto-save calculation output</span>
+                        </label>
+                        <div class="preference-description">Automatically save calculation results to file</div>
+                    </div>
+                </div>
             </div>
         </div>
         
