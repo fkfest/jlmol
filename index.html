@@ -1263,18 +1263,55 @@
         // Function to export the current view as an image
         function exportImage() {
             try {
-                // Get the image data using the correct JSmol API method
-                var imageData = Jmol.getPropertyAsString(jmolApplet0, "image");
+                // Get user preferences for export format and transparency
+                const prefs = getPreferences();
+                const exportFormat = prefs.exportFormat || 'png';
+                const useTransparentBackground = prefs.exportTransparentBackground !== false;
                 
-                // Convert the raw image data to a proper data URL
+                let imageData;
+                let fileExtension;
+                let mimeType;
+                
+                if (exportFormat === 'png') {
+                    // Export as PNG with proper transparency support
+                    if (useTransparentBackground) {
+                        // For transparent background, we need to use a specific JSmol command
+                        imageData = Jmol.getPropertyAsString(jmolApplet0, "image;PNG");
+                    } else {
+                        // For white background PNG
+                        const currentBg = Jmol.evaluateVar(jmolApplet0, "background");
+                        Jmol.script(jmolApplet0, "background white");
+                        imageData = Jmol.getPropertyAsString(jmolApplet0, "image;PNG");
+                        // Restore original background
+                        Jmol.script(jmolApplet0, `background ${currentBg}`);
+                    }
+                    fileExtension = 'png';
+                    mimeType = 'image/png';
+                } else if (exportFormat === 'jpg') {
+                    // Export as JPEG (always with white background as JPEG doesn't support transparency)
+                    const currentBg = Jmol.evaluateVar(jmolApplet0, "background");
+                    Jmol.script(jmolApplet0, "background white");
+                    imageData = Jmol.getPropertyAsString(jmolApplet0, "image;JPG");
+                    // Restore original background
+                    Jmol.script(jmolApplet0, `background ${currentBg}`);
+                    fileExtension = 'jpg';
+                    mimeType = 'image/jpeg';
+                } else {
+                    // Fallback to PNG for other formats
+                    imageData = Jmol.getPropertyAsString(jmolApplet0, "image;PNG");
+                    fileExtension = 'png';
+                    mimeType = 'image/png';
+                }
+                
+                // Convert the raw image data to a proper data URL if needed
                 if (!imageData.startsWith('data:')) {
-                    imageData = 'data:image/png;base64,' + imageData;
+                    imageData = `data:${mimeType};base64,${imageData}`;
                 }
                 
                 // Create a temporary link element
                 var link = document.createElement('a');
                 link.href = imageData;
-                link.download = 'molecule.png';
+                link.download = `molecule.${fileExtension}`;
                 
                 // This is required for Firefox
                 link.target = '_blank';
@@ -1288,7 +1325,8 @@
                     document.body.removeChild(link);
                 }, 100);
                 
-                document.getElementById('status').innerHTML = 'Image exported successfully';
+                const transparencyNote = (exportFormat === 'png' && useTransparentBackground) ? ' with transparent background' : '';
+                document.getElementById('status').innerHTML = `${exportFormat.toUpperCase()} image exported successfully${transparencyNote}`;
             } catch (err) {
                 document.getElementById('status').innerHTML = 'Error exporting image: ' + err.message;
                 console.error('Export error:', err);
@@ -4128,6 +4166,7 @@ and eliminates the need for manual steps.`;
             showTooltips: true,
             confirmOverwrite: true,
             exportFormat: 'png',
+            exportTransparentBackground: true,
             
             // Display settings
             autoSpin: false,
@@ -4212,6 +4251,9 @@ and eliminates the need for manual steps.`;
             
             const exportFormatSelect = document.getElementById('pref-export-format');
             if (exportFormatSelect) exportFormatSelect.value = prefs.exportFormat || 'png';
+            
+            const exportTransparentCheckbox = document.getElementById('pref-export-transparent');
+            if (exportTransparentCheckbox) exportTransparentCheckbox.checked = prefs.exportTransparentBackground !== false;
             
             // Display settings  
             const autoSpinCheckbox = document.getElementById('pref-auto-spin');
@@ -4333,6 +4375,9 @@ and eliminates the need for manual steps.`;
             
             const exportFormatSelect = document.getElementById('pref-export-format');
             if (exportFormatSelect) prefs.exportFormat = exportFormatSelect.value;
+            
+            const exportTransparentCheckbox = document.getElementById('pref-export-transparent');
+            if (exportTransparentCheckbox) prefs.exportTransparentBackground = exportTransparentCheckbox.checked;
             
             // Display settings
             const autoSpinCheckbox = document.getElementById('pref-auto-spin');
@@ -4915,6 +4960,13 @@ and eliminates the need for manual steps.`;
                             <option value="mol">MOL File</option>
                         </select>
                         <div class="preference-description">Default file format for exports</div>
+                    </div>
+                    <div class="preference-item">
+                        <label class="preference-checkbox-label">
+                            <input type="checkbox" id="pref-export-transparent">
+                            <span>Export PNG with transparent background</span>
+                        </label>
+                        <div class="preference-description">Export PNG images with transparent background (JPEG always uses white background)</div>
                     </div>
                 </div>
             </div>
