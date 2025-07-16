@@ -1179,6 +1179,22 @@
         }
     </style>
     <script type="text/javascript">
+        // Apply theme as early as possible to prevent flash
+        (function() {
+            try {
+                const saved = localStorage.getItem('jlmol-preferences');
+                if (saved) {
+                    const prefs = JSON.parse(saved);
+                    if (prefs.theme === 'dark') {
+                        document.body.setAttribute('data-theme', 'dark');
+                        console.log('Early theme application: dark mode');
+                    }
+                }
+            } catch (error) {
+                console.warn('Could not apply early theme:', error);
+            }
+        })();
+        
         var jmolApplet0;
         var isSpinning = false;
         var displayMode = 'default'; // Track current display mode
@@ -4841,8 +4857,20 @@ and eliminates the need for manual steps.`;
             // Load preferences
             window.userPreferences = loadPreferences();
             
-            // Apply preferences
+            // Apply preferences immediately
             applyPreferences();
+            
+            // Apply theme to body immediately for interface
+            const prefs = getPreferences();
+            if (prefs.theme) {
+                console.log('Initializing theme on page load:', prefs.theme);
+                const body = document.body;
+                if (prefs.theme === 'dark') {
+                    body.setAttribute('data-theme', 'dark');
+                } else {
+                    body.removeAttribute('data-theme');
+                }
+            }
             
             console.log('User preferences initialized');
         }
