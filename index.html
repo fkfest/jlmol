@@ -1184,20 +1184,12 @@
         var displayMode = 'default'; // Track current display mode
         var currentZoom = 100;
         var isDragMinimize = false; // Track drag-minimize state
-        // Function to get initial JSmol background color based on current theme
-        function getInitialJSmolBackground() {
-            const prefs = getPreferences();
-            if (prefs.theme === 'dark') {
-                return "0x1e1e1e";
-            }
-            return "0xFFFFFF";
-        }
 
         var Info = {
             width: "100%",
             height: "100%",
             debug: false,
-            color: getInitialJSmolBackground(),
+            color: "0xFFFFFF",
             use: "HTML5",
             j2sPath: "jsmol/j2s",
             addSelectionOptions: true,
@@ -1217,26 +1209,13 @@
                     console.log('JSmol ready: Setting initial display mode to', displayMode);
                     setDisplayMode(displayMode);
                     
-                    // Apply JSmol preferences when ready (includes background color)
+                    // Apply JSmol preferences when ready
                     if (typeof applyJSmolPreferences === 'function') {
                         applyJSmolPreferences();
                     }
                     
-                    // Apply current theme to JSmol background - force it to ensure it takes effect
+                    // Apply current theme to JSmol background
                     const prefs = getPreferences();
-                    console.log('Current preferences theme:', prefs.theme);
-                    
-                    // Always explicitly set the background based on theme
-                    const bgColor = prefs.theme === 'dark' ? '0x1e1e1e' : '0xFFFFFF';
-                    try {
-                        Jmol.script(jmolApplet0, `background ${bgColor}`);
-                        Jmol.script(jmolApplet0, `color background ${bgColor}`);
-                        console.log('Force applied JSmol background on ready:', bgColor);
-                    } catch (error) {
-                        console.warn('Error force applying JSmol background on ready:', error);
-                    }
-                    
-                    // Also apply theme to body if it exists  
                     if (prefs.theme) {
                         applyTheme(prefs.theme);
                     }
@@ -3001,10 +2980,8 @@
                         const panelWidth = panel.offsetWidth;
                         const panelHeight = panel.offsetHeight;
                         
-                        // Ensure the top bar is always visible (allow window to go to very top)
-                        // Minimum Y position is negative header height + small visible margin
-                        const minVisibleMargin = 10; // Keep at least 10px of header visible
-                        currentY = Math.max(-headerHeight + minVisibleMargin, Math.min(currentY, window.innerHeight - headerHeight));
+                        // Ensure the top bar is always visible
+                        currentY = Math.max(0, Math.min(currentY, window.innerHeight - headerHeight));
                         
                         // Ensure at least part of the panel is always visible horizontally
                         currentX = Math.max(-panelWidth + 100, Math.min(currentX, window.innerWidth - 100));
@@ -4323,21 +4300,10 @@ and eliminates the need for manual steps.`;
             if (jmolApplet0 && jmolApplet0._ready) {
                 // Convert hex color to JSmol format
                 const jsmolColor = color.replace('#', '0x');
-                try {
-                    // Use multiple methods to ensure background is set
-                    Jmol.script(jmolApplet0, `background ${jsmolColor}`);
-                    Jmol.script(jmolApplet0, `color background ${jsmolColor}`);
-                    // Also try setting it via the Info object if possible
-                    if (jmolApplet0.Info) {
-                        jmolApplet0.Info.color = jsmolColor;
-                    }
-                    console.log('Applied background color:', jsmolColor);
-                    
-                    // Update the preference
-                    updatePreference('bgColor', color);
-                } catch (error) {
-                    console.warn('Error applying background color to JSmol:', error);
-                }
+                Jmol.script(jmolApplet0, `background ${jsmolColor}`);
+                
+                // Update the preference
+                updatePreference('bgColor', color);
             } else {
                 console.log('JSmol not ready, background color will be applied when ready');
             }
@@ -4588,18 +4554,8 @@ and eliminates the need for manual steps.`;
             // Update JSmol background color for the theme
             if (jmolApplet0 && jmolApplet0._ready) {
                 const bgColor = theme === 'dark' ? '0x1e1e1e' : '0xFFFFFF';
-                try {
-                    // Use multiple methods to ensure background is set
-                    Jmol.script(jmolApplet0, `background ${bgColor}`);
-                    Jmol.script(jmolApplet0, `color background ${bgColor}`);
-                    // Also try setting it via the Info object if possible
-                    if (jmolApplet0.Info) {
-                        jmolApplet0.Info.color = bgColor;
-                    }
-                    console.log('Applied theme background color:', bgColor);
-                } catch (error) {
-                    console.warn('Error applying theme background to JSmol:', error);
-                }
+                Jmol.script(jmolApplet0, `background ${bgColor}`);
+                console.log('Applied theme background color:', bgColor);
             } else {
                 console.log('JSmol not ready, background will be applied when ready');
             }
