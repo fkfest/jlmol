@@ -2995,6 +2995,8 @@
             function globalMouseMove(e) {
                 if (activeDragData) {
                     e.preventDefault();
+                    e.stopPropagation();
+                    
                     const currentX = e.clientX - activeDragData.initialX;
                     const currentY = e.clientY - activeDragData.initialY;
 
@@ -3020,13 +3022,22 @@
 
             function globalMouseUp(e) {
                 if (activeDragData) {
-                    // Properly reset the drag state
-                    activeDragData.initialX = activeDragData.xOffset;
-                    activeDragData.initialY = activeDragData.yOffset;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    // Update the stored offsets for this panel
+                    if (activeDragData.panel.dragController) {
+                        activeDragData.panel.dragController.setOffset(activeDragData.xOffset, activeDragData.yOffset);
+                    }
+                    
+                    // Clear the active drag state
                     activeDragData = null;
                 }
-                // Force a blur to ensure focus is removed from dragging elements
-                e.preventDefault();
+                
+                // Remove focus from any dragging elements to prevent sticky behavior
+                if (document.activeElement && document.activeElement.blur) {
+                    document.activeElement.blur();
+                }
             }
 
             // Remove existing listeners to prevent duplicates
@@ -3043,6 +3054,9 @@
 
                 function dragStart(e) {
                     if (e.target === header || header.contains(e.target)) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        
                         activeDragData = {
                             panel: panel,
                             header: header,
@@ -3056,11 +3070,14 @@
 
                 header.addEventListener('mousedown', dragStart);
                 
-                // Store offset values for this specific panel
-                return {
+                // Store the controller reference on the panel for cleanup
+                const controller = {
                     getOffset: () => ({ x: xOffset, y: yOffset }),
                     setOffset: (x, y) => { xOffset = x; yOffset = y; }
                 };
+                panel.dragController = controller;
+                
+                return controller;
             }
 
             // Make all panels draggable
@@ -4360,31 +4377,15 @@ and eliminates the need for manual steps.`;
         }
         
         function updateBackgroundColor(color) {
-            if (jmolApplet0 && jmolApplet0._ready) {
-                // Check if a theme is currently active - if so, don't override with custom color
-                const prefs = getPreferences();
-                if (prefs.theme && (prefs.theme === 'dark' || prefs.theme === 'light')) {
-                    console.log('Theme is active, skipping custom background color update');
-                    return;
-                }
-                
-                // Convert hex color to JSmol format
-                const jsmolColor = color.replace('#', '0x');
-                console.log('Updating background color to:', jsmolColor);
-                
-                // Use multiple JSmol methods to ensure background is set
-                Jmol.script(jmolApplet0, `background ${jsmolColor}`);
-                Jmol.script(jmolApplet0, `set backgroundColor ${jsmolColor}`);
-                Jmol.script(jmolApplet0, `color background ${jsmolColor}`);
-                
-                // Force a refresh to apply the background
-                Jmol.script(jmolApplet0, 'refresh');
-                
-                // Update the preference
-                updatePreference('bgColor', color);
-            } else {
-                console.log('JSmol not ready, background color will be applied when ready');
-            }
+            // Allow custom background colors to be set regardless of theme
+            // The user explicitly wants this color
+            console.log('Updating background color to:', color);
+            
+            // Use the enhanced background application function
+            applyJSmolBackground(null, color);
+            
+            // Update the preference
+            updatePreference('bgColor', color);
         }
         
         // Enhanced preference loading and saving
@@ -4630,34 +4631,85 @@ and eliminates the need for manual steps.`;
             }
             
             // Update JSmol background color for the theme - apply immediately if ready
-            if (jmolApplet0 && jmolApplet0._ready) {
-                const bgColor = theme === 'dark' ? '0x1e1e1e' : '0xFFFFFF';
-                console.log('Applying theme background color immediately:', bgColor);
-                
-                // Use multiple JSmol methods to ensure background is set robustly
-                Jmol.script(jmolApplet0, `background ${bgColor}`);
-                Jmol.script(jmolApplet0, `set backgroundColor ${bgColor}`);
-                Jmol.script(jmolApplet0, `color background ${bgColor}`);
-                
-                // Additional method to ensure background persists
-                Jmol.script(jmolApplet0, `set defaultBackground ${bgColor}`);
-                
-                // Force multiple refreshes to ensure the background is applied immediately
-                Jmol.script(jmolApplet0, 'refresh');
-                setTimeout(() => {
-                    Jmol.script(jmolApplet0, 'refresh');
-                }, 10);
-                setTimeout(() => {
-                    Jmol.script(jmolApplet0, 'refresh');
-                }, 50);
-                setTimeout(() => {
-                    Jmol.script(jmolApplet0, 'refresh');
-                }, 100);
-            } else {
-                console.log('JSmol not ready, background will be applied when ready');
-            }
+            applyJSmolBackground(theme);
             
             console.log('Theme applied:', theme);
+        }
+        
+        // Enhanced JSmol background application function
+        function applyJSmolBackground(theme, customColor = null) {
+            if (!jmolApplet0) {
+                console.log('JSmol applet not initialized, background will be applied when ready');
+                return;
+            }
+            
+            let bgColor;
+            if (customColor) {
+                // Use custom color if provided
+                bgColor = customColor.replace('#', '0x');
+                console.log('Applying custom background color:', customColor);
+            } else if (theme === 'dark') {
+                bgColor = '0x1e1e1e';
+                console.log('Applying dark theme background');
+            } else {
+                bgColor = '0xFFFFFF';
+                console.log('Applying light theme background');
+            }
+            
+            // Function to apply background with multiple methods
+            function setBackground() {
+                try {
+                    // Method 1: Direct background command
+                    Jmol.script(jmolApplet0, `background ${bgColor}`);
+                    
+                    // Method 2: Set background color property
+                    Jmol.script(jmolApplet0, `set backgroundColor ${bgColor}`);
+                    
+                    // Method 3: Color background command (alternative syntax)
+                    Jmol.script(jmolApplet0, `color background ${bgColor}`);
+                    
+                    // Method 4: Set default background for persistence
+                    Jmol.script(jmolApplet0, `set defaultBackground ${bgColor}`);
+                    
+                    // Method 5: Force refresh to apply changes
+                    Jmol.script(jmolApplet0, 'refresh');
+                    
+                    console.log('JSmol background commands executed with color:', bgColor);
+                } catch (error) {
+                    console.error('Error applying JSmol background:', error);
+                }
+            }
+            
+            if (jmolApplet0._ready) {
+                // Apply immediately if ready
+                setBackground();
+                
+                // Apply again after a short delay to ensure it takes effect
+                setTimeout(() => {
+                    setBackground();
+                }, 200);
+                
+                // Apply one more time after a longer delay for stubborn cases
+                setTimeout(() => {
+                    setBackground();
+                }, 1000);
+            } else {
+                // If not ready, retry periodically until ready
+                let retries = 0;
+                const maxRetries = 20;
+                const checkAndApply = () => {
+                    if (jmolApplet0._ready) {
+                        setBackground();
+                        console.log('JSmol background applied after waiting for ready state');
+                    } else if (retries < maxRetries) {
+                        retries++;
+                        setTimeout(checkAndApply, 500);
+                    } else {
+                        console.warn('JSmol did not become ready after maximum retries');
+                    }
+                };
+                checkAndApply();
+            }
         }
         
         // Enhanced apply preferences function
@@ -4763,33 +4815,17 @@ and eliminates the need for manual steps.`;
             const prefs = getPreferences();
             
             try {
-                // Apply background color - prioritize theme over custom background color
-                let backgroundToApply;
-                if (prefs.theme === 'dark') {
-                    // For dark theme, always use dark background
-                    backgroundToApply = '0x1e1e1e';
-                    console.log('Applied dark theme background');
-                } else if (prefs.theme === 'light') {
-                    // For light theme, use white background
-                    backgroundToApply = '0xFFFFFF';
-                    console.log('Applied light theme background');
+                // Apply background color - enhanced logic to handle themes and custom colors
+                if (prefs.theme) {
+                    // If theme is set, use theme-based background
+                    applyJSmolBackground(prefs.theme);
                 } else if (prefs.bgColor) {
-                    // Fallback to custom background color if no theme is set
-                    backgroundToApply = prefs.bgColor.replace('#', '0x');
-                    console.log('Applied custom background color:', prefs.bgColor);
+                    // If no theme but custom background color is set, use custom color
+                    applyJSmolBackground(null, prefs.bgColor);
                 } else {
-                    // Default fallback
-                    backgroundToApply = '0xFFFFFF';
-                    console.log('Applied default background color');
+                    // Default to light theme background
+                    applyJSmolBackground('light');
                 }
-                
-                // Apply the background using multiple methods for robustness
-                Jmol.script(jmolApplet0, `background ${backgroundToApply}`);
-                Jmol.script(jmolApplet0, `set backgroundColor ${backgroundToApply}`);
-                Jmol.script(jmolApplet0, `color background ${backgroundToApply}`);
-                
-                // Force a refresh to ensure the background is applied
-                Jmol.script(jmolApplet0, 'refresh');
                 
                 // Apply antialiasing
                 if (prefs.antialiasing !== undefined) {
