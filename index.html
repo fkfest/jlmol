@@ -3003,9 +3003,10 @@
                     const panelWidth = activeDragData.panel.offsetWidth;
                     const panelHeight = activeDragData.panel.offsetHeight;
                     
-                    // Ensure the top bar is always visible - allow closer to top with 1px margin
+                    // Ensure the top bar is always visible - allow very close to top with 1px margin
                     const topMargin = 1;
-                    const constrainedY = Math.max(-headerHeight + topMargin, Math.min(currentY, window.innerHeight - headerHeight));
+                    // Fix constraint: minimum position should allow header to be almost at top
+                    const constrainedY = Math.max(topMargin, Math.min(currentY, window.innerHeight - headerHeight));
                     
                     // Ensure at least part of the panel is always visible horizontally
                     const constrainedX = Math.max(-panelWidth + 100, Math.min(currentX, window.innerWidth - 100));
@@ -3017,14 +3018,21 @@
                 }
             }
 
-            function globalMouseUp() {
+            function globalMouseUp(e) {
                 if (activeDragData) {
+                    // Properly reset the drag state
                     activeDragData.initialX = activeDragData.xOffset;
                     activeDragData.initialY = activeDragData.yOffset;
                     activeDragData = null;
                 }
+                // Force a blur to ensure focus is removed from dragging elements
+                e.preventDefault();
             }
 
+            // Remove existing listeners to prevent duplicates
+            document.removeEventListener('mousemove', globalMouseMove);
+            document.removeEventListener('mouseup', globalMouseUp);
+            
             // Add global event listeners once
             document.addEventListener('mousemove', globalMouseMove);
             document.addEventListener('mouseup', globalMouseUp);
@@ -4353,6 +4361,13 @@ and eliminates the need for manual steps.`;
         
         function updateBackgroundColor(color) {
             if (jmolApplet0 && jmolApplet0._ready) {
+                // Check if a theme is currently active - if so, don't override with custom color
+                const prefs = getPreferences();
+                if (prefs.theme && (prefs.theme === 'dark' || prefs.theme === 'light')) {
+                    console.log('Theme is active, skipping custom background color update');
+                    return;
+                }
+                
                 // Convert hex color to JSmol format
                 const jsmolColor = color.replace('#', '0x');
                 console.log('Updating background color to:', jsmolColor);
@@ -4627,11 +4642,17 @@ and eliminates the need for manual steps.`;
                 // Additional method to ensure background persists
                 Jmol.script(jmolApplet0, `set defaultBackground ${bgColor}`);
                 
-                // Force multiple refreshes to ensure the background is applied
+                // Force multiple refreshes to ensure the background is applied immediately
                 Jmol.script(jmolApplet0, 'refresh');
                 setTimeout(() => {
                     Jmol.script(jmolApplet0, 'refresh');
+                }, 10);
+                setTimeout(() => {
+                    Jmol.script(jmolApplet0, 'refresh');
                 }, 50);
+                setTimeout(() => {
+                    Jmol.script(jmolApplet0, 'refresh');
+                }, 100);
             } else {
                 console.log('JSmol not ready, background will be applied when ready');
             }
@@ -4653,8 +4674,8 @@ and eliminates the need for manual steps.`;
                 toggleSpin();
             }
             
-            // Apply background color
-            if (prefs.bgColor && jmolApplet0 && jmolApplet0._ready) {
+            // Apply background color only if no theme is set
+            if (prefs.bgColor && jmolApplet0 && jmolApplet0._ready && !prefs.theme) {
                 updateBackgroundColor(prefs.bgColor);
             }
             
