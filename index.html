@@ -479,7 +479,35 @@
         }
         .console-button {
             padding: 8px 16px;
-            font-size: 16px;
+            font-size: 14px;
+            background: var(--bg-button);
+            border: 1px solid var(--border-primary);
+            border-radius: 8px;
+            cursor: pointer;
+            color: var(--text-button);
+            box-shadow: 
+                0 2px 4px var(--shadow-light),
+                inset 0 1px 0 rgba(255,255,255,0.9),
+                inset 0 -1px 0 rgba(0,0,0,0.05);
+            transition: all 0.2s ease;
+        }
+        
+        .console-button:hover {
+            background: var(--bg-button-hover);
+            transform: translateY(-1px);
+            box-shadow: 
+                0 4px 8px var(--shadow-medium),
+                inset 0 1px 0 rgba(255,255,255,0.9),
+                inset 0 -1px 0 rgba(0,0,0,0.05);
+        }
+        
+        .console-button:active {
+            transform: translateY(1px);
+            background: var(--bg-button-active);
+            box-shadow: 
+                0 1px 2px var(--shadow-light),
+                inset 0 1px 0 rgba(255,255,255,0.9),
+                inset 0 -1px 0 rgba(0,0,0,0.05);
         }
         
         .console-container {
@@ -643,41 +671,6 @@
             height: 120px; /* Reduced from 150px */
             font-family: monospace;
         }
-        #elemcoButton {
-            background: linear-gradient(to bottom, #ffffff 0%, #f5f5f5 100%);
-            border: 1px solid #ccc;
-            padding: 16px;  /* Increased padding */
-            margin: 20px 40px;  /* Increased margins */
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: calc(100% - 80px);  /* Account for margins */
-            border-radius: 12px;  /* More rounded corners */
-            box-shadow: 
-                0 2px 4px rgba(0,0,0,0.1),  /* Subtle drop shadow */
-                inset 0 1px 0 rgba(255,255,255,0.9),  /* Top inner highlight */
-                inset 0 -1px 0 rgba(0,0,0,0.05);  /* Bottom inner shadow */
-            transition: all 0.2s ease;  /* Smooth transitions */
-        }
-        #elemcoButton:hover {
-            background: linear-gradient(to bottom, #f8f8f8 0%, #f0f0f0 100%);
-            transform: translateY(-1px);
-            box-shadow: 
-                0 4px 8px rgba(0,0,0,0.15),
-                inset 0 1px 0 rgba(255,255,255,0.9),
-                inset 0 -1px 0 rgba(0,0,0,0.05);
-        }
-        #elemcoButton:active {
-            transform: translateY(1px);
-            box-shadow: 
-                0 1px 2px rgba(0,0,0,0.1),
-                inset 0 1px 0 rgba(255,255,255,0.9),
-                inset 0 -1px 0 rgba(0,0,0,0.05);
-        }
-        #elemcoButton img {
-            height: 48px;  /* Made logo even bigger */
-        }
         .preview-note {
             font-size: 0.8em;
             color: #666;
@@ -732,16 +725,10 @@
 
         /* Toggle button active state */
         .toggle-button.active {
-            background: linear-gradient(to bottom, #e0e0ff 0%, #d5d5ff 100%);
+            background: var(--bg-selected);
             box-shadow: 
                 inset 0 1px 3px rgba(0,0,0,0.1),
                 inset 0 1px 0 rgba(255,255,255,0.9);
-        }
-
-        /* Consistent styling for console button */
-        .console-button {
-            font-size: 14px;  /* Slightly reduced font size */
-            padding: 7px 14px;  /* Slightly reduced padding */
         }
 
         /* Action buttons in panels */
@@ -804,115 +791,6 @@
         #toggle2D3DButton {
             min-width: 50px;  /* Reduced from default 70px */
             padding: 6px 8px;  /* Consistent with other compact buttons */
-        }
-
-        /* Console and ElemCo containers */
-        .console-container, .elemco-container {
-            margin: 8px 0;
-            padding-left: 40px;
-        }
-
-        /* Common button styles */
-        .console-button, #elemcoButton {
-            display: inline-flex;
-            align-items: center;
-            padding: 8px 16px;
-            font-size: 14px;
-            background: linear-gradient(to bottom, #ffffff 0%, #f5f5f5 100%);
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            box-shadow: 
-                0 2px 4px rgba(0,0,0,0.1),
-                inset 0 1px 0 rgba(255,255,255,0.9),
-                inset 0 -1px 0 rgba(0,0,0,0.05);
-            transition: all 0.2s ease;
-        }
-
-        /* ElemCo button image */
-        #elemcoButton img {
-            height: 32px;
-        }
-
-        /* Remove all previous button container styles */
-        .console-container, .elemco-container {
-            padding-left: 40px;
-            margin: 8px 0;
-            width: auto;  /* Remove fixed width */
-        }
-
-        /* Button styles */
-        .console-button, #elemcoButton {
-            display: inline-flex;
-            align-items: center;
-            padding: 8px 16px;
-            font-size: 14px;
-            background: linear-gradient(to bottom, #ffffff 0%, #f5f5f5 100%);
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            box-shadow: 
-                0 2px 4px rgba(0,0,0,0.1),
-                inset 0 1px 0 rgba(255,255,255,0.9),
-                inset 0 -1px 0 rgba(0,0,0,0.05);
-            transition: all 0.2s ease;
-            margin: 0;  /* Remove any margin from buttons */
-        }
-
-        /* Remove any width constraints on buttons */
-        #elemcoButton {
-            width: auto;
-        }
-
-        #elemcoButton img {
-            height: 32px;
-        }
-
-        /* Container styles */
-        .console-container, .elemco-container {
-            padding-left: 40px;
-            margin: 8px 0;
-            width: auto;
-            display: block;
-        }
-
-        /* Button base styles */
-        .console-button, #elemcoButton {
-            display: inline-flex;
-            align-items: center;
-            padding: 8px 16px;
-            font-size: 14px;
-            background: linear-gradient(to bottom, #ffffff 0%, #f5f5f5 100%);
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            box-shadow: 
-                0 2px 4px rgba(0,0,0,0.1),
-                inset 0 1px 0 rgba(255,255,255,0.9),
-                inset 0 -1px 0 rgba(0,0,0,0.05);
-            transition: all 0.2s ease;
-            margin: 0;
-        }
-
-        /* ElemCo button image */
-        #elemcoButton img {
-            height: 32px;
-        }
-
-        #elemcoButton {
-            display: inline-flex;
-            align-items: center;
-            padding: 8px calc(16px + 13px);  /* Original padding + 2.5px on each side = 5px total increase */
-            font-size: 14px;
-            background: linear-gradient(to bottom, #ffffff 0%, #f5f5f5 100%);
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            box-shadow: 
-                0 2px 4px rgba(0,0,0,0.1),
-                inset 0 1px 0 rgba(255,255,255,0.9),
-                inset 0 -1px 0 rgba(0,0,0,0.05);
-            transition: all 0.2s ease;
-        }
-
-        #elemcoButton img {
-            height: 32px;
         }
 
         .method-df-line {
@@ -1066,7 +944,7 @@
         #julia-output-section {
             margin-top: 16px;
             padding-top: 16px;
-            border-top: 1px solid #ddd;
+            border-top: 1px solid var(--border-secondary);
         }
 
         #julia-output {
@@ -1143,6 +1021,8 @@
             font-weight: 500;
             color: var(--text-secondary);
             transition: all 0.2s ease;
+        }
+        
         .preferences-tab:last-child {
             border-right: none;
         }
@@ -3083,7 +2963,7 @@
                     initialX = e.clientX - xOffset;
                     initialY = e.clientY - yOffset;
 
-                    if (e.target === header) {
+                    if (e.target === header || header.contains(e.target)) {
                         isDragging = true;
                     }
                 }
@@ -3093,6 +2973,18 @@
                         e.preventDefault();
                         currentX = e.clientX - initialX;
                         currentY = e.clientY - initialY;
+
+                        // Prevent top bar from going out of screen bounds
+                        const headerHeight = header.offsetHeight;
+                        const panelWidth = panel.offsetWidth;
+                        const panelHeight = panel.offsetHeight;
+                        
+                        // Ensure the top bar is always visible
+                        currentY = Math.max(0, Math.min(currentY, window.innerHeight - headerHeight));
+                        
+                        // Ensure at least part of the panel is always visible horizontally
+                        currentX = Math.max(-panelWidth + 100, Math.min(currentX, window.innerWidth - 100));
+
                         xOffset = currentX;
                         yOffset = currentY;
 
@@ -5118,7 +5010,7 @@ and eliminates the need for manual steps.`;
         <div id="julia-output-section" style="display: none;">
             <div class="elemco-input-group vertical">
                 <label for="julia-output">Calculation Output:</label>
-                <textarea id="julia-output" readonly style="height: 200px; font-family: monospace; background: #f8f8f8;"></textarea>
+                <textarea id="julia-output" readonly style="height: 200px; font-family: monospace;"></textarea>
                 <div class="preview-note">Julia calculation results will appear here.</div>
             </div>
             <div class="action-buttons">
