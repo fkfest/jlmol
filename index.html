@@ -3007,8 +3007,8 @@
                     
                     // Ensure the top bar is always visible - allow very close to top with 1px margin
                     const topMargin = 1;
-                    // Fix constraint: minimum position should allow header to be almost at top
-                    const constrainedY = Math.max(topMargin, Math.min(currentY, window.innerHeight - headerHeight));
+                    // Fix constraint: allow positioning to the very top (within 1px)
+                    const constrainedY = Math.max(-topMargin, Math.min(currentY, window.innerHeight - headerHeight));
                     
                     // Ensure at least part of the panel is always visible horizontally
                     const constrainedX = Math.max(-panelWidth + 100, Math.min(currentX, window.innerWidth - 100));
@@ -3030,13 +3030,18 @@
                         activeDragData.panel.dragController.setOffset(activeDragData.xOffset, activeDragData.yOffset);
                     }
                     
-                    // Clear the active drag state
+                    // Clear the active drag state immediately
                     activeDragData = null;
                 }
                 
                 // Remove focus from any dragging elements to prevent sticky behavior
                 if (document.activeElement && document.activeElement.blur) {
                     document.activeElement.blur();
+                }
+                
+                // Force release any mouse capture to prevent sticky behavior
+                if (document.releaseCapture) {
+                    document.releaseCapture();
                 }
             }
 
@@ -3047,6 +3052,24 @@
             // Add global event listeners once
             document.addEventListener('mousemove', globalMouseMove);
             document.addEventListener('mouseup', globalMouseUp);
+            
+            // Additional cleanup event listeners to prevent sticky behavior
+            window.addEventListener('blur', function() {
+                // Clear dragging when window loses focus
+                activeDragData = null;
+            });
+            
+            document.addEventListener('mouseenter', function() {
+                // Clear dragging if mouse re-enters without button pressed
+                if (activeDragData && !event.buttons) {
+                    activeDragData = null;
+                }
+            });
+            
+            document.addEventListener('mouseleave', function() {
+                // Clear dragging when mouse leaves document
+                activeDragData = null;
+            });
 
             function makeDraggable(panel, header) {
                 let xOffset = 0;
@@ -4381,8 +4404,14 @@ and eliminates the need for manual steps.`;
             // The user explicitly wants this color
             console.log('Updating background color to:', color);
             
-            // Use the enhanced background application function
+            // Use the enhanced background application function with multiple attempts
             applyJSmolBackground(null, color);
+            
+            // Additional attempt after delay to ensure it sticks
+            setTimeout(() => {
+                applyJSmolBackground(null, color);
+                console.log('Background color re-applied after delay');
+            }, 300);
             
             // Update the preference
             updatePreference('bgColor', color);
@@ -4399,8 +4428,16 @@ and eliminates the need for manual steps.`;
                 
                 // Add change listener for immediate theme update
                 themeSelect.addEventListener('change', function() {
-                    applyTheme(this.value);
-                    updatePreference('theme', this.value);
+                    const newTheme = this.value;
+                    console.log('Theme changed to:', newTheme);
+                    applyTheme(newTheme);
+                    updatePreference('theme', newTheme);
+                    
+                    // Ensure JSmol background is updated immediately
+                    setTimeout(() => {
+                        applyJSmolBackground(newTheme);
+                        console.log('JSmol background updated for theme change');
+                    }, 100);
                 });
             }
             
@@ -4455,8 +4492,19 @@ and eliminates the need for manual steps.`;
                 
                 // Add change listener for immediate background update
                 bgColorInput.addEventListener('change', function() {
-                    bgColorPreview.style.backgroundColor = this.value;
-                    updateBackgroundColor(this.value);
+                    const newColor = this.value;
+                    bgColorPreview.style.backgroundColor = newColor;
+                    console.log('Custom background color changed to:', newColor);
+                    
+                    // Apply custom background immediately
+                    applyJSmolBackground(null, newColor);
+                    updatePreference('bgColor', newColor);
+                    
+                    // Ensure the custom color takes precedence over theme
+                    setTimeout(() => {
+                        applyJSmolBackground(null, newColor);
+                        console.log('Custom background color re-applied');
+                    }, 200);
                 });
             }
             
@@ -4630,8 +4678,10 @@ and eliminates the need for manual steps.`;
                 body.removeAttribute('data-theme');
             }
             
-            // Update JSmol background color for the theme - apply immediately if ready
-            applyJSmolBackground(theme);
+            // Update JSmol background color for the theme - apply immediately with enhanced method
+            setTimeout(() => {
+                applyJSmolBackground(theme);
+            }, 50); // Small delay to ensure theme CSS is applied first
             
             console.log('Theme applied:', theme);
         }
@@ -4656,23 +4706,32 @@ and eliminates the need for manual steps.`;
                 console.log('Applying light theme background');
             }
             
-            // Function to apply background with multiple methods
+            // Enhanced function to apply background with multiple methods and better error handling
             function setBackground() {
                 try {
-                    // Method 1: Direct background command
-                    Jmol.script(jmolApplet0, `background ${bgColor}`);
+                    // Method 1: Set background color first (most reliable)
+                    Jmol.script(jmolApplet0, `set backgroundColor ${bgColor}`, true);
                     
-                    // Method 2: Set background color property
-                    Jmol.script(jmolApplet0, `set backgroundColor ${bgColor}`);
+                    // Method 2: Direct background command
+                    Jmol.script(jmolApplet0, `background ${bgColor}`, true);
                     
                     // Method 3: Color background command (alternative syntax)
-                    Jmol.script(jmolApplet0, `color background ${bgColor}`);
+                    Jmol.script(jmolApplet0, `color background ${bgColor}`, true);
                     
                     // Method 4: Set default background for persistence
-                    Jmol.script(jmolApplet0, `set defaultBackground ${bgColor}`);
+                    Jmol.script(jmolApplet0, `set defaultBackground ${bgColor}`, true);
                     
-                    // Method 5: Force refresh to apply changes
-                    Jmol.script(jmolApplet0, 'refresh');
+                    // Method 5: Clear any cached background settings
+                    Jmol.script(jmolApplet0, 'set refreshing true', true);
+                    
+                    // Method 6: Force immediate refresh to apply changes
+                    Jmol.script(jmolApplet0, 'refresh', true);
+                    
+                    // Method 7: Additional background force-set after refresh
+                    setTimeout(() => {
+                        Jmol.script(jmolApplet0, `background ${bgColor}`, true);
+                        console.log('JSmol background re-applied after refresh:', bgColor);
+                    }, 100);
                     
                     console.log('JSmol background commands executed with color:', bgColor);
                 } catch (error) {
@@ -4687,11 +4746,13 @@ and eliminates the need for manual steps.`;
                 // Apply again after a short delay to ensure it takes effect
                 setTimeout(() => {
                     setBackground();
+                    console.log('JSmol background re-applied after delay');
                 }, 200);
                 
                 // Apply one more time after a longer delay for stubborn cases
                 setTimeout(() => {
-                    setBackground();
+                    Jmol.script(jmolApplet0, `background ${bgColor}`, true);
+                    console.log('JSmol background final application');
                 }, 1000);
             } else {
                 // If not ready, retry periodically until ready
@@ -4816,14 +4877,18 @@ and eliminates the need for manual steps.`;
             
             try {
                 // Apply background color - enhanced logic to handle themes and custom colors
-                if (prefs.theme) {
-                    // If theme is set, use theme-based background
-                    applyJSmolBackground(prefs.theme);
-                } else if (prefs.bgColor) {
-                    // If no theme but custom background color is set, use custom color
+                // Priority: custom color overrides theme, theme overrides default
+                if (prefs.bgColor && prefs.bgColor !== '#FFFFFF') {
+                    // Custom background color specified - use it regardless of theme
+                    console.log('Applying custom background color:', prefs.bgColor);
                     applyJSmolBackground(null, prefs.bgColor);
+                } else if (prefs.theme) {
+                    // No custom color, use theme-based background
+                    console.log('Applying theme-based background for theme:', prefs.theme);
+                    applyJSmolBackground(prefs.theme);
                 } else {
                     // Default to light theme background
+                    console.log('Applying default light theme background');
                     applyJSmolBackground('light');
                 }
                 
