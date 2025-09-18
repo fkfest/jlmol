@@ -83,7 +83,7 @@ jlmol is an Electron-based desktop application for molecular visualization built
 
 ### Database Search Testing
 1. Test PubChem search by CID: Enter `:1983` (caffeine) and click Load
-2. Test name search: Enter `:aspirin` and verify structure loads
+2. Test name search: Enter `aspirin` and verify structure loads
 3. Test SMILES search: Enter `:smiles:C6H6` (benzene) and verify
 4. Test search type selector: Click dropdown to force specific search types
 5. Verify Enter key functionality for quick loading
