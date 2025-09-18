@@ -1,6 +1,6 @@
 # jlmol - Molecular Visualization Desktop Application
 
-jlmol is an Electron-based desktop application for molecular visualization built with JSmol (JavaScript molecular viewer). It provides native desktop experience for powerful molecular visualization, structure editing, database search integration, and quantum chemistry calculations via ElemCo.jl.
+jlmol is an Electron-based desktop application for molecular visualization built with JSmol (JavaScript molecular viewer). It provides native desktop experience for powerful molecular visualization, structure editing, database search integration, and quantum chemistry calculations via ElemCo.jl. Additionally, the application also works in a browser as a website.
 
 **ALWAYS reference these instructions first and fallback to search or bash commands only when you encounter unexpected information that does not match the info here.**
 
