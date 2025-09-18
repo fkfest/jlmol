@@ -34,10 +34,46 @@
         }
     </script>
     <style>
+        /* CSS Variables for Theme Support */
+        :root {
+            --bg-color: #ffffff;
+            --text-color: #000000;
+            --panel-bg: #ffffff;
+            --panel-border: #ccc;
+            --button-bg: #f0f0f0;
+            --button-hover: #e8e8e8;
+            --button-active: #ddd;
+            --input-bg: #ffffff;
+            --input-border: #ccc;
+            --modal-bg: #ffffff;
+            --modal-shadow: rgba(0,0,0,0.1);
+            --status-bg: #f5f5f5;
+            --jsmol-bg: #FFFFFF;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #1a1a1a;
+            --text-color: #ffffff;
+            --panel-bg: #2d2d2d;
+            --panel-border: #555;
+            --button-bg: #404040;
+            --button-hover: #4a4a4a;
+            --button-active: #505050;
+            --input-bg: #404040;
+            --input-border: #666;
+            --modal-bg: #2d2d2d;
+            --modal-shadow: rgba(0,0,0,0.3);
+            --status-bg: #333333;
+            --jsmol-bg: #1a1a1a;
+        }
+
         body {
             margin: 0;
             padding: 0;
             overflow: auto;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
         #container { 
             display: flex;
@@ -64,15 +100,18 @@
             width: 200px; 
             padding: 10px;
             transform-origin: top right;
+            background-color: var(--panel-bg);
+            color: var(--text-color);
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
         #editor-panel {
             position: fixed;
             width: 300px;
             padding: 10px;
             display: none;
-            background: white;
-            border: 1px solid #ccc;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            background: var(--modal-bg);
+            border: 1px solid var(--panel-border);
+            box-shadow: 0 2px 10px var(--modal-shadow);
             z-index: 9999;
             top: 100px;
             left: 100px;
@@ -82,18 +121,22 @@
             min-height: 200px;
             max-width: 90vw;
             max-height: 90vh;
+            color: var(--text-color);
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
         #editor-header {
             cursor: move;
             padding: 10px;
-            background: #f0f0f0;
+            background: var(--button-bg);
             margin: -10px -10px 10px -10px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 1px solid #ccc;
+            border-bottom: 1px solid var(--panel-border);
             -webkit-user-select: none;
             user-select: none;
+            color: var(--text-color);
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
         .xyz-row {
             display: flex;
@@ -118,7 +161,14 @@
             white-space: pre;
             resize: vertical;
         }
-        #status { color: red; margin: 10px; }
+        #status { 
+            color: red; 
+            margin: 10px; 
+            background-color: var(--status-bg);
+            padding: 8px;
+            border-radius: 4px;
+            transition: background-color 0.3s ease;
+        }
         #orbitalControls {
             position: fixed;
             width: 300px;
@@ -215,10 +265,13 @@
         .database-group input {
             width: 100%;
             padding: 8px;
-            border: 1px solid #ccc;
+            border: 1px solid var(--input-border);
             border-radius: 3px;
             font-size: 12px;
             box-sizing: border-box;
+            background: var(--input-bg);
+            color: var(--text-color);
+            transition: all 0.3s ease;
         }
         .database-group input:focus {
             outline: none;
@@ -236,10 +289,13 @@
         .search-input-container input {
             flex: 1;
             padding: 8px 30px 8px 8px; /* Reduced right padding for smaller selector */
-            border: 1px solid #ccc;
+            border: 1px solid var(--input-border);
             border-radius: 3px;
             font-size: 12px;
             margin: 0;
+            background: var(--input-bg);
+            color: var(--text-color);
+            transition: all 0.3s ease;
         }
         
         .search-input-container input:focus {
@@ -544,37 +600,35 @@
         }
 
         button {
-            background: linear-gradient(to bottom, #ffffff 0%, #f5f5f5 100%);
-            border: 1px solid #ccc;
+            background: var(--button-bg);
+            border: 1px solid var(--panel-border);
             padding: 6px 12px;  /* Reduced padding */
             border-radius: 6px;  /* Slightly reduced border radius */
             cursor: pointer;
             box-shadow: 
-                0 2px 4px rgba(0,0,0,0.1),
-                inset 0 1px 0 rgba(255,255,255,0.9),
-                inset 0 -1px 0 rgba(0,0,0,0.05);
+                0 2px 4px var(--modal-shadow),
+                inset 0 1px 0 rgba(255,255,255,0.1);
             transition: all 0.2s ease;
             font-size: 13px;  /* Slightly smaller font */
-            color: #333;
+            color: var(--text-color);
             min-width: 70px;  /* Reduced minimum width */
             margin: 0;
         }
 
         button:hover {
-            background: linear-gradient(to bottom, #f8f8f8 0%, #f0f0f0 100%);
+            background: var(--button-hover);
             transform: translateY(-1px);
             box-shadow: 
-                0 4px 8px rgba(0,0,0,0.15),
-                inset 0 1px 0 rgba(255,255,255,0.9),
-                inset 0 -1px 0 rgba(0,0,0,0.05);
+                0 4px 8px var(--modal-shadow),
+                inset 0 1px 0 rgba(255,255,255,0.1);
         }
 
         button:active {
             transform: translateY(1px);
+            background: var(--button-active);
             box-shadow: 
-                0 1px 2px rgba(0,0,0,0.1),
-                inset 0 1px 0 rgba(255,255,255,0.9),
-                inset 0 -1px 0 rgba(0,0,0,0.05);
+                0 1px 2px var(--modal-shadow),
+                inset 0 1px 0 rgba(255,255,255,0.1);
         }
 
         /* Special styling for the ElemCo button since it's larger */
@@ -952,9 +1006,9 @@
             width: 450px;
             padding: 0;
             display: none;
-            background: white;
-            border: 1px solid #ccc;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            background: var(--modal-bg);
+            border: 1px solid var(--panel-border);
+            box-shadow: 0 2px 10px var(--modal-shadow);
             z-index: 9999;
             top: 140px;
             left: 140px;
@@ -963,12 +1017,14 @@
             min-width: 400px;
             min-height: 400px;
             border-radius: 8px;
+            color: var(--text-color);
+            transition: all 0.3s ease;
         }
 
         #preferences-header {
             cursor: move;
             padding: 12px 15px;
-            background: linear-gradient(to bottom, #f8f8f8, #e8e8e8);
+            background: var(--button-bg);
             margin: 0;
             display: flex;
             justify-content: space-between;
@@ -981,8 +1037,8 @@
 
         .preferences-tabs {
             display: flex;
-            background: #f0f0f0;
-            border-bottom: 1px solid #ccc;
+            background: var(--button-bg);
+            border-bottom: 1px solid var(--panel-border);
             margin: 0;
             padding: 0;
         }
@@ -991,13 +1047,13 @@
             flex: 1;
             padding: 12px 8px;
             text-align: center;
-            background: #f0f0f0;
+            background: var(--button-bg);
             border: none;
-            border-right: 1px solid #ccc;
+            border-right: 1px solid var(--panel-border);
             cursor: pointer;
             font-size: 12px;
             font-weight: 500;
-            color: #666;
+            color: var(--text-color);
             transition: all 0.2s ease;
         }
 
@@ -1006,13 +1062,11 @@
         }
 
         .preferences-tab:hover {
-            background: #e8e8e8;
-            color: #333;
+            background: var(--button-hover);
         }
 
         .preferences-tab.active {
-            background: white;
-            color: #333;
+            background: var(--modal-bg);
             border-bottom: 2px solid #4CAF50;
             font-weight: 600;
         }
@@ -1020,6 +1074,7 @@
         .preferences-content {
             padding: 15px;
             min-height: 300px;
+            background: var(--modal-bg);
         }
 
         .preferences-tab-content {
@@ -1064,10 +1119,12 @@
         .preference-select, .preference-input {
             flex: 1;
             padding: 6px 10px;
-            border: 1px solid #ccc;
+            border: 1px solid var(--input-border);
             border-radius: 4px;
             font-size: 13px;
-            background: white;
+            background: var(--input-bg);
+            color: var(--text-color);
+            transition: all 0.3s ease;
         }
 
         .preference-select:focus, .preference-input:focus {
@@ -4192,6 +4249,7 @@ and eliminates the need for manual steps.`;
         const DEFAULT_PREFERENCES = {
             // General settings
             theme: 'default',
+            darkMode: false,
             autoLoadLastMolecule: false,
             saveWindowPositions: true,
             showTooltips: true,
@@ -4276,6 +4334,19 @@ and eliminates the need for manual steps.`;
             
             const showTooltipsCheckbox = document.getElementById('pref-show-tooltips');
             if (showTooltipsCheckbox) showTooltipsCheckbox.checked = prefs.showTooltips !== false;
+            
+            const darkModeCheckbox = document.getElementById('pref-dark-mode');
+            if (darkModeCheckbox) {
+                darkModeCheckbox.checked = prefs.darkMode || false;
+                // Add immediate reaction to dark mode toggle
+                darkModeCheckbox.addEventListener('change', function() {
+                    const currentPrefs = getPreferences();
+                    currentPrefs.darkMode = this.checked;
+                    window.userPreferences = currentPrefs;
+                    applyPreferences();
+                    savePreferences(currentPrefs);
+                });
+            }
             
             const confirmOverwriteCheckbox = document.getElementById('pref-confirm-overwrite');
             if (confirmOverwriteCheckbox) confirmOverwriteCheckbox.checked = prefs.confirmOverwrite !== false;
@@ -4401,6 +4472,9 @@ and eliminates the need for manual steps.`;
             const showTooltipsCheckbox = document.getElementById('pref-show-tooltips');
             if (showTooltipsCheckbox) prefs.showTooltips = showTooltipsCheckbox.checked;
             
+            const darkModeCheckbox = document.getElementById('pref-dark-mode');
+            if (darkModeCheckbox) prefs.darkMode = darkModeCheckbox.checked;
+            
             const confirmOverwriteCheckbox = document.getElementById('pref-confirm-overwrite');
             if (confirmOverwriteCheckbox) prefs.confirmOverwrite = confirmOverwriteCheckbox.checked;
             
@@ -4485,13 +4559,28 @@ and eliminates the need for manual steps.`;
         function applyPreferences() {
             const prefs = getPreferences();
             
+            // Apply dark mode theme
+            if (prefs.darkMode) {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                // Update JSmol background color for dark mode
+                if (jmolApplet0 && jmolApplet0._ready) {
+                    updateBackgroundColor('#1a1a1a');
+                }
+            } else {
+                document.documentElement.removeAttribute('data-theme');
+                // Update JSmol background color for light mode
+                if (jmolApplet0 && jmolApplet0._ready) {
+                    updateBackgroundColor(prefs.bgColor || '#FFFFFF');
+                }
+            }
+            
             // Apply auto-spin preference if enabled
             if (prefs.autoSpin && !isSpinning) {
                 toggleSpin();
             }
             
-            // Apply background color
-            if (prefs.bgColor && jmolApplet0 && jmolApplet0._ready) {
+            // Apply background color (this will be overridden by dark mode if enabled)
+            if (prefs.bgColor && jmolApplet0 && jmolApplet0._ready && !prefs.darkMode) {
                 updateBackgroundColor(prefs.bgColor);
             }
             
@@ -4970,6 +5059,13 @@ and eliminates the need for manual steps.`;
                             <span>Show tooltips on hover</span>
                         </label>
                         <div class="preference-description">Display helpful tooltips when hovering over buttons and controls</div>
+                    </div>
+                    <div class="preference-item">
+                        <label class="preference-checkbox-label">
+                            <input type="checkbox" id="pref-dark-mode">
+                            <span>Enable dark mode</span>
+                        </label>
+                        <div class="preference-description">Switch to dark theme for the interface and JSmol window</div>
                     </div>
                 </div>
                 
