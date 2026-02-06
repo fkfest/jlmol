@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-02-06
+
+### Added
+
+- **Molden Export**: New functionality to export molecular structures in Molden format with customizable file naming
+- **Enhanced Preferences System**: Tabbed interface for better organization of user preferences
+- **Windows Start Script**: Added `npm run start:win` for direct Windows executable launch
+
+### Changed
+
+- Hide menu bar by default with auto-hide feature for cleaner interface
+- Improved CSS overflow handling and box-sizing for input elements
+- Refactored background color handling to use JSmol script format
+- Improved clipboard functionality with better fallbacks
+- Upgraded Electron to v40.2.1
+
+### Fixed
+
+- Fixed image export format mismatch: properly handle JSmol JPEG output and convert to PNG when needed
+- Fixed export image transparency support
+- Fixed JSmol settings persistence by applying preferences after all molecule loading operations
+- Fixed JSmol initialization to prevent startup failures while maintaining settings integration
+- Fixed JSmol settings integration to actually apply preferences to the viewer
+
 ## [1.2.1] - 2025-07-10
 
 ### Added
