@@ -911,6 +911,36 @@
             gap: 8px;
             white-space: nowrap;  /* Prevent label wrapping */
         }
+
+        .molden-export-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 12px 0;
+        }
+
+        .molden-toggle-label {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin: 0;
+            min-width: unset !important;
+            white-space: nowrap;
+        }
+
+        .molden-toggle-label input[type="checkbox"] {
+            width: auto;
+            margin: 0;
+        }
+
+        .molden-export-group input[type="text"] {
+            flex: 1;
+            padding: 4px 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            max-width: 200px;
+        }
+
         #version-display {
             font-size: 12px;
             color: #666;
@@ -3422,6 +3452,8 @@
             const mpfitBasis = document.getElementById('elemco-mpfit');
             const charge = document.getElementById('elemco-charge');
             const multiplicity = document.getElementById('elemco-multiplicity');
+            const moldenCheckbox = document.getElementById('elemco-molden');
+            const moldenFile = document.getElementById('elemco-molden-file');
 
             // Store references to listeners for proper cleanup
             const elements = [
@@ -3430,7 +3462,9 @@
                 { element: jkfitBasis, event: 'change', handler: updateElemCoInput },
                 { element: mpfitBasis, event: 'change', handler: updateElemCoInput },
                 { element: charge, event: 'input', handler: updateElemCoInput },
-                { element: multiplicity, event: 'input', handler: updateElemCoInput }
+                { element: multiplicity, event: 'input', handler: updateElemCoInput },
+                { element: moldenCheckbox, event: 'change', handler: updateElemCoInput },
+                { element: moldenFile, event: 'input', handler: updateElemCoInput }
             ];
 
             // Remove old listeners if they exist
@@ -3708,6 +3742,8 @@
             const mpfitBasis = document.getElementById('elemco-mpfit').value;
             const charge = parseInt(document.getElementById('elemco-charge').value) || 0;
             const multiplicity = parseInt(document.getElementById('elemco-multiplicity').value) || 0;
+            const moldenEnabled = document.getElementById('elemco-molden').checked;
+            const moldenFile = document.getElementById('elemco-molden-file').value.trim() || 'orbitals.molden';
 
             // Get current molecular structure from JSmol (with numbered atoms if available)
             debugLog('ElemCo', 'Calling getXYZDataWithNumberedAtoms');
@@ -3810,6 +3846,12 @@ ${xyzData.trim()}
                 const ccCommand = dfEnabled ? '@dfcc' : '@cc';
                 elemcoInput += `\n# Run ${method} calculation\n${ccCommand} ${method.toLowerCase()}\n`;
             }
+
+            // Add molden export if enabled
+            if (moldenEnabled) {
+                elemcoInput += `\n# Export orbitals to Molden file\n@export_molden "${moldenFile}"\n`;
+            }
+
             elemcoInput += `\nend\nmain()\n`;
         
             // Set the input text
@@ -4930,6 +4972,13 @@ and eliminates the need for manual steps.`;
                 <label for="elemco-multiplicity">Multiplicity:</label>
                 <input type="number" id="elemco-multiplicity" value="0" min="0" max="99">
             </div>
+        </div>
+        <div class="elemco-input-group molden-export-group">
+            <label class="molden-toggle-label" for="elemco-molden">
+                <input type="checkbox" id="elemco-molden">
+                <span>Export Molden</span>
+            </label>
+            <input type="text" id="elemco-molden-file" placeholder="orbitals.molden" value="orbitals.molden" title="Filename for molden orbital export">
         </div>
         <div class="elemco-input-group vertical">
             <div style="margin-bottom: 8px;">

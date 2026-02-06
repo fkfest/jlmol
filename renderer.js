@@ -57,6 +57,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const charge = document.getElementById('elemco-charge');
     const multiplicity = document.getElementById('elemco-multiplicity');
     const dfToggle = document.getElementById('elemco-df');
+    const moldenCheckbox = document.getElementById('elemco-molden');
+    const moldenFile = document.getElementById('elemco-molden-file');
 
     // Add event listeners
     method?.addEventListener('change', updateElemCoInput);
@@ -65,6 +67,8 @@ document.addEventListener('DOMContentLoaded', () => {
     mpfitBasis?.addEventListener('change', updateElemCoInput);
     charge?.addEventListener('input', updateElemCoInput);
     multiplicity?.addEventListener('input', updateElemCoInput);
+    moldenCheckbox?.addEventListener('change', updateElemCoInput);
+    moldenFile?.addEventListener('input', updateElemCoInput);
     dfToggle?.addEventListener('change', () => {
         updateMethodOptions();
         updateElemCoInput();
