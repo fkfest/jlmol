@@ -73,6 +73,30 @@ jlmol is an Electron-based desktop application for molecular visualization built
 
 **ALWAYS test functionality after making changes by running through these scenarios:**
 
+### Mandatory Build Verification
+**After any code changes, ALWAYS verify the following before considering work complete:**
+
+1. **Build Linux AppImage**:
+   ```bash
+   rm -rf dist && npm run build:linux
+   ```
+   Verify `dist/jlmol-*.AppImage` is created successfully. The rpm target may fail if `rpmbuild` is not installed - this is acceptable.
+
+2. **Build Windows installer** (cross-compile from Linux):
+   ```bash
+   npm run build:windows
+   ```
+   Verify `dist/jlmol-*.exe` is created successfully.
+
+3. **Test browser version**:
+   - Open `index.html` directly in a browser (file:// or via local server)
+   - Verify JSmol viewer loads correctly
+   - Test basic functionality (load sample molecule, rotate, change display mode)
+   - Check browser console for errors
+   - Ensure version number displays (may show "unknown" without server due to package.json fetch)
+
+**NOTE**: This application must work in BOTH Electron AND browser environments. Any changes to JavaScript code must use feature detection (e.g., `typeof require !== 'undefined'`) when using Node.js-specific APIs.
+
 ### Basic Molecular Viewer Testing
 1. Start the application: `npm start`
 2. Load a sample molecule from jsmol/data/ directory (drag and drop or file menu)
@@ -168,7 +192,7 @@ This project does not have:
 - Code formatting tools (Prettier, etc.)
 - CI testing beyond builds
 
-Validation is done manually through the scenarios described above.
+**Manual validation is REQUIRED** - always run through the "Mandatory Build Verification" section and relevant validation scenarios above after making changes.
 
 ## Build Distribution
 - Windows: .exe installer via NSIS
@@ -182,5 +206,26 @@ Validation is done manually through the scenarios described above.
 - **Linux**: Primary development platform, all package formats supported
 - **macOS**: Supported but may require code signing for distribution
 - **Electron**: Version 28.x, supports modern web standards and ES6+
+- **Browser**: Works as standalone webpage, must not use Node.js APIs without feature detection
 
 Always ensure compatibility across platforms when making changes affecting the main process or native integrations.
+
+## Dual Environment Compatibility (CRITICAL)
+
+This application **MUST** work in both environments:
+1. **Electron desktop app** - Has access to Node.js APIs (`require`, `fs`, `child_process`, etc.)
+2. **Browser webpage** - No Node.js, only standard Web APIs available
+
+### Best Practices for Dual Compatibility:
+- Always use feature detection before Node.js APIs:
+  ```javascript
+  if (typeof require !== 'undefined') {
+      // Electron-specific code
+      const fs = require('fs');
+  } else {
+      // Browser fallback
+  }
+  ```
+- Use modern Web APIs with fallbacks (e.g., Clipboard API with `document.execCommand` fallback)
+- Never assume `process`, `require`, or `__dirname` exist without checking
+- Test both environments after changes: `npm start` for Electron, open `index.html` in browser

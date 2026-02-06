@@ -1,11 +1,20 @@
 // Check version immediately when script loads
-(function checkVersion() {
+(function checkVersion(retryCount) {
+    retryCount = retryCount || 0;
+    const maxRetries = 50; // Max 5 seconds (50 * 100ms)
+    
     const versionElement = document.getElementById('version-number');
     if (versionElement && window.appVersion) {
         versionElement.textContent = window.appVersion;
-    } else {
+    } else if (retryCount < maxRetries) {
         // If element isn't ready yet or version not loaded, retry in 100ms
-        setTimeout(checkVersion, 100);
+        setTimeout(() => checkVersion(retryCount + 1), 100);
+    } else {
+        // Give up after max retries, set fallback
+        if (versionElement) {
+            versionElement.textContent = 'unknown';
+        }
+        console.warn('Could not load version after', maxRetries, 'attempts');
     }
 })();
 

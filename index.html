@@ -2243,7 +2243,7 @@
                 }
             }
             
-            await            await loadFromDatabase(prefix + query);
+            await loadFromDatabase(prefix + query);
         }
 
         // Test function for molecular formula search
@@ -3387,9 +3387,31 @@
 
         function copyElemCoInput() {
             const input = document.getElementById('elemco-input');
-            input.select();
-            document.execCommand('copy');
-            document.getElementById('status').innerHTML = 'Input copied to clipboard';
+            const text = input.value;
+            
+            // Use modern Clipboard API with fallback for older browsers
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(() => {
+                    document.getElementById('status').innerHTML = 'Input copied to clipboard';
+                }).catch(err => {
+                    console.error('Clipboard API failed:', err);
+                    fallbackCopyToClipboard(input);
+                });
+            } else {
+                fallbackCopyToClipboard(input);
+            }
+        }
+        
+        // Fallback for browsers without Clipboard API
+        function fallbackCopyToClipboard(textArea) {
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                document.getElementById('status').innerHTML = 'Input copied to clipboard';
+            } catch (err) {
+                console.error('Fallback copy failed:', err);
+                document.getElementById('status').innerHTML = 'Copy failed - please copy manually';
+            }
         }
 
         // Remove previous event listeners and add new ones
@@ -4803,7 +4825,7 @@ and eliminates the need for manual steps.`;
             </div>
             <div class="elemco-container">
                 <button id="elemcoButton" onclick="showElemCoPanel()">
-                    <img src="build/elemco_logo.png" alt="ElemCo.jl" title="Generate ElemCo.jl Input">
+                    <img src="build/elemco_logo.png" alt="ElemCo.jl" title="Generate ElemCo.jl Input" onerror="this.style.display='none'; this.parentElement.innerHTML='ElemCo.jl';">
                 </button>
             </div>
         </div>
@@ -4844,7 +4866,7 @@ and eliminates the need for manual steps.`;
     <div id="elemcoPanel">
         <div id="elemco-header">
             <div style="display: flex; align-items: center;">
-                <img src="build/elemco_logo.png" alt="ElemCo.jl">
+                <img src="build/elemco_logo.png" alt="ElemCo.jl" onerror="this.style.display='none';">
                 <h3>ElemCo.jl Input</h3>
             </div>
             <button onclick="hideElemCoPanel()" title="Close ElemCo.jl input panel">Close</button>

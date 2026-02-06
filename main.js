@@ -139,7 +139,7 @@ function createWindow() {
                                 clearInterval(waitForReady);
                                 console.log('JSmol ready, loading molecule...');
                                 try {
-                                    const content = \`${fileContent.replace(/\\/g, '\\\\').replace(/`/g, '\\`')}\`;
+                                    const content = \`${fileContent.replace(/\\/g, '\\\\').replace(/\$/g, '\\$').replace(/\`/g, '\\\`')}\`;
                                     Jmol.script(jmolApplet0, 'set echo top left; echo "Loading molecule...";');
                                     setTimeout(() => {
                                         Jmol.script(jmolApplet0, 'load inline "' + content + '" filter "NOSORT";');
@@ -174,8 +174,8 @@ function createWindow() {
 
 app.whenReady().then(createWindow);
 
-// Add periodic memory monitoring
-setInterval(() => {
+// Add periodic memory monitoring with cleanup
+let memoryMonitorInterval = setInterval(() => {
     const memUsage = process.memoryUsage();
     if (memUsage.heapUsed > 500 * 1024 * 1024) { // 500MB threshold
         log(`High memory usage detected: ${Math.round(memUsage.heapUsed / 1024 / 1024)}MB`);
@@ -187,6 +187,11 @@ setInterval(() => {
 }, 30000); // Check every 30 seconds
 
 app.on('window-all-closed', () => {
+    // Clear memory monitoring interval
+    if (memoryMonitorInterval) {
+        clearInterval(memoryMonitorInterval);
+        memoryMonitorInterval = null;
+    }
     log('Application closing - cleaning up resources');
     // Force cleanup on exit
     if (global.gc) {
