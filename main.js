@@ -90,7 +90,8 @@ function createWindow() {
     });
 
     win.loadFile('index.html');
-    win.setMenuBarVisibility(true);
+    win.setMenuBarVisibility(false);
+    win.setAutoHideMenuBar(true);
 
     // Add proper cleanup on window close
     win.on('closed', () => {
