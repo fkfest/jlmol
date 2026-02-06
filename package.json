@@ -5,6 +5,7 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
+    "start:win": "node_modules/electron/dist/electron.exe .",
     "start-safe": "electron . --disable-hardware-acceleration",
     "start-debug": "electron . --enable-logging --log-level=0",
     "start-safe-debug": "electron . --disable-hardware-acceleration --enable-logging --log-level=0",
@@ -43,7 +44,11 @@
       "category": "public.app-category.education"
     },
     "linux": {
-      "target": ["AppImage", "deb", "rpm"],
+      "target": [
+        "AppImage",
+        "deb",
+        "rpm"
+      ],
       "icon": "build/icons/",
       "category": "Science",
       "artifactName": "${productName}-${version}.${ext}",
@@ -62,8 +67,8 @@
   },
   "license": "LGPL-2.1",
   "devDependencies": {
-    "electron": "^28.0.0",
-    "electron-builder": "^24.9.1"
+    "electron": "^40.2.1",
+    "electron-builder": "^26.7.0"
   },
   "keywords": []
 }
