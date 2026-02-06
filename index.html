@@ -434,10 +434,14 @@
             top: 120px;
             left: 120px;
             resize: both;
-            overflow: auto;
+            overflow-x: hidden;
+            overflow-y: auto;
             min-width: 250px; /* Reduced from 300px */
             min-height: 300px; /* Reduced from 400px */
             max-height: 90vh;
+        }
+        #elemcoPanel * {
+            box-sizing: border-box;
         }
         #elemco-header {
             cursor: move;
@@ -834,6 +838,10 @@
             padding: 8px;
             border: 1px solid #ccc;
             border-radius: 4px;
+            box-sizing: border-box;
+            overflow-x: hidden;
+            word-wrap: break-word;
+            white-space: pre-wrap;
         }
 
         .preview-note {
@@ -970,6 +978,11 @@
             resize: vertical;
             min-height: 150px;
             max-height: 400px;
+            width: 100%;
+            box-sizing: border-box;
+            overflow-x: hidden;
+            word-wrap: break-word;
+            white-space: pre-wrap;
         }
 
         #julia-output:focus {
@@ -4997,7 +5010,7 @@ and eliminates the need for manual steps.`;
         <div id="julia-output-section" style="display: none;">
             <div class="elemco-input-group vertical">
                 <label for="julia-output">Calculation Output:</label>
-                <textarea id="julia-output" readonly style="height: 200px; font-family: monospace; background: #f8f8f8;"></textarea>
+                <textarea id="julia-output" readonly></textarea>
                 <div class="preview-note">Julia calculation results will appear here.</div>
             </div>
             <div class="action-buttons">
