@@ -4276,9 +4276,10 @@ and eliminates the need for manual steps.`;
         
         function updateBackgroundColor(color) {
             if (jmolApplet0 && jmolApplet0._ready) {
-                // Convert hex color to JSmol format
-                const jsmolColor = color.replace('#', '0x');
+                // Convert hex color to JSmol script format [xRRGGBB]
+                const jsmolColor = '[x' + color.replace('#', '') + ']';
                 Jmol.script(jmolApplet0, `background ${jsmolColor}`);
+                console.log('Applied background color:', color, '->', jsmolColor);
                 
                 // Update the preference
                 updatePreference('bgColor', color);
@@ -4603,9 +4604,9 @@ and eliminates the need for manual steps.`;
             try {
                 // Apply background color
                 if (prefs.bgColor) {
-                    const jsmolColor = prefs.bgColor.replace('#', '0x');
+                    const jsmolColor = '[x' + prefs.bgColor.replace('#', '') + ']';
                     Jmol.script(jmolApplet0, `background ${jsmolColor}`);
-                    console.log('Applied background color:', prefs.bgColor);
+                    console.log('Applied background color:', prefs.bgColor, '->', jsmolColor);
                 }
                 
                 // Apply antialiasing
