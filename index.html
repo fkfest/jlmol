@@ -2247,6 +2247,20 @@
             return true;
         }
 
+        function looksLikeChemicalName(str) {
+            if (!/^[A-Za-z0-9\s,()-]+$/.test(str) || !/[A-Za-z]/.test(str)) {
+                return false;
+            }
+
+            // IUPAC-style names often use comma-separated locants such as "3,4-" or "N,N-"
+            if (str.includes(',')) {
+                return true;
+            }
+
+            // Numeric locants followed by a hyphen and a word are more likely names than SMILES
+            return /\d+(?:,\d+)*[A-Za-z]?-[A-Za-z]*[a-z]{2,}/.test(str);
+        }
+
         async function loadFromPubChem() {
             const query = document.getElementById('pubchemInput').value.trim();
             if (!query) {
@@ -2275,6 +2289,10 @@
                 // Check if it's a molecular formula
                 else if (isMolecularFormula(query)) {
                     prefix = ':formula:';
+                }
+                // Chemical names with locants such as "3,4-" or "2-" should stay name searches
+                else if (looksLikeChemicalName(query)) {
+                    prefix = ':';
                 }
                 // Check if it's a SMILES string (more specific patterns)
                 else if (/[=@#]|[\[\]()]|[cC][cC]|[nN][oO]|[sS][iI]|[pP][hH]|\d[nNcCoOsS]|[nNcCoOsS]\d|\+|-/.test(query) && 
