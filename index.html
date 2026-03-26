@@ -2248,7 +2248,7 @@
         }
 
         function looksLikeChemicalName(str) {
-            if (!/^[A-Za-z0-9\s,.\-()]+$/.test(str) || !/[A-Za-z]/.test(str)) {
+            if (!/^[A-Za-z0-9\s,()-]+$/.test(str) || !/[A-Za-z]/.test(str)) {
                 return false;
             }
 
@@ -2258,7 +2258,7 @@
             }
 
             // Numeric locants followed by a hyphen and a word are more likely names than SMILES
-            return /\d+(?:,\d+)*[A-Za-z]?-+[A-Za-z]/.test(str) && /[a-z]/.test(str);
+            return /\d+(?:,\d+)*[A-Za-z]?-[A-Za-z]*[a-z]{2,}/.test(str);
         }
 
         async function loadFromPubChem() {
