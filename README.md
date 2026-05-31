@@ -261,6 +261,17 @@ To use ModelKit:
 
 This feature complements the XYZ editor and 2D JSME editor, providing a complete set of molecular editing tools.
 
+## Semiempirical Calculations (xtb / g-xTB)
+
+Run [xtb](https://github.com/grimme-lab/xtb) g-xTB calculations on the current structure (desktop app only):
+
+- **Calculate Energy**: runs `xtb <coord.xyz> --gxtb` and reports the total energy
+- **Optimize Geometry**: runs `xtb <coord.xyz> --gxtb --opt` and replaces the current geometry with the optimized structure
+- Set charge, number of unpaired electrons (`--uhf`), and extra xtb flags
+- Configurable xtb command (supports WSL) in Settings → xtb
+- Browser mode shows a message to install jlmol locally; a clear message is shown if xtb is not accessible
+- Requires xtb with g-xTB support, plus the g-xTB parameter files from [grimme-lab/g-xtb](https://github.com/grimme-lab/g-xtb) placed in `$XTBPATH` or `$HOME`
+
 ## ElemCo.jl Integration
 
 The application includes built-in support for generating ElemCo.jl input files for quantum chemistry calculations:

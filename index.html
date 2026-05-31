@@ -385,6 +385,18 @@
             width: 100%;
         }
 
+        .xtb-container {
+            display: flex;
+            justify-content: flex-start;
+            padding-left: 40px;
+            width: 100%;
+            margin-top: 8px;
+        }
+
+        #xtbButton {
+            min-width: 86px;
+        }
+
         #elemcoButton {
             background: linear-gradient(to bottom, #ffffff 0%, #f5f5f5 100%);
             border: 1px solid #ccc;
@@ -422,6 +434,58 @@
         .sample-buttons {
             margin-top: 4px;  /* Add space above the sample buttons */
         }
+        #xtbPanel {
+            display: none;
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            margin-left: -300px;
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            z-index: 10001;
+            width: 600px;
+            max-width: 90vw;
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+
+        #xtb-header {
+            cursor: move;
+            margin: -24px -24px 16px -24px;
+            padding: 12px 24px;
+            border-bottom: 2px solid #3498db;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        #xtb-header h3 {
+            margin: 0;
+            color: #2c3e50;
+            border-bottom: none;
+            padding-bottom: 0;
+            pointer-events: none;
+        }
+
+        #xtbPanel h3 {
+            margin-top: 0;
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+
+        #xtb-output {
+            width: 100%;
+            min-height: 200px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            box-sizing: border-box;
+            resize: vertical;
+            background: #1e1e1e;
+            color: #d4d4d4;
+        }
+
         #elemcoPanel {
             position: fixed;
             width: 350px; /* Reduced from 400px */
@@ -3035,6 +3099,10 @@
                 document.getElementById('preferencesPanel'),
                 document.getElementById('preferences-header')
             );
+            makeDraggable(
+                document.getElementById('xtbPanel'),
+                document.getElementById('xtb-header')
+            );
         }
 
         // Add page zoom functionality
@@ -4215,6 +4283,289 @@ and eliminates the need for manual steps.`;
             document.getElementById('status').innerHTML = 'Calculation output cleared';
         }
 
+        // ============================================================
+        // xtb (g-xTB) integration
+        // ============================================================
+
+        function showXtbPanel() {
+            const panel = document.getElementById('xtbPanel');
+            if (panel) panel.style.display = 'block';
+        }
+
+        function hideXtbPanel() {
+            const panel = document.getElementById('xtbPanel');
+            if (panel) panel.style.display = 'none';
+        }
+
+        function clearXtbOutput() {
+            const outputTextarea = document.getElementById('xtb-output');
+            const outputSection = document.getElementById('xtb-output-section');
+            if (outputTextarea) outputTextarea.value = '';
+            if (outputSection) outputSection.style.display = 'none';
+            document.getElementById('status').innerHTML = 'Output cleared';
+        }
+
+        // Quote-aware command parser (supports paths with spaces and 'wsl ...' commands)
+        function parseXtbCommand(cmd) {
+            const parts = [];
+            let current = '';
+            let inQuotes = false;
+            let quoteChar = '';
+            for (let i = 0; i < cmd.length; i++) {
+                const char = cmd[i];
+                if ((char === '"' || char === "'") && !inQuotes) {
+                    inQuotes = true;
+                    quoteChar = char;
+                } else if (char === quoteChar && inQuotes) {
+                    inQuotes = false;
+                    quoteChar = '';
+                } else if (char === ' ' && !inQuotes) {
+                    if (current.trim()) { parts.push(current.trim()); current = ''; }
+                } else {
+                    current += char;
+                }
+            }
+            if (current.trim()) parts.push(current.trim());
+            return parts;
+        }
+
+        // Entry point for xtb calculations. mode = 'energy' | 'opt'
+        async function runXtb(mode) {
+            const outputSection = document.getElementById('xtb-output-section');
+            const outputTextarea = document.getElementById('xtb-output');
+            if (!outputSection || !outputTextarea) {
+                document.getElementById('status').innerHTML = 'Error: xtb panel not initialized';
+                return;
+            }
+
+            // Ensure a molecule is loaded
+            let xyzData = '';
+            try {
+                xyzData = Jmol.evaluateVar(jmolApplet0, 'write("xyz")') || '';
+            } catch (e) {
+                xyzData = '';
+            }
+            const atomCount = xyzData ? parseInt(xyzData.split('\n')[0]) : 0;
+            if (!atomCount || isNaN(atomCount)) {
+                document.getElementById('status').innerHTML = 'Please load a molecule first';
+                return;
+            }
+
+            outputSection.style.display = 'block';
+            outputTextarea.value = mode === 'opt'
+                ? 'Initializing xtb geometry optimization...\n'
+                : 'Initializing xtb energy calculation...\n';
+            document.getElementById('status').innerHTML = 'Preparing xtb calculation...';
+
+            try {
+                if (typeof require !== 'undefined') {
+                    await runXtbInElectron(xyzData, mode);
+                } else {
+                    showXtbBrowserMessage();
+                }
+            } catch (error) {
+                console.error('Error running xtb calculation:', error);
+                outputTextarea.value = `Error: ${error.message}\n\nTroubleshooting:\n- Ensure xtb is installed and accessible\n- Check the xtb command in Settings\n- For g-xTB, install the parameter files from https://github.com/grimme-lab/g-xtb into $XTBPATH or $HOME`;
+                document.getElementById('status').innerHTML = 'xtb calculation failed - see output for details';
+            }
+        }
+
+        // Browser fallback message
+        function showXtbBrowserMessage() {
+            const outputTextarea = document.getElementById('xtb-output');
+            outputTextarea.value = `=== jlmol Browser Mode ===
+Running xtb directly from the browser is not supported.
+
+Please install jlmol locally (the desktop application) to run xtb calculations.
+Download: https://github.com/fkfest/jlmol/releases/latest
+
+The desktop version runs xtb on your machine. You will also need:
+1. xtb with g-xTB support installed and on your PATH (or set the command in Settings -> xtb).
+2. The g-xTB parameter files from https://github.com/grimme-lab/g-xtb,
+   placed in $XTBPATH or $HOME.`;
+            document.getElementById('status').innerHTML = 'Please install jlmol locally to run xtb';
+        }
+
+        // Run xtb in the Electron environment
+        async function runXtbInElectron(xyzData, mode) {
+            const { spawn } = require('child_process');
+            const fs = require('fs');
+            const path = require('path');
+            const os = require('os');
+
+            const outputTextarea = document.getElementById('xtb-output');
+            const prefs = getPreferences();
+            const xtbCommand = (prefs.xtbCommand || 'xtb').trim();
+            const timeoutMs = (parseInt(prefs.calcTimeout) || 5) * 60 * 1000;
+
+            // Calculation options from the panel
+            const charge = parseInt(document.getElementById('xtb-charge')?.value, 10) || 0;
+            const uhf = Math.max(0, parseInt(document.getElementById('xtb-uhf')?.value, 10) || 0);
+            const extraFlags = (document.getElementById('xtb-extra-flags')?.value || '').trim();
+
+            const commandParts = parseXtbCommand(xtbCommand);
+            if (commandParts.length === 0) {
+                throw new Error('No xtb command configured. Set it in Settings -> xtb.');
+            }
+            const isWSL = commandParts[0].toLowerCase() === 'wsl';
+            const baseCommand = isWSL ? 'wsl' : commandParts[0];
+            const cmdPrefixArgs = commandParts.slice(1); // e.g. ['xtb'] for "wsl xtb", or [] for "xtb"
+
+            // Dedicated working directory (xtb writes several output files into CWD)
+            const workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'jlmol_xtb_'));
+            fs.writeFileSync(path.join(workDir, 'coord.xyz'), xyzData);
+
+            let cleanedUp = false;
+            function cleanup() {
+                if (cleanedUp) return;
+                cleanedUp = true;
+                try {
+                    fs.rmSync(workDir, { recursive: true, force: true });
+                    console.log('xtb working directory cleaned up:', workDir);
+                } catch (e) {
+                    console.warn('Could not remove xtb working directory:', workDir, e);
+                }
+            }
+            process.once('exit', cleanup);
+
+            // Build arguments. The geometry file is passed as a relative name; cwd is workDir.
+            const calcArgs = [...cmdPrefixArgs, 'coord.xyz', '--gxtb', '--chrg', String(charge), '--uhf', String(uhf)];
+            if (mode === 'opt') calcArgs.push('--opt');
+            if (extraFlags) calcArgs.push(...parseXtbCommand(extraFlags));
+
+            const fullCmd = `${xtbCommand} coord.xyz --gxtb${mode === 'opt' ? ' --opt' : ''} --chrg ${charge} --uhf ${uhf}${extraFlags ? ' ' + extraFlags : ''}`;
+            outputTextarea.value = `=== jlmol xtb (g-xTB) Calculation ===\nTimestamp: ${new Date().toISOString()}\nMode: ${mode === 'opt' ? 'Geometry optimization' : 'Single-point energy'}\nxtb command: ${xtbCommand}\nWorking directory: ${workDir}\nFull command: ${fullCmd}\n\n--- Checking xtb availability ---\n`;
+            document.getElementById('status').innerHTML = 'Checking xtb...';
+
+            // Availability check first
+            const versionArgs = [...cmdPrefixArgs, '--version'];
+            const check = spawn(baseCommand, versionArgs, {
+                cwd: workDir,
+                stdio: ['pipe', 'pipe', 'pipe'],
+                shell: isWSL ? false : true
+            });
+
+            check.on('error', (error) => {
+                cleanup();
+                const wslTip = isWSL ? `\n\nWSL tips:\n- Ensure WSL is installed and xtb exists inside your distribution\n- Try 'wsl xtb --version' in a terminal` : '';
+                outputTextarea.value += `\n=== xtb NOT FOUND ===\nCould not run "${xtbCommand}": ${error.message}\n\nPlease check the xtb command in Settings -> xtb, or install xtb (with g-xTB support) from https://github.com/grimme-lab/g-xtb and make sure it is on your PATH.${wslTip}`;
+                document.getElementById('status').innerHTML = 'xtb not found - see output';
+            });
+
+            check.on('close', (code) => {
+                if (code !== 0) {
+                    cleanup();
+                    outputTextarea.value += `\nxtb version check failed (exit code ${code}) for command "${xtbCommand}".\nPlease verify the command in Settings -> xtb.`;
+                    document.getElementById('status').innerHTML = 'xtb not available - see output';
+                    return;
+                }
+
+                outputTextarea.value += `xtb found.\n\n--- Starting calculation ---\n`;
+                document.getElementById('status').innerHTML = mode === 'opt' ? 'Optimizing geometry with xtb...' : 'Calculating energy with xtb...';
+
+                const proc = spawn(baseCommand, calcArgs, {
+                    cwd: workDir,
+                    stdio: ['pipe', 'pipe', 'pipe'],
+                    timeout: timeoutMs,
+                    shell: isWSL ? false : true
+                });
+
+                let stdout = '';
+                let outputBuffer = '';
+                const startTime = Date.now();
+                let lastUpdateTime = Date.now();
+
+                function flushOutput() {
+                    if (outputBuffer.length > 0) {
+                        outputTextarea.value += outputBuffer;
+                        outputBuffer = '';
+                        outputTextarea.scrollTop = outputTextarea.scrollHeight;
+                    }
+                }
+
+                proc.stdout.on('data', (data) => {
+                    const text = data.toString();
+                    stdout += text;
+                    outputBuffer += text;
+                    const now = Date.now();
+                    if (now - lastUpdateTime > 100) {
+                        flushOutput();
+                        lastUpdateTime = now;
+                        const elapsed = ((now - startTime) / 1000).toFixed(1);
+                        document.getElementById('status').innerHTML = `xtb running... (${elapsed}s)`;
+                    }
+                });
+
+                proc.stderr.on('data', (data) => {
+                    outputTextarea.value += data.toString();
+                    outputTextarea.scrollTop = outputTextarea.scrollHeight;
+                });
+
+                proc.on('error', (error) => {
+                    flushOutput();
+                    cleanup();
+                    outputTextarea.value += `\n=== PROCESS ERROR ===\n${error.message}`;
+                    document.getElementById('status').innerHTML = `xtb process error: ${error.message}`;
+                });
+
+                proc.on('close', (exitCode) => {
+                    flushOutput();
+                    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+
+                    // NOTE: xtb returns exit code 0 even on failure (e.g. missing g-xTB
+                    // parameters), so success is detected from the produced output, not the code.
+                    if (mode === 'opt') {
+                        const optFile = path.join(workDir, 'xtbopt.xyz');
+                        if (fs.existsSync(optFile)) {
+                            let optXyz = '';
+                            try {
+                                optXyz = fs.readFileSync(optFile, 'utf8');
+                            } catch (e) {
+                                optXyz = '';
+                            }
+                            if (optXyz && parseInt(optXyz.split('\n')[0]) > 0) {
+                                applyOptimizedGeometry(optXyz);
+                                outputTextarea.value += `\n\n=== OPTIMIZATION COMPLETED (${elapsed}s) ===\nThe geometry in the viewer has been replaced with the optimized structure.`;
+                                document.getElementById('status').innerHTML = `Geometry optimized with g-xTB (${elapsed}s)`;
+                                cleanup();
+                                return;
+                            }
+                        }
+                        outputTextarea.value += `\n\n=== OPTIMIZATION FAILED ===\nNo optimized geometry (xtbopt.xyz) was produced. See the output above.\nIf this mentions missing g-xTB parameters, install them from https://github.com/grimme-lab/g-xtb into $XTBPATH or $HOME.`;
+                        document.getElementById('status').innerHTML = 'xtb optimization failed - see output';
+                    } else {
+                        const match = stdout.match(/TOTAL ENERGY\s+(-?\d+\.\d+)/);
+                        if (match) {
+                            const energy = match[1];
+                            outputTextarea.value += `\n\n=== ENERGY CALCULATION COMPLETED (${elapsed}s) ===\nTotal energy: ${energy} Eh`;
+                            document.getElementById('status').innerHTML = `g-xTB total energy: ${energy} Eh (${elapsed}s)`;
+                        } else {
+                            outputTextarea.value += `\n\n=== ENERGY CALCULATION FAILED ===\nNo total energy was found in the xtb output. See above.\nIf this mentions missing g-xTB parameters, install them from https://github.com/grimme-lab/g-xtb into $XTBPATH or $HOME.`;
+                            document.getElementById('status').innerHTML = 'xtb energy calculation failed - see output';
+                        }
+                    }
+                    cleanup();
+                });
+            });
+        }
+
+        // Replace the current geometry in the viewer with the optimized structure
+        function applyOptimizedGeometry(optXyz) {
+            try {
+                Jmol.script(jmolApplet0, `load inline "${optXyz}" filter "NOSORT"`);
+                setTimeout(() => {
+                    if (typeof applyJSmolPreferences === 'function') {
+                        try { applyJSmolPreferences(); } catch (e) { console.warn('applyJSmolPreferences failed:', e); }
+                    }
+                    if (typeof refreshJSMEFromJSmol === 'function') {
+                        try { refreshJSMEFromJSmol(); } catch (e) { /* 2D editor not active */ }
+                    }
+                }, 300);
+            } catch (e) {
+                console.error('Failed to load optimized geometry into viewer:', e);
+            }
+        }
+
         // Initialize ElemCo panel elements
         function initElemCoPanel() {
             // Clean up any existing elements first
@@ -4317,7 +4668,10 @@ and eliminates the need for manual steps.`;
             calcTimeout: 5,
             useDF: false,
             autoClearOutput: true,
-            saveOutput: false
+            saveOutput: false,
+
+            // xtb (g-xTB) settings
+            xtbCommand: 'xtb'
         };
         
         // Switch between preference tabs
@@ -4470,9 +4824,13 @@ and eliminates the need for manual steps.`;
             
             const juliaCommandInput = document.getElementById('pref-julia-command');
             if (juliaCommandInput) juliaCommandInput.value = prefs.juliaCommand || 'julia';
-            
+
             const calcTimeoutInput = document.getElementById('pref-calc-timeout');
             if (calcTimeoutInput) calcTimeoutInput.value = prefs.calcTimeout || 5;
+
+            // xtb settings
+            const xtbCommandInput = document.getElementById('pref-xtb-command');
+            if (xtbCommandInput) xtbCommandInput.value = prefs.xtbCommand || 'xtb';
             
             const useDFCheckbox = document.getElementById('pref-use-df');
             if (useDFCheckbox) useDFCheckbox.checked = prefs.useDF || false;
@@ -4554,9 +4912,13 @@ and eliminates the need for manual steps.`;
             
             const juliaCommandInput = document.getElementById('pref-julia-command');
             if (juliaCommandInput) prefs.juliaCommand = juliaCommandInput.value.trim() || 'julia';
-            
+
             const calcTimeoutInput = document.getElementById('pref-calc-timeout');
             if (calcTimeoutInput) prefs.calcTimeout = parseInt(calcTimeoutInput.value) || 5;
+
+            // xtb settings
+            const xtbCommandInput = document.getElementById('pref-xtb-command');
+            if (xtbCommandInput) prefs.xtbCommand = xtbCommandInput.value.trim() || 'xtb';
             
             const useDFCheckbox = document.getElementById('pref-use-df');
             if (useDFCheckbox) prefs.useDF = useDFCheckbox.checked;
@@ -4903,6 +5265,9 @@ and eliminates the need for manual steps.`;
                     <img src="build/elemco_logo.png" alt="ElemCo.jl" title="Generate ElemCo.jl Input" onerror="this.style.display='none'; this.parentElement.innerHTML='ElemCo.jl';">
                 </button>
             </div>
+            <div class="xtb-container">
+                <button id="xtbButton" onclick="showXtbPanel()" title="Run xtb (g-xTB) energy or geometry optimization">xtb (g-xTB)</button>
+            </div>
         </div>
     </div>
     <div id="orbitalControls">
@@ -5036,6 +5401,44 @@ and eliminates the need for manual steps.`;
             </div>
         </div>
     </div>
+    <div id="xtbPanel">
+        <div id="xtb-header">
+            <h3>xtb (g-xTB) Calculation</h3>
+        </div>
+        <div class="elemco-input-group">
+            <label>Options</label>
+            <div style="display:flex; gap:16px; flex-wrap:wrap;">
+                <div class="elemco-input-group vertical" style="margin-bottom:0;">
+                    <label for="xtb-charge">Charge</label>
+                    <input type="number" id="xtb-charge" value="0" step="1" style="width:100px;" title="Total molecular charge (passed as --chrg)">
+                </div>
+                <div class="elemco-input-group vertical" style="margin-bottom:0;">
+                    <label for="xtb-uhf">Unpaired electrons</label>
+                    <input type="number" id="xtb-uhf" value="0" min="0" step="1" style="width:140px;" title="Number of unpaired electrons (passed as --uhf)">
+                </div>
+            </div>
+        </div>
+        <div class="elemco-input-group vertical">
+            <label for="xtb-extra-flags">Extra xtb flags (optional)</label>
+            <input type="text" id="xtb-extra-flags" placeholder="e.g. --acc 0.5" title="Additional command-line flags passed to xtb">
+        </div>
+        <div class="preview-note">Runs <code>xtb &lt;coord.xyz&gt; --gxtb</code> for the energy, or <code>xtb &lt;coord.xyz&gt; --gxtb --opt</code> to optimize and replace the current geometry. g-xTB parameter files must be installed (see Settings &rarr; xtb).</div>
+        <div class="action-buttons">
+            <button onclick="runXtb('energy')" title="Calculate the g-xTB energy of the current geometry">Calculate Energy</button>
+            <button onclick="runXtb('opt')" title="Optimize the current geometry with g-xTB and replace it in the viewer">Optimize Geometry</button>
+            <button onclick="hideXtbPanel()" title="Close the xtb panel">Close</button>
+        </div>
+        <div id="xtb-output-section" style="display: none;">
+            <div class="elemco-input-group vertical">
+                <label for="xtb-output">Calculation Output:</label>
+                <textarea id="xtb-output" readonly></textarea>
+                <div class="preview-note">xtb output will appear here.</div>
+            </div>
+            <div class="action-buttons">
+                <button onclick="clearXtbOutput()" title="Clear calculation output">Clear Output</button>
+            </div>
+        </div>
+    </div>
     <div id="preferencesPanel">
         <div id="preferences-header">
             <h3>⚙️ User Preferences</h3>
@@ -5047,6 +5450,7 @@ and eliminates the need for manual steps.`;
             <button class="preferences-tab" onclick="switchPreferencesTab('display')">Display</button>
             <button class="preferences-tab" onclick="switchPreferencesTab('advanced')">Advanced</button>
             <button class="preferences-tab" onclick="switchPreferencesTab('elemco')">ElemCo.jl</button>
+            <button class="preferences-tab" onclick="switchPreferencesTab('xtb')">xtb</button>
         </div>
         
         <div class="preferences-content">
@@ -5280,6 +5684,23 @@ and eliminates the need for manual steps.`;
             </div>
         </div>
         
+            <!-- xtb (g-xTB) Settings Tab -->
+            <div id="preferences-xtb" class="preferences-tab-content">
+                <div class="preference-section">
+                    <h4>xtb Configuration</h4>
+                    <div class="preference-item">
+                        <label class="preference-label">xtb command:</label>
+                        <input type="text" id="pref-xtb-command" class="preference-input" placeholder="xtb" title="xtb command or path (e.g., xtb, /usr/local/bin/xtb, xtb.exe, or 'wsl xtb' for WSL)">
+                        <div class="preference-description">Command or path to the xtb executable (supports WSL). g-xTB calculations require the parameter files from the g-xtb repository in $XTBPATH or $HOME.</div>
+                    </div>
+                    <div class="preference-item">
+                        <div class="preference-description">Get xtb with g-xTB support and the required parameter files from
+                            <a href="https://github.com/grimme-lab/g-xtb" target="_blank" rel="noopener noreferrer">github.com/grimme-lab/g-xtb</a>.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         <div class="preference-buttons">
             <button onclick="resetPreferencesToDefaults()" class="preference-reset-button">Reset to Defaults</button>
             <button onclick="savePreferencesFromUI()" class="preference-save-button">Save Preferences</button>
