@@ -4474,6 +4474,25 @@ and eliminates the need for manual steps.`;
             return parts;
         }
 
+        // Compress a sorted list of 1-based atom numbers into xtb range notation,
+        // e.g. [1,2,3,5,8,9] -> "1-3,5,8-9".
+        function formatAtomRanges(nums) {
+            if (!nums.length) return '';
+            const sorted = [...nums].sort((a, b) => a - b);
+            const parts = [];
+            let start = sorted[0], prev = sorted[0];
+            for (let i = 1; i < sorted.length; i++) {
+                if (sorted[i] === prev + 1) {
+                    prev = sorted[i];
+                } else {
+                    parts.push(start === prev ? `${start}` : `${start}-${prev}`);
+                    start = prev = sorted[i];
+                }
+            }
+            parts.push(start === prev ? `${start}` : `${start}-${prev}`);
+            return parts.join(',');
+        }
+
         // Entry point for xtb calculations. mode = 'energy' | 'opt'
         async function runXtb(mode) {
             const outputSection = document.getElementById('xtb-output-section');
@@ -4560,6 +4579,35 @@ The desktop version runs xtb on your machine. You will also need:
             const workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'jlmol_xtb_'));
             fs.writeFileSync(path.join(workDir, 'coord.xyz'), xyzData);
 
+            // Optionally freeze the non-selected atoms during optimization by writing
+            // an xtb xcontrol file with a $fix block (passed via --input). The atoms
+            // listed in $fix are removed from the optimization, so only the currently
+            // selected atoms are relaxed.
+            let inputFileArgs = [];
+            let freezeSummary = '';
+            const freezeUnselected = mode === 'opt' && document.getElementById('xtb-freeze-unselected')?.checked;
+            if (freezeUnselected) {
+                const totalAtoms = parseInt(xyzData.split('\n')[0], 10) || 0;
+                if (selectedAtoms.size === 0) {
+                    freezeSummary = '"Relax only selected atoms" is enabled but no atoms are selected — optimizing all atoms.\n';
+                } else {
+                    // selectedAtoms holds 0-based indices; xtb uses 1-based numbering.
+                    const fixed = [];
+                    for (let i = 0; i < totalAtoms; i++) {
+                        if (!selectedAtoms.has(i)) fixed.push(i + 1);
+                    }
+                    if (fixed.length === 0) {
+                        freezeSummary = 'All atoms are selected — nothing to freeze, optimizing all atoms.\n';
+                    } else {
+                        const ranges = formatAtomRanges(fixed);
+                        const xcontrol = `$fix\n   atoms: ${ranges}\n$end\n`;
+                        fs.writeFileSync(path.join(workDir, 'xtb.inp'), xcontrol);
+                        inputFileArgs = ['--input', 'xtb.inp'];
+                        freezeSummary = `Relaxing ${selectedAtoms.size} selected atom(s); freezing ${fixed.length} atom(s) via xtb.inp:\n${xcontrol}`;
+                    }
+                }
+            }
+
             let cleanedUp = false;
             function cleanup() {
                 if (cleanedUp) return;
@@ -4574,12 +4622,12 @@ The desktop version runs xtb on your machine. You will also need:
             process.once('exit', cleanup);
 
             // Build arguments. The geometry file is passed as a relative name; cwd is workDir.
-            const calcArgs = [...cmdPrefixArgs, 'coord.xyz', '--gxtb', '--chrg', String(charge), '--uhf', String(uhf)];
+            const calcArgs = [...cmdPrefixArgs, 'coord.xyz', ...inputFileArgs, '--gxtb', '--chrg', String(charge), '--uhf', String(uhf)];
             if (mode === 'opt') calcArgs.push('--opt');
             if (extraFlags) calcArgs.push(...parseXtbCommand(extraFlags));
 
-            const fullCmd = `${xtbCommand} coord.xyz --gxtb${mode === 'opt' ? ' --opt' : ''} --chrg ${charge} --uhf ${uhf}${extraFlags ? ' ' + extraFlags : ''}`;
-            outputTextarea.value = `=== jlmol xtb (g-xTB) Calculation ===\nTimestamp: ${new Date().toISOString()}\nMode: ${mode === 'opt' ? 'Geometry optimization' : 'Single-point energy'}\nxtb command: ${xtbCommand}\nWorking directory: ${workDir}\nFull command: ${fullCmd}\n\n--- Checking xtb availability ---\n`;
+            const fullCmd = `${xtbCommand} coord.xyz${inputFileArgs.length ? ' --input xtb.inp' : ''} --gxtb${mode === 'opt' ? ' --opt' : ''} --chrg ${charge} --uhf ${uhf}${extraFlags ? ' ' + extraFlags : ''}`;
+            outputTextarea.value = `=== jlmol xtb (g-xTB) Calculation ===\nTimestamp: ${new Date().toISOString()}\nMode: ${mode === 'opt' ? 'Geometry optimization' : 'Single-point energy'}\nxtb command: ${xtbCommand}\nWorking directory: ${workDir}\nFull command: ${fullCmd}\n${freezeSummary ? '\n' + freezeSummary : ''}\n--- Checking xtb availability ---\n`;
             document.getElementById('status').innerHTML = 'Checking xtb...';
 
             // Availability check first
@@ -5572,6 +5620,13 @@ The desktop version runs xtb on your machine. You will also need:
         <div class="elemco-input-group vertical">
             <label for="xtb-extra-flags">Extra xtb flags (optional)</label>
             <input type="text" id="xtb-extra-flags" placeholder="e.g. --acc 0.5" title="Additional command-line flags passed to xtb">
+        </div>
+        <div class="elemco-input-group">
+            <label class="molden-toggle-label" for="xtb-freeze-unselected">
+                <input type="checkbox" id="xtb-freeze-unselected">
+                <span>Relax only selected atoms (freeze the rest)</span>
+            </label>
+            <div class="preview-note">During optimization, writes an xtb <code>$fix</code> block for every non-selected atom (<code>--input</code>). Select atoms by clicking them in the structure or XYZ viewer. Ignored if no atoms are selected.</div>
         </div>
         <div class="preview-note">Runs <code>xtb &lt;coord.xyz&gt; --gxtb</code> for the energy, or <code>xtb &lt;coord.xyz&gt; --gxtb --opt</code> to optimize and replace the current geometry. g-xTB parameter files must be installed (see Settings &rarr; xtb).</div>
         <div class="action-buttons">
