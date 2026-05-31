@@ -48,6 +48,10 @@ function runJuliaCalculation() {
     }
 }
 
+// Note: showXtbPanel() and runXtb() are defined as globals in index.html's inline
+// script (like the other panel handlers). No wrappers here — defining them again
+// before that script loads would shadow the real implementations.
+
 // Add event listeners for input changes when the DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     const method = document.getElementById('elemco-method');

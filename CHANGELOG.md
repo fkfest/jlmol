@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- xtb (g-xTB) integration: calculate the energy (`xtb <coord.xyz> --gxtb`) or optimize the geometry (`xtb <coord.xyz> --gxtb --opt`) of the current structure. After an optimization the geometry in the viewer is replaced with the optimized structure. Runs only in the desktop app (the browser version shows a message to install jlmol locally), checks that xtb is accessible and reports a helpful message if not, and supports charge / unpaired-electron / extra-flag options. The xtb command is configurable in Settings → xtb (like the Julia command). g-xTB requires the parameter files from https://github.com/grimme-lab/g-xtb in `$XTBPATH` or `$HOME`.
+
 ## [1.3.0] - 2026-02-06
 
 ### Added
