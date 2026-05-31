@@ -5,6 +5,7 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
+    "start-verbose": "electron . --verbose",
     "start:win": "node_modules/electron/dist/electron.exe .",
     "start-safe": "electron . --disable-hardware-acceleration",
     "start-debug": "electron . --enable-logging --log-level=0",
