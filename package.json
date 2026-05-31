@@ -28,6 +28,7 @@
       "main.js",
       "index.html",
       "renderer.js",
+      "css/**/*",
       "jsmol/**/*",
       "build/**/*",
       "package.json"
