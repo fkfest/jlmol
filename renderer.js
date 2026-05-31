@@ -18,39 +18,11 @@
     }
 })();
 
-function showElemCoPanel() {
-    document.getElementById('elemcoPanel').style.display = 'block';
-    updateElemCoInput(); // Remove initializeElemCoListeners call since we handle it in DOMContentLoaded
-}
-
-function hideElemCoPanel() {
-    document.getElementById('elemcoPanel').style.display = 'none';
-}
-
-function generateElemCoInput() {
-    updateElemCoInput();
-    document.getElementById('status').innerHTML = 'ElemCo.jl input reset to default';
-}
-
-function copyElemCoInput() {
-    const input = document.getElementById('elemco-input');
-    input.select();
-    document.execCommand('copy');
-    document.getElementById('status').innerHTML = 'Input copied to clipboard';
-}
-
-function runJuliaCalculation() {
-    // This function is defined in index.html and will be called from there
-    if (typeof window.runJuliaCalculation === 'function') {
-        window.runJuliaCalculation();
-    } else {
-        document.getElementById('status').innerHTML = 'Julia calculation function not available';
-    }
-}
-
-// Note: showXtbPanel() and runXtb() are defined as globals in index.html's inline
-// script (like the other panel handlers). No wrappers here — defining them again
-// before that script loads would shadow the real implementations.
+// Note: the ElemCo / Julia / xtb panel handlers (showElemCoPanel, hideElemCoPanel,
+// generateElemCoInput, copyElemCoInput, runJuliaCalculation, showXtbPanel, runXtb, …)
+// are defined as globals in the js/ feature scripts (js/elemco.js, js/xtb.js), which
+// load after this file. We do NOT redefine them here — earlier definitions would just
+// be overridden, and the feature-script versions are authoritative.
 
 // Add event listeners for input changes when the DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
