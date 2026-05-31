@@ -107,6 +107,17 @@
         .xyz-row.selected {
             background-color: #e0e0ff;
         }
+        .selection-count {
+            font-size: 12px;
+            color: #4040a0;
+            margin-left: 6px;
+            align-self: center;
+        }
+        .selection-hint {
+            font-size: 11px;
+            color: #888;
+            margin: 4px 0;
+        }
         .xyz-cell {
             padding: 2px 5px;
         }
@@ -1308,7 +1319,7 @@
                     }
                 }, 500);
             },
-            script: "set debugScript off; set antialiasDisplay; set zoomLarge false; set picking ON"
+            script: "set debugScript off; set antialiasDisplay; set zoomLarge false; set picking ON; set pickCallback 'onJmolAtomPicked'; set loadStructCallback 'onJmolStructureLoaded'"
         };
 
         /*
@@ -2855,7 +2866,12 @@
                     };
                     xyzContent.appendChild(row);
                 }
-                
+
+                // Restore selection highlighting/halos for atoms that were already
+                // selected (e.g. via clicking in the 3D structure) before the viewer
+                // was (re)opened.
+                reapplySelectionToRows();
+
                 // Update textarea content
                 const editArea = document.getElementById('xyz-content-edit');
                 editArea.value = lastXYZData;
@@ -2887,13 +2903,15 @@
                 selectionView.style.display = 'none';
                 editView.style.display = 'block';
                 editButton.textContent = 'Switch to Selection Mode';
-                // Clear any existing selections
-                Jmol.script(jmolApplet0, 'select none; halos off');
+                // Clear any existing selections (keeps state Set, rows and halos in sync)
+                clearAtomSelection();
             } else {
                 // Switch to selection mode
                 selectionView.style.display = 'block';
                 editView.style.display = 'none';
                 editButton.textContent = 'Switch to Edit Mode';
+                // Re-draw halos for any atoms selected via the 3D structure
+                reapplySelectionToRows();
             }
         }
 
@@ -3005,16 +3023,114 @@
             }
         }
 
+        // ===== Central atom selection state =====
+        // Single source of truth shared by the XYZ viewer, the 3D structure (JSmol
+        // picking) and the ElemCo input editor. Holds 0-based atom indices.
+        var selectedAtoms = new Set();
+
+        // Update any UI that reflects how many atoms are currently selected.
+        function updateSelectionUI() {
+            const countEl = document.getElementById('selection-count');
+            if (countEl) {
+                const n = selectedAtoms.size;
+                countEl.textContent = n > 0 ? `${n} selected` : '';
+            }
+        }
+
+        // Turn the 3D halo on/off for a single atom (atomIndex is 0-based).
+        function applyHaloForAtom(atomIndex, on) {
+            try {
+                Jmol.script(jmolApplet0, `select atomno=${atomIndex + 1}; halos ${on ? 'on' : 'off'}`);
+            } catch (e) {
+                console.error('Error updating halo for atom', atomIndex, e);
+            }
+        }
+
+        // Select or deselect an atom and keep every view in sync (state Set,
+        // XYZ-viewer row highlight, 3D halo, selection counter).
+        function setAtomSelected(atomIndex, selected) {
+            if (selected) {
+                selectedAtoms.add(atomIndex);
+            } else {
+                selectedAtoms.delete(atomIndex);
+            }
+            // Sync the matching XYZ-viewer row, if the viewer is rendered.
+            const row = document.querySelector(`#xyz-content .xyz-row[data-atom-index="${atomIndex}"]`);
+            if (row) row.classList.toggle('selected', selected);
+            // Sync the 3D structure halo.
+            applyHaloForAtom(atomIndex, selected);
+            updateSelectionUI();
+        }
+
+        function toggleAtomSelectionByIndex(atomIndex) {
+            setAtomSelected(atomIndex, !selectedAtoms.has(atomIndex));
+        }
+
+        // Clear all selections everywhere.
+        function clearAtomSelection() {
+            selectedAtoms.clear();
+            document.querySelectorAll('#xyz-content .xyz-row.selected')
+                .forEach(r => r.classList.remove('selected'));
+            try {
+                Jmol.script(jmolApplet0, 'select all; halos off; select none');
+            } catch (e) {
+                console.error('Error clearing halos:', e);
+            }
+            updateSelectionUI();
+        }
+
+        // After the XYZ viewer rebuilds its rows, restore selection highlighting
+        // and re-draw the 3D halos for the currently selected atoms.
+        function reapplySelectionToRows() {
+            document.querySelectorAll('#xyz-content .xyz-row').forEach(row => {
+                const idx = parseInt(row.dataset.atomIndex);
+                row.classList.toggle('selected', selectedAtoms.has(idx));
+            });
+            if (selectedAtoms.size > 0) {
+                const list = Array.from(selectedAtoms).map(i => 'atomno=' + (i + 1)).join(' or ');
+                try {
+                    Jmol.script(jmolApplet0, `select ${list}; halos on`);
+                } catch (e) {
+                    console.error('Error re-applying halos:', e);
+                }
+            }
+            updateSelectionUI();
+        }
+
+        // Selected atom numbers as sorted 1-based indices (for ElemCo / external use).
+        function getSelectedAtomNumbers() {
+            return Array.from(selectedAtoms).map(i => i + 1).sort((a, b) => a - b);
+        }
+
+        // Fired by JSmol when an atom is clicked in the 3D structure. JSmol passes
+        // (appletName, label, atomIndex) with a 0-based atomIndex. Toggles that
+        // atom's selection (disabled while the model-kit editor is active so clicks
+        // there keep editing the geometry instead of selecting).
+        function onJmolAtomPicked(app, label, atomIndex) {
+            if (isDragMinimize) return;
+            try {
+                const idx = parseInt(atomIndex);
+                if (isNaN(idx) || idx < 0) return;
+                toggleAtomSelectionByIndex(idx);
+            } catch (e) {
+                console.error('Error handling atom pick:', e);
+            }
+        }
+
+        // Fired by JSmol whenever a new structure is loaded. Atom indices from a
+        // previous structure are no longer valid, so drop any stale selection.
+        function onJmolStructureLoaded() {
+            if (selectedAtoms.size === 0) return;
+            selectedAtoms.clear();
+            document.querySelectorAll('#xyz-content .xyz-row.selected')
+                .forEach(r => r.classList.remove('selected'));
+            updateSelectionUI();
+        }
+
+        // XYZ-viewer row click -> route through the central selection state.
         function toggleAtomSelection(row) {
-            row.classList.toggle('selected');
             const atomIndex = parseInt(row.dataset.atomIndex);
-            const isSelected = row.classList.contains('selected');
-            
-            // Update selection in JSmol
-            const script = isSelected ? 
-                `select atomno=${atomIndex + 1}; halos on` :
-                `select atomno=${atomIndex + 1}; halos off`;
-            Jmol.script(jmolApplet0, script);
+            toggleAtomSelectionByIndex(atomIndex);
         }
 
         function hideXYZEditor() {
@@ -3513,6 +3629,29 @@
         function generateElemCoInput() {
             updateElemCoInput();
             document.getElementById('status').innerHTML = 'ElemCo.jl input reset to default';
+        }
+
+        // Insert the list of currently selected atoms (sorted, 1-based indices) at the
+        // cursor position in the ElemCo input editor, e.g. for dummy atoms or active
+        // regions. Falls back to appending at the end if no cursor position is known.
+        function insertSelectedAtomsIntoElemCo() {
+            const nums = getSelectedAtomNumbers();
+            if (nums.length === 0) {
+                document.getElementById('status').innerHTML =
+                    'No atoms selected — click atoms in the structure or XYZ viewer first';
+                return;
+            }
+            const textarea = document.getElementById('elemco-input');
+            const listText = '[' + nums.join(', ') + ']';
+            const hasCursor = typeof textarea.selectionStart === 'number';
+            const start = hasCursor ? textarea.selectionStart : textarea.value.length;
+            const end = hasCursor ? textarea.selectionEnd : textarea.value.length;
+            textarea.value = textarea.value.slice(0, start) + listText + textarea.value.slice(end);
+            const pos = start + listText.length;
+            textarea.selectionStart = textarea.selectionEnd = pos;
+            textarea.focus();
+            document.getElementById('status').innerHTML =
+                `Inserted ${nums.length} selected atom${nums.length === 1 ? '' : 's'}: ${listText}`;
         }
 
         function copyElemCoInput() {
@@ -5294,7 +5433,10 @@ The desktop version runs xtb on your machine. You will also need:
         </div>
         <div class="mode-buttons">
             <button id="toggle-edit-mode" onclick="toggleEditMode()" title="Toggle between selection and text edit modes">Switch to Edit Mode</button>
+            <button onclick="clearAtomSelection()" title="Deselect all atoms">Clear Selection</button>
+            <span id="selection-count" class="selection-count"></span>
         </div>
+        <div class="selection-hint">Click atoms in the 3D structure or the rows below to select them.</div>
         <div id="xyz-content"></div>
         <textarea id="xyz-content-edit" class="xyz-editor"></textarea>
         <div class="action-buttons">
@@ -5382,6 +5524,9 @@ The desktop version runs xtb on your machine. You will also need:
                 <a href="https://elem.co.il" target="_blank" rel="noopener noreferrer">Documentation →</a>
             </div>
             <label for="elemco-input">Input Editor:</label>
+            <div style="margin-bottom: 6px;">
+                <button type="button" onclick="insertSelectedAtomsIntoElemCo()" title="Insert the list of atoms currently selected in the structure/XYZ viewer at the cursor (e.g. for dummy atoms or active regions)">Insert Selected Atoms</button>
+            </div>
             <textarea id="elemco-input"></textarea>
             <div class="preview-note">Note: Changes to parameters will update this editor. You can also edit directly.</div>
         </div>
