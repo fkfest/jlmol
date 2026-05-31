@@ -2728,6 +2728,7 @@
             
             // Create orbital entries in groups of 10 for better performance
             const fragment = document.createDocumentFragment();
+            let selectedDiv = null;
             for (let i = 1; i <= numOrbitals; i++) {
                 const div = document.createElement('div');
                 // Find orbital energy from the stored orbitals array
@@ -2749,10 +2750,24 @@
                 div.onclick = () => showOrbital(i);
                 if (i === currentOrbitalIndex) {
                     div.className = 'selected';
+                    selectedDiv = div;
                 }
                 fragment.appendChild(div);
             }
             list.appendChild(fragment);
+
+            // Keep the selected orbital visible: scroll the list (only the list,
+            // not the page) so the highlighted entry stays in view when navigating
+            // with the arrow keys or HOMO/LUMO buttons.
+            if (selectedDiv) {
+                const itemRect = selectedDiv.getBoundingClientRect();
+                const listRect = list.getBoundingClientRect();
+                if (itemRect.top < listRect.top) {
+                    list.scrollTop -= (listRect.top - itemRect.top);
+                } else if (itemRect.bottom > listRect.bottom) {
+                    list.scrollTop += (itemRect.bottom - listRect.bottom);
+                }
+            }
         }
         
         function showHOMO() {
