@@ -54,6 +54,7 @@ Download: [Latest Release Executables](https://github.com/fkfest/jlmol/releases/
   - Atom selection mode
   - Save edited structures
   - Draggable and resizable editor window
+- **NEW**: Two-way atom selection — click atoms in the 3D structure or the XYZ viewer to select/deselect them; the selection is mirrored in both views and can be inserted into the ElemCo.jl input editor as an atom-index list with one click
 
 ### ElemCo.jl Input Generation and Calculation
 
@@ -176,6 +177,18 @@ To use the editor:
 6. Click "Update Structure" to apply your changes
 7. Click "Save XYZ File" to save the current structure
 
+## Selecting Atoms
+
+Atom selection works in both directions and is shared across the viewer, the XYZ editor and the ElemCo.jl panel:
+
+- **Click an atom in the 3D structure** to select or deselect it (toggle). Selected atoms are marked with halos.
+- **Click a row in the XYZ editor** to do the same; the selection is mirrored in the 3D structure and vice versa.
+- The XYZ editor shows the current selection count and a **Clear Selection** button.
+- In the ElemCo.jl panel, **Insert Selected Atoms** inserts the selected atoms as a 1-based index list (e.g. `[1, 3, 5]`) at the cursor in the input editor — handy for defining dummy atoms, active regions, etc.
+- The selection is cleared automatically when a new structure is loaded. Atom-clicking is disabled while the ModelKit 3D editor is active (so clicks keep editing the geometry).
+
+The selection is also used by the xtb optimizer to freeze atoms (see below).
+
 ## Orbital Visualization
 
 The orbital viewer provides enhanced visualization of molecular orbitals:
@@ -267,6 +280,7 @@ Run [xtb](https://github.com/grimme-lab/xtb) g-xTB calculations on the current s
 
 - **Calculate Energy**: runs `xtb <coord.xyz> --gxtb` and reports the total energy
 - **Optimize Geometry**: runs `xtb <coord.xyz> --gxtb --opt` and replaces the current geometry with the optimized structure
+- **Relax only selected atoms (freeze the rest)**: when this option is enabled and atoms are selected, the optimization writes an xtb [`$fix`](https://xtb-docs.readthedocs.io/en/latest/xcontrol.html) block for every non-selected atom (passed via `--input xtb.inp`), so only the selected atoms are relaxed while the rest stay fixed. Ignored if no atoms are selected.
 - Set charge, number of unpaired electrons (`--uhf`), and extra xtb flags
 - Configurable xtb command (supports WSL) in Settings → xtb
 - Browser mode shows a message to install jlmol locally; a clear message is shown if xtb is not accessible
@@ -299,6 +313,7 @@ The application includes built-in support for generating ElemCo.jl input files f
 - Density Fitting (DF) toggle for supported methods
 - Charge and multiplicity specification
 - Direct text editing of generated input
+- **Insert Selected Atoms**: insert the atoms currently selected in the structure/XYZ viewer as a 1-based index list (e.g. `[1, 3, 5]`) at the cursor (for dummy atoms, active regions, etc.)
 
 ### Using ElemCo.jl Integration
 
