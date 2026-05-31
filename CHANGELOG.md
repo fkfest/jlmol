@@ -7,15 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-
-- Quiet terminal output by default: the Electron main process no longer echoes its verbose per-event log (startup info, focus/blur, memory stats) or Chromium's GPU/init messages to the terminal. A full log is still written to `jsmol.log` in the user-data directory. Enable terminal logging with `npm run start-verbose`, `--verbose`/`--debug`, or `JLMOL_DEBUG=1`.
+## [1.4.0] - 2026-05-31
 
 ### Added
 
 - Atom selection by clicking in the 3D structure: clicking an atom in the viewer now selects/deselects it (toggle), with the selection mirrored in the XYZ viewer rows and vice versa (two-way sync). A shared selection state highlights selected atoms with halos in 3D and a highlight in the XYZ viewer, shows a selection count, and offers a "Clear Selection" button. The selected atoms can be inserted as a 1-based index list (e.g. `[1, 3, 5]`) into the ElemCo.jl input editor with one click ("Insert Selected Atoms"), e.g. to define dummy atoms or active regions. Selection is cleared automatically when a new structure is loaded, and clicking is disabled while the model-kit editor is active.
 - xtb constrained optimization: a "Relax only selected atoms (freeze the rest)" option in the xtb panel. When enabled and atoms are selected, the optimization writes an xtb xcontrol file with a `$fix` block listing every non-selected atom (passed via `--input xtb.inp`), so only the selected atoms are relaxed while the rest stay fixed. Ignored if no atoms are selected.
 - xtb (g-xTB) integration: calculate the energy (`xtb <coord.xyz> --gxtb`) or optimize the geometry (`xtb <coord.xyz> --gxtb --opt`) of the current structure. After an optimization the geometry in the viewer is replaced with the optimized structure. Runs only in the desktop app (the browser version shows a message to install jlmol locally), checks that xtb is accessible and reports a helpful message if not, and supports charge / unpaired-electron / extra-flag options. The xtb command is configurable in Settings → xtb (like the Julia command). g-xTB requires the parameter files from https://github.com/grimme-lab/g-xtb in `$XTBPATH` or `$HOME`.
+
+### Changed
+
+- Quiet terminal output by default: the Electron main process no longer echoes its verbose per-event log (startup info, focus/blur, memory stats) or Chromium's GPU/init messages to the terminal. A full log is still written to `jsmol.log` in the user-data directory. Enable terminal logging with `npm run start-verbose`, `--verbose`/`--debug`, or `JLMOL_DEBUG=1`.
+- Internal: split the monolithic `index.html` into `css/styles.css` and per-feature `js/` modules for maintainability (no user-facing behavior change).
 
 ## [1.3.0] - 2026-02-06
 
