@@ -3,6 +3,21 @@ const path = require('path')
 const fs = require('fs')
 const { version } = require('./package.json')
 
+// Console verbosity. A full log file (jsmol.log in userData) is ALWAYS kept for
+// troubleshooting; this flag only controls how much is echoed to the terminal.
+// Quiet by default; enable with `--verbose` / `--debug` or JLMOL_DEBUG=1
+// (e.g. `npm run start-verbose`).
+const VERBOSE_LOGGING = process.argv.includes('--verbose')
+    || process.argv.includes('--debug')
+    || process.env.JLMOL_DEBUG === '1'
+    || process.env.JLMOL_VERBOSE === '1';
+
+// Silence Chromium's own noisy GPU/init messages on the terminal unless logging
+// was explicitly requested (the start-debug script passes --enable-logging).
+if (!VERBOSE_LOGGING && !process.argv.includes('--enable-logging')) {
+    app.commandLine.appendSwitch('log-level', '3'); // 3 = fatal only
+}
+
 // Add command line switches for stability on Windows 11
 app.commandLine.appendSwitch('disable-gpu-sandbox');
 app.commandLine.appendSwitch('disable-software-rasterizer');
@@ -31,8 +46,14 @@ function log(message) {
     const timestamp = new Date().toISOString();
     const memUsage = process.memoryUsage();
     const logEntry = `${timestamp}: ${message} [Memory: RSS=${Math.round(memUsage.rss/1024/1024)}MB, Heap=${Math.round(memUsage.heapUsed/1024/1024)}MB]\n`;
-    fs.appendFileSync(logFile, logEntry);
-    console.log(logEntry.trim());
+    try {
+        fs.appendFileSync(logFile, logEntry);
+    } catch (e) {
+        // Ignore log-file write errors so logging never breaks the app.
+    }
+    if (VERBOSE_LOGGING) {
+        console.log(logEntry.trim());
+    }
 }
 
 // Clear log file

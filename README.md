@@ -116,6 +116,14 @@ npm install
 npm start
 ```
 
+The terminal output is kept quiet by default. A full log is always written to `jsmol.log` in the app's user-data directory. To echo the detailed log to the terminal, run with verbose logging:
+
+```bash
+npm run start-verbose
+# or: npm start -- --verbose
+# or set JLMOL_DEBUG=1 in the environment
+```
+
 ### Building
 
 To build the application:
