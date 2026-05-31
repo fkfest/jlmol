@@ -29,6 +29,7 @@
       "index.html",
       "renderer.js",
       "css/**/*",
+      "js/**/*",
       "jsmol/**/*",
       "build/**/*",
       "package.json"
