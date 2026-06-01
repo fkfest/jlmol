@@ -127,7 +127,7 @@
             <ul>
                 <li>Download the g-xTB binary directly from <a href="https://github.com/grimme-lab/g-xtb" target="_blank">grimme-lab/g-xtb</a>. At the moment that is all you need &mdash; there is no separate xtb installation or parameter download.</li>
                 <li>Extract it to a folder and make sure the <code>xtb</code> binary in its <code>bin</code> directory is reachable: either add it to your <code>PATH</code> (e.g. create a symbolic link in <code>~/bin</code>), or simply set the full path to the binary in <strong>Settings &rarr; xtb</strong>.</li>
-                <li>The xtb command is configurable in <strong>Settings &rarr; xtb</strong> (just like the Julia command), and supports WSL invocations such as <code>wsl xtb</code>.</li>
+                <li>The xtb command is configurable in <strong>Settings &rarr; xtb</strong> (just like the Julia command), and supports WSL. To run xtb under WSL, use a login shell so your environment and <code>PATH</code> are picked up, e.g. <code>wsl --shell-type login xtb</code>.</li>
                 <li>JLmol checks that xtb is reachable and shows a clear message if it is not.</li>
             </ul>
             <h3>Best Practices &amp; Troubleshooting:</h3>

@@ -115,7 +115,7 @@
             <h3>Calculation Runner:</h3>
             <ul>
                 <li>Run calculations locally, in WSL (Windows Subsystem for Linux), or remotely via SSH.</li>
-                <li>Customizable Julia command and environment for advanced workflows.</li>
+                <li>Customizable Julia command and environment for advanced workflows. To run Julia under WSL, use a login shell so your environment and <code>PATH</code> are picked up, e.g. <code>wsl --shell-type login julia</code>.</li>
                 <li>Integrated log viewer for monitoring calculation progress and troubleshooting errors.</li>
                 <li>For remote jobs, the bundled <code>runremote</code> script uses <code>ssh</code>/<code>scp</code> to execute calculations on a more powerful Linux machine (works best with passwordless SSH).</li>
                 <li>Supports batch jobs and large molecule calculations (subject to system resources).</li>
