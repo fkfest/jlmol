@@ -125,22 +125,22 @@
             </ul>
             <h3>Setup &amp; Requirements:</h3>
             <ul>
-                <li>Install <a href="https://github.com/grimme-lab/xtb" target="_blank">xtb</a> with g-xTB support and make it accessible on your system.</li>
-                <li>Download the g-xTB parameter files from <a href="https://github.com/grimme-lab/g-xtb" target="_blank">grimme-lab/g-xtb</a> and place them in <code>$XTBPATH</code> or <code>$HOME</code>.</li>
+                <li>Download the g-xTB binary directly from <a href="https://github.com/grimme-lab/g-xtb" target="_blank">grimme-lab/g-xtb</a>. At the moment that is all you need &mdash; there is no separate xtb installation or parameter download.</li>
+                <li>Extract it to a folder and make sure the <code>xtb</code> binary in its <code>bin</code> directory is reachable: either add it to your <code>PATH</code> (e.g. create a symbolic link in <code>~/bin</code>), or simply set the full path to the binary in <strong>Settings &rarr; xtb</strong>.</li>
                 <li>The xtb command is configurable in <strong>Settings &rarr; xtb</strong> (just like the Julia command), and supports WSL invocations such as <code>wsl xtb</code>.</li>
                 <li>JLmol checks that xtb is reachable and shows a clear message if it is not.</li>
             </ul>
             <h3>Best Practices &amp; Troubleshooting:</h3>
             <ul>
                 <li>Use g-xTB to pre-optimize a structure, then refine it with a higher-level method via the <a href="elemco.html">ElemCo.jl integration</a>.</li>
-                <li>If a calculation fails to start, verify the xtb command in Settings and that the g-xTB parameter files are in <code>$XTBPATH</code> or <code>$HOME</code>.</li>
+                <li>If a calculation fails to start, verify the xtb command in Settings &mdash; make sure the path to the g-xTB binary is correct or that it is on your <code>PATH</code>.</li>
                 <li>Set the correct charge and number of unpaired electrons for open-shell or charged species.</li>
                 <li>The browser version cannot run xtb; install jlmol locally to use this feature.</li>
             </ul>
             <h3>References:</h3>
             <ul>
+                <li><a href="https://github.com/grimme-lab/g-xtb" target="_blank">g-xTB binary (grimme-lab/g-xtb)</a></li>
                 <li><a href="https://github.com/grimme-lab/xtb" target="_blank">xtb on GitHub</a></li>
-                <li><a href="https://github.com/grimme-lab/g-xtb" target="_blank">g-xTB parameters (grimme-lab/g-xtb)</a></li>
                 <li><a href="https://xtb-docs.readthedocs.io/" target="_blank">xtb Documentation</a></li>
             </ul>
         </div>
