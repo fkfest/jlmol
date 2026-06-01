@@ -292,7 +292,7 @@ Run [xtb](https://github.com/grimme-lab/xtb) g-xTB calculations on the current s
 - Set charge, number of unpaired electrons (`--uhf`), and extra xtb flags
 - Configurable xtb command (supports WSL) in Settings → xtb
 - Browser mode shows a message to install jlmol locally; a clear message is shown if xtb is not accessible
-- Requires xtb with g-xTB support, plus the g-xTB parameter files from [grimme-lab/g-xtb](https://github.com/grimme-lab/g-xtb) placed in `$XTBPATH` or `$HOME`
+- Requires the g-xTB binary from [grimme-lab/g-xtb](https://github.com/grimme-lab/g-xtb). At the moment that is all you need — download it, extract it, and make sure the `xtb` binary in its `bin` folder is on your `PATH` (e.g. a symbolic link in `~/bin`) or set its full path in Settings → xtb. No separate xtb installation or parameter-file download is required.
 
 ## ElemCo.jl Integration
 
