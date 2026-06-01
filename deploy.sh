@@ -86,6 +86,7 @@ copy_file "robots.txt" "$DEPLOY_DIR/robots.txt" "SEO robots configuration (robot
 copy_file "sitemap.xml" "$DEPLOY_DIR/sitemap.xml" "Search engine sitemap (sitemap.xml)"
 copy_file ".htaccess" "$DEPLOY_DIR/.htaccess" "Apache configuration (.htaccess)"
 copy_file "favicon.svg" "$DEPLOY_DIR/favicon.svg" "Favicon (favicon.svg)"
+copy_file "styles.css" "$DEPLOY_DIR/styles.css" "Shared stylesheet (styles.css)"
 
 # Copy help pages and directory
 mkdir -p "$DEPLOY_DIR/help"
@@ -110,6 +111,7 @@ Files included in this deployment:
 - help.html          : Help index page
 - news.html          : News & updates page
 - help/*.html        : Feature help/guide pages
+- styles.css         : Shared stylesheet (linked by help/*.html, help.html, news.html)
 - robots.txt         : SEO configuration (if available)
 - sitemap.xml        : Search engine sitemap (if available)
 - .htaccess          : Apache server configuration (if available)
@@ -130,8 +132,7 @@ Security Notes:
 Files NOT included (development only):
 - package.json       : Development configuration
 - node_modules/      : Development dependencies
-- script.js          : Optional enhancement (embedded in HTML)
-- styles.css         : Optional styles (embedded in HTML)
+- script.js          : Unused (index.html uses an inline script)
 - .nvmrc             : Node.js version specification
 - SECURITY*.md       : Security documentation
 - WEBSITE_README.md  : Development documentation
@@ -197,6 +198,7 @@ put robots.txt
 put sitemap.xml
 put .htaccess
 put favicon.svg
+put styles.css
 put help/*.html
 ls
 quit
