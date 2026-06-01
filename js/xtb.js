@@ -99,7 +99,7 @@ async function runXtb(mode) {
         }
     } catch (error) {
         console.error('Error running xtb calculation:', error);
-        outputTextarea.value = `Error: ${error.message}\n\nTroubleshooting:\n- Ensure xtb is installed and accessible\n- Check the xtb command in Settings\n- For g-xTB, install the parameter files from https://github.com/grimme-lab/g-xtb into $XTBPATH or $HOME`;
+        outputTextarea.value = `Error: ${error.message}\n\nTroubleshooting:\n- Ensure xtb is installed and accessible\n- Check the xtb command in Settings\n- For g-xTB, get the distribution from https://github.com/grimme-lab/g-xtb, extract it, and make sure its xtb binary is on your PATH (it bundles the parameters)`;
         document.getElementById('status').innerHTML = 'xtb calculation failed - see output for details';
     }
 }
@@ -113,10 +113,10 @@ Running xtb directly from the browser is not supported.
 Please install jlmol locally (the desktop application) to run xtb calculations.
 Download: https://github.com/fkfest/jlmol/releases/latest
 
-The desktop version runs xtb on your machine. You will also need:
-1. xtb with g-xTB support installed and on your PATH (or set the command in Settings -> xtb).
-2. The g-xTB parameter files from https://github.com/grimme-lab/g-xtb,
-   placed in $XTBPATH or $HOME.`;
+The desktop version runs xtb on your machine. You will also need the g-xTB
+distribution from https://github.com/grimme-lab/g-xtb: download it, extract it,
+and make sure its xtb binary is on your PATH (or set the full path in
+Settings -> xtb). It bundles the parameters, so no separate download is needed.`;
     document.getElementById('status').innerHTML = 'Please install jlmol locally to run xtb';
 }
 
@@ -294,7 +294,7 @@ async function runXtbInElectron(xyzData, mode) {
                         return;
                     }
                 }
-                outputTextarea.value += `\n\n=== OPTIMIZATION FAILED ===\nNo optimized geometry (xtbopt.xyz) was produced. See the output above.\nIf this mentions missing g-xTB parameters, install them from https://github.com/grimme-lab/g-xtb into $XTBPATH or $HOME.`;
+                outputTextarea.value += `\n\n=== OPTIMIZATION FAILED ===\nNo optimized geometry (xtbopt.xyz) was produced. See the output above.\nIf this mentions missing g-xTB parameters, make sure the xtb being run is the one from the g-xtb distribution (https://github.com/grimme-lab/g-xtb), which bundles the parameters.`;
                 document.getElementById('status').innerHTML = 'xtb optimization failed - see output';
             } else {
                 const match = stdout.match(/TOTAL ENERGY\s+(-?\d+\.\d+)/);
@@ -303,7 +303,7 @@ async function runXtbInElectron(xyzData, mode) {
                     outputTextarea.value += `\n\n=== ENERGY CALCULATION COMPLETED (${elapsed}s) ===\nTotal energy: ${energy} Eh`;
                     document.getElementById('status').innerHTML = `g-xTB total energy: ${energy} Eh (${elapsed}s)`;
                 } else {
-                    outputTextarea.value += `\n\n=== ENERGY CALCULATION FAILED ===\nNo total energy was found in the xtb output. See above.\nIf this mentions missing g-xTB parameters, install them from https://github.com/grimme-lab/g-xtb into $XTBPATH or $HOME.`;
+                    outputTextarea.value += `\n\n=== ENERGY CALCULATION FAILED ===\nNo total energy was found in the xtb output. See above.\nIf this mentions missing g-xTB parameters, make sure the xtb being run is the one from the g-xtb distribution (https://github.com/grimme-lab/g-xtb), which bundles the parameters.`;
                     document.getElementById('status').innerHTML = 'xtb energy calculation failed - see output';
                 }
             }

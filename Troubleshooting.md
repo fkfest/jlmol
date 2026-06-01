@@ -127,7 +127,7 @@ If you encounter issues not covered here, please check the GitHub issues or crea
 
 - **"Please install jlmol locally to run xtb"**: xtb can only run in the desktop app, not the browser version. Download it from https://github.com/fkfest/jlmol/releases/latest
 - **"xtb not found"**: jlmol could not run the configured command. Check the command in Settings → xtb, or install xtb and make sure it is on your PATH. Verify with `xtb --version` in a terminal.
-- **Missing g-xTB parameters** (mentioned in the output): the xtb driver is installed but the g-xTB parameters are missing. Obtain them from https://github.com/grimme-lab/g-xtb and place them in `$XTBPATH` or `$HOME`.
-- **Optimization failed / no optimized geometry**: xtb returns success even when it cannot run, so jlmol detects failure from the output. Read the output panel — it usually contains the exact reason (most often missing g-xTB parameters).
-- **WSL**: set the command to e.g. `wsl xtb` in Settings → xtb. Make sure xtb (and the g-xTB parameters) are available inside your WSL distribution, and test with `wsl xtb --version`.
+- **Missing g-xTB parameters** (mentioned in the output): the xtb being run is not the g-xTB build. Download the g-xTB distribution from https://github.com/grimme-lab/g-xtb (it bundles the parameters), extract it, and make sure its `xtb` binary is the one on your `PATH` (or set its full path in Settings → xtb). No separate parameter download is needed.
+- **Optimization failed / no optimized geometry**: xtb returns success even when it cannot run, so jlmol detects failure from the output. Read the output panel — it usually contains the exact reason (most often the wrong xtb binary, i.e. not the g-xTB distribution).
+- **WSL**: set the command to e.g. `wsl --shell-type login xtb` in Settings → xtb (a login shell picks up your environment and `PATH`). Make sure the g-xTB distribution is available inside your WSL distribution, and test with `wsl --shell-type login xtb --version`.
 - **Charge / spin**: set the total charge and the number of unpaired electrons in the xtb panel (passed to xtb as `--chrg` and `--uhf`).

@@ -296,7 +296,7 @@
             </label>
             <div class="preview-note">During optimization, writes an xtb <code>$fix</code> block for every non-selected atom (<code>--input</code>). Select atoms by clicking them in the structure or XYZ viewer. Ignored if no atoms are selected.</div>
         </div>
-        <div class="preview-note">Runs <code>xtb &lt;coord.xyz&gt; --gxtb</code> for the energy, or <code>xtb &lt;coord.xyz&gt; --gxtb --opt</code> to optimize and replace the current geometry. g-xTB parameter files must be installed (see Settings &rarr; xtb).</div>
+        <div class="preview-note">Runs <code>xtb &lt;coord.xyz&gt; --gxtb</code> for the energy, or <code>xtb &lt;coord.xyz&gt; --gxtb --opt</code> to optimize and replace the current geometry. Requires the g-xTB distribution from grimme-lab/g-xtb on your PATH (see Settings &rarr; xtb).</div>
         <div class="action-buttons">
             <button onclick="runXtb('energy')" title="Calculate the g-xTB energy of the current geometry">Calculate Energy</button>
             <button onclick="runXtb('opt')" title="Optimize the current geometry with g-xTB and replace it in the viewer">Optimize Geometry</button>
@@ -564,12 +564,13 @@
                     <h4>xtb Configuration</h4>
                     <div class="preference-item">
                         <label class="preference-label">xtb command:</label>
-                        <input type="text" id="pref-xtb-command" class="preference-input" placeholder="xtb" title="xtb command or path (e.g., xtb, /usr/local/bin/xtb, xtb.exe, or 'wsl xtb' for WSL)">
-                        <div class="preference-description">Command or path to the xtb executable (supports WSL). g-xTB calculations require the parameter files from the g-xtb repository in $XTBPATH or $HOME.</div>
+                        <input type="text" id="pref-xtb-command" class="preference-input" placeholder="xtb" title="xtb command or path (e.g., xtb, /usr/local/bin/xtb, xtb.exe, or 'wsl --shell-type login xtb' for WSL)">
+                        <div class="preference-description">Command or path to the xtb executable (supports WSL, e.g. <code>wsl --shell-type login xtb</code>). g-xTB calculations require the xtb binary from the g-xtb distribution, which bundles the parameters.</div>
                     </div>
                     <div class="preference-item">
-                        <div class="preference-description">Get xtb with g-xTB support and the required parameter files from
-                            <a href="https://github.com/grimme-lab/g-xtb" target="_blank" rel="noopener noreferrer">github.com/grimme-lab/g-xtb</a>.
+                        <div class="preference-description">Download the g-xTB distribution from
+                            <a href="https://github.com/grimme-lab/g-xtb" target="_blank" rel="noopener noreferrer">github.com/grimme-lab/g-xtb</a>,
+                            extract it, and put its <code>xtb</code> binary on your PATH (or set the full path above). It includes the parameters &mdash; no separate download is needed.
                         </div>
                     </div>
                 </div>
