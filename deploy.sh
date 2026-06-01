@@ -80,6 +80,8 @@ copy_file "jlmol.png" "$DEPLOY_DIR/jlmol.png" "Application screenshot (jlmol.png
 
 # Optional but recommended files
 copy_file "about.html" "$DEPLOY_DIR/about.html" "About page (about.html)"
+copy_file "help.html" "$DEPLOY_DIR/help.html" "Help index (help.html)"
+copy_file "news.html" "$DEPLOY_DIR/news.html" "News & updates (news.html)"
 copy_file "robots.txt" "$DEPLOY_DIR/robots.txt" "SEO robots configuration (robots.txt)"
 copy_file "sitemap.xml" "$DEPLOY_DIR/sitemap.xml" "Search engine sitemap (sitemap.xml)"
 copy_file ".htaccess" "$DEPLOY_DIR/.htaccess" "Apache configuration (.htaccess)"
@@ -105,6 +107,9 @@ Files included in this deployment:
 - index.html          : Main website
 - jlmol.png          : Application screenshot
 - about.html         : About page (if available)
+- help.html          : Help index page
+- news.html          : News & updates page
+- help/*.html        : Feature help/guide pages
 - robots.txt         : SEO configuration (if available)
 - sitemap.xml        : Search engine sitemap (if available)
 - .htaccess          : Apache server configuration (if available)
@@ -186,6 +191,8 @@ binary
 put index.html
 put jlmol.png
 put about.html
+put help.html
+put news.html
 put robots.txt
 put sitemap.xml
 put .htaccess

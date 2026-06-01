@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JLmol Help - Semiempirical Calculations (xtb / g-xTB)</title>
+    <meta name="description" content="Help page for JLmol's semiempirical xtb / g-xTB calculations: energies, geometry optimization, and constrained optimization.">
+    <link rel="stylesheet" href="../styles.css">
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+    <style>
+        body {
+            background: linear-gradient(135deg, #f0f4f8 0%, #e0e7ef 100%);
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px 60px 20px;
+        }
+        .section-title {
+            font-size: 2.7rem;
+            font-weight: 800;
+            color: #4F46E5;
+            margin-bottom: 2.5rem;
+            letter-spacing: -1px;
+            text-align: center;
+        }
+        .help-content {
+            background: #fff;
+            border-radius: 18px;
+            box-shadow: 0 6px 32px rgba(79,70,229,0.08), 0 1.5px 6px rgba(0,0,0,0.04);
+            padding: 2.5rem 2rem 2rem 2rem;
+            margin-bottom: 2rem;
+        }
+        .help-content h3 {
+            color: #6366f1;
+            font-size: 1.35rem;
+            font-weight: 700;
+            margin-top: 2.2rem;
+            margin-bottom: 1rem;
+        }
+        .help-content ul {
+            padding-left: 1.2rem;
+            margin-bottom: 1.5rem;
+        }
+        .help-content li {
+            margin-bottom: 0.7rem;
+            font-size: 1.08rem;
+            color: #374151;
+        }
+        .help-content p {
+            font-size: 1.13rem;
+            color: #374151;
+            margin-bottom: 1.5rem;
+        }
+        .help-content code {
+            background: #eef2ff;
+            color: #3730a3;
+            padding: 0.15em 0.45em;
+            border-radius: 5px;
+            font-size: 0.97em;
+        }
+        .help-content a {
+            color: #4F46E5;
+            text-decoration: underline;
+            transition: color 0.2s;
+        }
+        .help-content a:hover {
+            color: #3730a3;
+        }
+        nav {
+            box-shadow: 0 2px 12px rgba(79,70,229,0.07);
+        }
+        .nav-links a {
+            font-weight: 600;
+            color: #6366f1;
+            border-radius: 6px;
+            padding: 0.4rem 1rem;
+            transition: background 0.2s, color 0.2s;
+        }
+        .nav-links a:hover, .nav-links a.active {
+            background: #eef2ff;
+            color: #3730a3;
+        }
+        @media (max-width: 600px) {
+            .container { padding: 20px 4vw 40px 4vw; }
+            .help-content { padding: 1.2rem 0.7rem; }
+            .section-title { font-size: 2rem; }
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="nav-container">
+            <a href="../index.html" class="logo" style="display: flex; align-items: center; gap: 0.5rem;">
+                <img src="../favicon.svg" alt="JLmol Logo" style="width:32px;height:32px;vertical-align:middle;" />
+                <span style="font-weight: bold; color: #4F46E5; font-size: 1.3rem; letter-spacing: -1px;">JLmol</span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="../index.html#features">Features</a></li>
+                <li><a href="../index.html#news">News</a></li>
+                <li><a href="../index.html#demo">Demo</a></li>
+                <li><a href="../index.html#download">Download</a></li>
+                <li><a href="../help.html">Help</a></li>
+                <li><a href="https://app.jlmol.com" target="_blank" rel="noopener noreferrer">Try Online</a></li>
+                <li><a href="https://github.com/fkfest/jlmol" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+            </ul>
+        </div>
+    </nav>
+    <div class="container" style="padding-top: 120px;">
+        <h1 class="section-title">Semiempirical Calculations (xtb / g-xTB)</h1>
+        <div class="help-content">
+            <p>JLmol can run fast semiempirical quantum chemistry calculations on the current structure using <a href="https://github.com/grimme-lab/xtb" target="_blank">xtb</a> with the <strong>g-xTB</strong> method. This lets you get energies and optimized geometries in seconds &mdash; ideal for quick screening, pre-optimizing structures before a high-level ElemCo.jl calculation, or exploring conformations. These calculations run in the desktop app only.</p>
+            <h3>What You Can Do:</h3>
+            <ul>
+                <li><strong>Calculate Energy:</strong> runs <code>xtb &lt;coord.xyz&gt; --gxtb</code> and reports the total energy of the current structure.</li>
+                <li><strong>Optimize Geometry:</strong> runs <code>xtb &lt;coord.xyz&gt; --gxtb --opt</code> and replaces the geometry in the viewer with the optimized structure.</li>
+                <li><strong>Set calculation parameters:</strong> specify the molecular charge, the number of unpaired electrons (<code>--uhf</code>), and any extra xtb command-line flags.</li>
+            </ul>
+            <h3>Constrained Optimization (Freeze Atoms):</h3>
+            <ul>
+                <li>Enable <strong>&ldquo;Relax only selected atoms (freeze the rest)&rdquo;</strong> to optimize just part of a structure.</li>
+                <li>When atoms are <a href="editing.html#atom-selection">selected</a>, JLmol writes an xtb <a href="https://xtb-docs.readthedocs.io/en/latest/xcontrol.html" target="_blank"><code>$fix</code></a> block listing every non-selected atom (passed via <code>--input xtb.inp</code>), so only the selected atoms move while the rest stay fixed.</li>
+                <li>This is handy for relaxing an adsorbate on a rigid surface, a fragment within a larger molecule, or a newly added group.</li>
+                <li>The option is ignored if no atoms are selected.</li>
+            </ul>
+            <h3>Setup &amp; Requirements:</h3>
+            <ul>
+                <li>Install <a href="https://github.com/grimme-lab/xtb" target="_blank">xtb</a> with g-xTB support and make it accessible on your system.</li>
+                <li>Download the g-xTB parameter files from <a href="https://github.com/grimme-lab/g-xtb" target="_blank">grimme-lab/g-xtb</a> and place them in <code>$XTBPATH</code> or <code>$HOME</code>.</li>
+                <li>The xtb command is configurable in <strong>Settings &rarr; xtb</strong> (just like the Julia command), and supports WSL invocations such as <code>wsl xtb</code>.</li>
+                <li>JLmol checks that xtb is reachable and shows a clear message if it is not.</li>
+            </ul>
+            <h3>Best Practices &amp; Troubleshooting:</h3>
+            <ul>
+                <li>Use g-xTB to pre-optimize a structure, then refine it with a higher-level method via the <a href="elemco.html">ElemCo.jl integration</a>.</li>
+                <li>If a calculation fails to start, verify the xtb command in Settings and that the g-xTB parameter files are in <code>$XTBPATH</code> or <code>$HOME</code>.</li>
+                <li>Set the correct charge and number of unpaired electrons for open-shell or charged species.</li>
+                <li>The browser version cannot run xtb; install jlmol locally to use this feature.</li>
+            </ul>
+            <h3>References:</h3>
+            <ul>
+                <li><a href="https://github.com/grimme-lab/xtb" target="_blank">xtb on GitHub</a></li>
+                <li><a href="https://github.com/grimme-lab/g-xtb" target="_blank">g-xTB parameters (grimme-lab/g-xtb)</a></li>
+                <li><a href="https://xtb-docs.readthedocs.io/" target="_blank">xtb Documentation</a></li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

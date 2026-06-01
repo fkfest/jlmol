@@ -566,6 +566,7 @@
                 <li><a href="#news">News</a></li>
                 <li><a href="#demo">Demo</a></li>
                 <li><a href="#download">Download</a></li>
+                <li><a href="help.html">Help</a></li>
                 <li><a href="https://app.jlmol.com" target="_blank" rel="noopener noreferrer">Try Online</a></li>
                 <li><a href="https://github.com/fkfest/jlmol" target="_blank" rel="noopener noreferrer">GitHub</a></li>
             </ul>
@@ -648,6 +649,22 @@
                     <p>Generate inputs and run quantum chemistry calculations with ElemCo.jl directly from the app, with local and remote execution support.</p>
                     <a href="help/elemco.html" class="learn-more-link">Learn More &rarr;</a>
                 </div>
+
+                <!-- Feature 7: Semiempirical Calculations (xtb / g-xTB) -->
+                <div class="feature-card">
+                    <div class="feature-icon">⚗️</div>
+                    <h3>Semiempirical Calculations</h3>
+                    <p>Compute energies and optimize geometries with xtb's g-xTB method in one click, including constrained optimization that freezes selected atoms.</p>
+                    <a href="help/xtb.html" class="learn-more-link">Learn More &rarr;</a>
+                </div>
+
+                <!-- Feature 8: Atom Selection -->
+                <div class="feature-card">
+                    <div class="feature-icon">🎯</div>
+                    <h3>Interactive Atom Selection</h3>
+                    <p>Click atoms in the 3D structure or the XYZ viewer to select them, with two-way sync, and insert them as an index list into your ElemCo.jl input.</p>
+                    <a href="help/editing.html#atom-selection" class="learn-more-link">Learn More &rarr;</a>
+                </div>
             </div>
         </div>
     </section>
@@ -656,24 +673,31 @@
     <section id="news" class="news-section">
         <div class="container">
             <h2 class="section-title">What's New</h2>
+            <p class="section-subtitle">Highlights from recent releases. See the <a href="https://github.com/fkfest/jlmol/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer" class="learn-more-link">full changelog</a> for every change.</p>
             <div class="news-grid">
                 <div class="news-card">
-                    <p class="news-date">July 2025</p>
-                    <h3>Integrated ElemCo.jl Runner</h3>
-                    <p>Run ElemCo.jl quantum chemistry calculations directly from within jlmol. Includes support for Windows Subsystem for Linux (WSL) and remote execution on other machines via SSH.</p>
+                    <p class="news-date">May 2026 &middot; v1.4.0</p>
+                    <h3>Semiempirical Calculations with xtb / g-xTB</h3>
+                    <p>Calculate the energy or optimize the geometry of the current structure with the g-xTB method in one click. Set charge, unpaired electrons, and extra flags, and even freeze atoms to relax only a selected region.</p>
+                    <a href="help/xtb.html" class="learn-more-link">Learn More &rarr;</a>
                 </div>
-                
+
                 <div class="news-card">
-                    <p class="news-date">July 2025</p>
-                    <h3>Persistent User Preferences</h3>
-                    <p>Customize your experience with the new settings panel. Your preferences for display styles, calculation defaults, and Julia command paths are now saved between sessions.</p>
+                    <p class="news-date">May 2026 &middot; v1.4.0</p>
+                    <h3>Click-to-Select Atoms</h3>
+                    <p>Click atoms in the 3D structure or the XYZ viewer to select them, with the selection mirrored in both views. Insert the selected atoms as a 1-based index list into your ElemCo.jl input, or use them to constrain an xtb optimization.</p>
+                    <a href="help/editing.html#atom-selection" class="learn-more-link">Learn More &rarr;</a>
                 </div>
-                
+
                 <div class="news-card">
-                    <p class="news-date">July 2025</p>
-                    <h3>Advanced Calculation Support</h3>
-                    <p>Added support for more ElemCo.jl methods and options, giving you more power and flexibility for your computational chemistry research.</p>
+                    <p class="news-date">February 2026 &middot; v1.3.0</p>
+                    <h3>Molden Export &amp; Redesigned Preferences</h3>
+                    <p>Export molecular structures in Molden format with custom file naming, and enjoy a cleaner, tabbed preferences panel along with a quieter, auto-hiding interface.</p>
+                    <a href="help/formats.html" class="learn-more-link">Learn More &rarr;</a>
                 </div>
+            </div>
+            <div style="text-align: center; margin-top: 3rem;">
+                <a href="news.html" class="btn btn-primary" style="background:#4F46E5;color:#fff;">View all updates &rarr;</a>
             </div>
         </div>
     </section>
@@ -752,6 +776,8 @@
                         <li><a href="https://github.com/fkfest/jlmol" target="_blank" rel="noopener noreferrer">GitHub Repository</a></li>
                         <li><a href="https://github.com/fkfest/jlmol/releases" target="_blank" rel="noopener noreferrer">Releases</a></li>
                         <li><a href="https://app.jlmol.com" target="_blank" rel="noopener noreferrer">Online Demo</a></li>
+                        <li><a href="help.html">Help &amp; Guides</a></li>
+                        <li><a href="news.html">News &amp; Updates</a></li>
                         <li><a href="https://github.com/fkfest/jlmol/blob/main/Troubleshooting.md" target="_blank" rel="noopener noreferrer">Troubleshooting</a></li>
                     </ul>
                 </div>
@@ -777,7 +803,7 @@
             </div>
             
             <div class="footer-bottom">
-                <p>&copy; 2025 JLmol. Licensed under LGPL-2.1. Built with ❤️ for the molecular science community.</p>
+                <p>&copy; 2026 JLmol. Licensed under LGPL-2.1. Built with ❤️ for the molecular science community.</p>
             </div>
         </div>
     </footer>

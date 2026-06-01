@@ -124,6 +124,15 @@
                 <li>Atom selection, drag-to-reorder, and batch editing supported.</li>
                 <li>Save/export edited structures in multiple formats.</li>
             </ul>
+            <h3 id="atom-selection">Two-Way Atom Selection:</h3>
+            <ul>
+                <li>Click an atom in the 3D structure to select or deselect it (toggle); selected atoms are marked with halos.</li>
+                <li>Click a row in the XYZ editor to do the same &mdash; the selection is mirrored between the 3D viewer and the XYZ editor in both directions.</li>
+                <li>A live selection count and a <strong>Clear Selection</strong> button keep the current selection easy to manage.</li>
+                <li>In the <a href="elemco.html">ElemCo.jl panel</a>, <strong>Insert Selected Atoms</strong> inserts the selection as a 1-based index list (e.g. <code>[1, 3, 5]</code>) at the cursor &mdash; handy for dummy atoms or active regions.</li>
+                <li>The same selection drives <a href="xtb.html">constrained xtb optimization</a>, where unselected atoms are frozen.</li>
+                <li>Selection is cleared automatically when a new structure is loaded, and atom-clicking is disabled while the ModelKit 3D editor is active.</li>
+            </ul>
             <h3>Technical Details:</h3>
             <ul>
                 <li>2D/3D editors are synchronized: changes in one are reflected in the other.</li>

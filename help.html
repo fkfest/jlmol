@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JLmol Help &amp; Guides</title>
+    <meta name="description" content="Help and guides for JLmol: visualization, database search, structure editing, atom selection, orbitals, file formats, ElemCo.jl, and xtb / g-xTB calculations.">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <style>
+        body {
+            background: linear-gradient(135deg, #f0f4f8 0%, #e0e7ef 100%);
+        }
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 40px 20px 60px 20px;
+        }
+        .section-title {
+            font-size: 2.7rem;
+            font-weight: 800;
+            color: #4F46E5;
+            margin-bottom: 0.8rem;
+            letter-spacing: -1px;
+            text-align: center;
+        }
+        .section-subtitle {
+            text-align: center;
+            font-size: 1.13rem;
+            color: #6b7280;
+            margin-bottom: 3rem;
+        }
+        .help-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.8rem;
+        }
+        .help-card {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 6px 32px rgba(79,70,229,0.08), 0 1.5px 6px rgba(0,0,0,0.04);
+            padding: 2rem 1.8rem;
+            text-decoration: none;
+            display: block;
+            transition: transform 0.3s, box-shadow 0.3s;
+            border: 1px solid #e2e8f0;
+        }
+        .help-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 18px 30px rgba(79,70,229,0.12);
+        }
+        .help-card .icon {
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(45deg, #4F46E5, #7C3AED);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+            margin-bottom: 1rem;
+        }
+        .help-card h3 {
+            color: #1f2937;
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 0.6rem;
+        }
+        .help-card p {
+            color: #6b7280;
+            font-size: 1rem;
+            line-height: 1.6;
+        }
+        nav {
+            box-shadow: 0 2px 12px rgba(79,70,229,0.07);
+        }
+        .nav-links a {
+            font-weight: 600;
+            color: #6366f1;
+            border-radius: 6px;
+            padding: 0.4rem 1rem;
+            transition: background 0.2s, color 0.2s;
+        }
+        .nav-links a:hover, .nav-links a.active {
+            background: #eef2ff;
+            color: #3730a3;
+        }
+        @media (max-width: 600px) {
+            .container { padding: 20px 4vw 40px 4vw; }
+            .section-title { font-size: 2rem; }
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="nav-container">
+            <a href="index.html" class="logo" style="display: flex; align-items: center; gap: 0.5rem;">
+                <img src="favicon.svg" alt="JLmol Logo" style="width:32px;height:32px;vertical-align:middle;" />
+                <span style="font-weight: bold; color: #4F46E5; font-size: 1.3rem; letter-spacing: -1px;">JLmol</span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="index.html#features">Features</a></li>
+                <li><a href="index.html#news">News</a></li>
+                <li><a href="index.html#demo">Demo</a></li>
+                <li><a href="index.html#download">Download</a></li>
+                <li><a href="help.html" class="active">Help</a></li>
+                <li><a href="https://app.jlmol.com" target="_blank" rel="noopener noreferrer">Try Online</a></li>
+                <li><a href="https://github.com/fkfest/jlmol" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+            </ul>
+        </div>
+    </nav>
+    <div class="container" style="padding-top: 120px;">
+        <h1 class="section-title">Help &amp; Guides</h1>
+        <p class="section-subtitle">In-depth guides for every part of JLmol. Pick a topic to learn more.</p>
+        <div class="help-grid">
+            <a class="help-card" href="help/visualization.html">
+                <div class="icon">🧬</div>
+                <h3>3D Visualization</h3>
+                <p>Display styles, interactive controls, spin animation, drag-and-drop loading, and image export.</p>
+            </a>
+            <a class="help-card" href="help/database.html">
+                <div class="icon">🔍</div>
+                <h3>PubChem Database</h3>
+                <p>Search and load structures by CID, name, formula, or SMILES, with auto-detection.</p>
+            </a>
+            <a class="help-card" href="help/editing.html">
+                <div class="icon">✏️</div>
+                <h3>Structure Editing</h3>
+                <p>The JSME 2D editor, the 3D ModelKit, the XYZ editor, and two-way atom selection.</p>
+            </a>
+            <a class="help-card" href="help/orbitals.html">
+                <div class="icon">⚛️</div>
+                <h3>Orbital Visualization</h3>
+                <p>HOMO/LUMO identification, orbital navigation, and energy-level display.</p>
+            </a>
+            <a class="help-card" href="help/formats.html">
+                <div class="icon">📁</div>
+                <h3>File Formats</h3>
+                <p>Import and export XYZ, PDB, MOL, CIF, and MOLDEN, including Molden export.</p>
+            </a>
+            <a class="help-card" href="help/elemco.html">
+                <div class="icon">⚡</div>
+                <h3>ElemCo.jl Integration</h3>
+                <p>Generate inputs and run quantum chemistry calculations locally, in WSL, or via SSH.</p>
+            </a>
+            <a class="help-card" href="help/xtb.html">
+                <div class="icon">⚗️</div>
+                <h3>xtb / g-xTB Calculations</h3>
+                <p>Fast semiempirical energies and geometry optimization, with constrained (frozen-atom) optimization.</p>
+            </a>
+            <a class="help-card" href="https://github.com/fkfest/jlmol/blob/main/Troubleshooting.md" target="_blank" rel="noopener noreferrer">
+                <div class="icon">🛠️</div>
+                <h3>Troubleshooting</h3>
+                <p>Solutions to common issues, including Windows graphics and WSL setup.</p>
+            </a>
+        </div>
+    </div>
+</body>
+</html>

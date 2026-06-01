@@ -106,15 +106,17 @@
             <h3>Input Generation:</h3>
             <ul>
                 <li>Automatically generate ElemCo.jl input files from any loaded structure.</li>
-                <li>Select quantum chemistry methods: HF, MP2, CCSD, CCSD(T), and more.</li>
-                <li>Choose basis sets and toggle density fitting for supported methods.</li>
-                <li>Inputs are formatted for direct use with ElemCo.jl, minimizing manual editing.</li>
+                <li>Select from a broad range of methods: HF, MP2, DCSD, CCSD(T), CCSDT, DC-CCSDT, and the SVD-based SVD-DCSD and SVD-DC-CCSDT.</li>
+                <li>Choose correlation-consistent basis sets (cc-pVDZ/TZ, aug-cc-pVDZ/TZ) and auxiliary JK- and MP2-fitting sets, and toggle density fitting for supported methods.</li>
+                <li>Set charge and multiplicity, then edit the generated input directly or copy it to the clipboard.</li>
+                <li><strong>Insert Selected Atoms:</strong> insert the atoms currently <a href="editing.html#atom-selection">selected</a> in the structure as a 1-based index list (e.g. <code>[1, 3, 5]</code>) at the cursor &mdash; useful for defining dummy atoms or active regions.</li>
             </ul>
             <h3>Calculation Runner:</h3>
             <ul>
                 <li>Run calculations locally, in WSL (Windows Subsystem for Linux), or remotely via SSH.</li>
                 <li>Customizable Julia command and environment for advanced workflows.</li>
                 <li>Integrated log viewer for monitoring calculation progress and troubleshooting errors.</li>
+                <li>For remote jobs, the bundled <code>runremote</code> script uses <code>ssh</code>/<code>scp</code> to execute calculations on a more powerful Linux machine (works best with passwordless SSH).</li>
                 <li>Supports batch jobs and large molecule calculations (subject to system resources).</li>
             </ul>
             <h3>User Preferences & Technical Details:</h3>

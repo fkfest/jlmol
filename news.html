@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JLmol News &amp; Updates</title>
+    <meta name="description" content="Release news and updates for JLmol, the desktop molecular visualization application.">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <style>
+        body {
+            background: linear-gradient(135deg, #f0f4f8 0%, #e0e7ef 100%);
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px 60px 20px;
+        }
+        .section-title {
+            font-size: 2.7rem;
+            font-weight: 800;
+            color: #4F46E5;
+            margin-bottom: 0.8rem;
+            letter-spacing: -1px;
+            text-align: center;
+        }
+        .section-subtitle {
+            text-align: center;
+            font-size: 1.13rem;
+            color: #6b7280;
+            margin-bottom: 3rem;
+        }
+        .news-card {
+            background: #fff;
+            padding: 2rem;
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 1.5px 6px rgba(0,0,0,0.04);
+        }
+        .news-card h3 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 0.4rem;
+            color: #1f2937;
+        }
+        .news-card p {
+            color: #374151;
+            line-height: 1.6;
+            margin-bottom: 0.8rem;
+        }
+        .news-card ul {
+            padding-left: 1.2rem;
+            color: #374151;
+        }
+        .news-card li {
+            margin-bottom: 0.5rem;
+        }
+        .news-date {
+            font-size: 0.9rem;
+            color: #6366f1;
+            font-weight: 600;
+            margin-bottom: 0.6rem;
+        }
+        .news-card a {
+            color: #4F46E5;
+            text-decoration: underline;
+        }
+        .news-card a:hover {
+            color: #3730a3;
+        }
+        nav {
+            box-shadow: 0 2px 12px rgba(79,70,229,0.07);
+        }
+        .nav-links a {
+            font-weight: 600;
+            color: #6366f1;
+            border-radius: 6px;
+            padding: 0.4rem 1rem;
+            transition: background 0.2s, color 0.2s;
+        }
+        .nav-links a:hover, .nav-links a.active {
+            background: #eef2ff;
+            color: #3730a3;
+        }
+        .changelog-link {
+            text-align: center;
+            margin-top: 2.5rem;
+            color: #6b7280;
+        }
+        .changelog-link a {
+            color: #4F46E5;
+            font-weight: 600;
+        }
+        @media (max-width: 600px) {
+            .container { padding: 20px 4vw 40px 4vw; }
+            .section-title { font-size: 2rem; }
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="nav-container">
+            <a href="index.html" class="logo" style="display: flex; align-items: center; gap: 0.5rem;">
+                <img src="favicon.svg" alt="JLmol Logo" style="width:32px;height:32px;vertical-align:middle;" />
+                <span style="font-weight: bold; color: #4F46E5; font-size: 1.3rem; letter-spacing: -1px;">JLmol</span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="index.html#features">Features</a></li>
+                <li><a href="news.html" class="active">News</a></li>
+                <li><a href="index.html#demo">Demo</a></li>
+                <li><a href="index.html#download">Download</a></li>
+                <li><a href="help.html">Help</a></li>
+                <li><a href="https://app.jlmol.com" target="_blank" rel="noopener noreferrer">Try Online</a></li>
+                <li><a href="https://github.com/fkfest/jlmol" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+            </ul>
+        </div>
+    </nav>
+    <div class="container" style="padding-top: 120px;">
+        <h1 class="section-title">News &amp; Updates</h1>
+        <p class="section-subtitle">Highlights from each JLmol release, newest first.</p>
+
+        <div class="news-card">
+            <p class="news-date">May 2026 &middot; v1.4.0</p>
+            <h3>Semiempirical xtb / g-xTB &amp; Interactive Atom Selection</h3>
+            <ul>
+                <li><strong>xtb (g-xTB) calculations:</strong> compute the energy or optimize the geometry of the current structure in one click, with charge, unpaired-electron, and extra-flag options. <a href="help/xtb.html">Learn more &rarr;</a></li>
+                <li><strong>Constrained optimization:</strong> freeze the unselected atoms so only a selected region is relaxed.</li>
+                <li><strong>Click-to-select atoms:</strong> select atoms in the 3D structure or the XYZ viewer with two-way sync, and insert them as a 1-based index list into the ElemCo.jl input. <a href="help/editing.html#atom-selection">Learn more &rarr;</a></li>
+                <li><strong>Quieter startup:</strong> verbose terminal logging is off by default (a full log is still written to <code>jsmol.log</code>).</li>
+            </ul>
+        </div>
+
+        <div class="news-card">
+            <p class="news-date">February 2026 &middot; v1.3.0</p>
+            <h3>Molden Export &amp; Redesigned Preferences</h3>
+            <ul>
+                <li>Export molecular structures in Molden format with customizable file naming.</li>
+                <li>Tabbed preferences interface for clearer organization of settings.</li>
+                <li>Auto-hiding menu bar and various export and clipboard fixes.</li>
+                <li>Added <code>npm run start:win</code> for direct Windows launch; upgraded Electron.</li>
+            </ul>
+        </div>
+
+        <div class="news-card">
+            <p class="news-date">July 2025 &middot; v1.2.0 &ndash; v1.2.1</p>
+            <h3>Integrated ElemCo.jl Runner &amp; User Preferences</h3>
+            <ul>
+                <li><strong>Calculation runner:</strong> run ElemCo.jl calculations directly from the app with real-time output.</li>
+                <li><strong>WSL support:</strong> run Julia under Windows Subsystem for Linux with automatic path translation.</li>
+                <li><strong>Remote execution:</strong> run calculations on a remote Linux machine over SSH via the <code>runremote</code> script.</li>
+                <li><strong>Persistent preferences:</strong> a settings panel that remembers display styles, calculation defaults, and the Julia command.</li>
+            </ul>
+        </div>
+
+        <div class="news-card">
+            <p class="news-date">January 2025 &middot; v1.1.0</p>
+            <h3>Smarter Database Search</h3>
+            <ul>
+                <li>Combined search interface with an integrated search-type selector and contextual placeholders.</li>
+                <li>SMILES search enforcement to override auto-detection.</li>
+                <li>XYZ files generated from PubChem now carry meaningful database metadata (CID, name, SMILES, formula).</li>
+            </ul>
+        </div>
+
+        <div class="news-card">
+            <p class="news-date">2025 &middot; v1.0.0</p>
+            <h3>First Stable Release</h3>
+            <ul>
+                <li>Advanced molecular visualization with JSmol, supporting XYZ, PDB, MOL, CIF, and MOLDEN.</li>
+                <li>2D (JSME) and 3D (ModelKit) structure editing with real-time sync, plus the XYZ coordinate editor.</li>
+                <li>Orbital visualization with HOMO/LUMO identification and energy levels.</li>
+                <li>ElemCo.jl input generation for HF, MP2, DCSD, CCSD(T), CCSDT, and DC-CCSDT.</li>
+                <li>Cross-platform desktop builds for Windows, macOS, and Linux.</li>
+            </ul>
+        </div>
+
+        <p class="changelog-link">Looking for the complete, detailed history? See the <a href="https://github.com/fkfest/jlmol/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">full changelog on GitHub</a>.</p>
+    </div>
+</body>
+</html>
