@@ -161,11 +161,56 @@
         .xyz-content-edit {
             display: none;
         }
-        textarea.xyz-editor {
-            width: 100%;
-            min-height: 200px;
-            font-family: monospace;
+        /* XYZ edit textarea + highlight overlay. The backdrop sits behind a
+           transparent-background textarea and tints the lines of selected
+           atoms; both share identical metrics so the text lines up exactly. */
+        #xyz-edit-wrap {
+            position: relative;
             margin: 10px 0;
+        }
+        #xyz-content-edit.xyz-editor,
+        #xyz-edit-backdrop {
+            width: 100%;
+            box-sizing: border-box;
+            margin: 0;
+            padding: 6px;
+            border: 1px solid #ccc;
+            font-family: monospace;
+            font-size: 13px;
+            line-height: 1.4;
+            white-space: pre;
+            letter-spacing: normal;
+            tab-size: 4;
+        }
+        #xyz-content-edit.xyz-editor {
+            position: relative;
+            z-index: 1;
+            display: block;
+            min-height: 200px;
+            resize: vertical;
+            overflow: auto;
+            background: transparent;
+            color: #000;
+        }
+        #xyz-edit-backdrop {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 0;
+            overflow: hidden;
+            pointer-events: none;
+            border-color: transparent;
+            background: #fff;
+            color: transparent;
+        }
+        #xyz-edit-highlights {
+            min-height: 200px;
+        }
+        #xyz-edit-highlights .xyz-edit-hl {
+            background: #fff3a0;
+            border-radius: 2px;
         }
         .mode-buttons {
             margin: 10px 0;
