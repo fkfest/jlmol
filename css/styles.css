@@ -702,9 +702,10 @@
             padding: 6px 8px;  /* Reduced horizontal padding */
         }
 
-        /* Keep the Reset button at normal width */
+        /* Keep the Reset button compact so it doesn't overflow narrow screens */
         .control-line button[onclick*="resetZoom"] {
-            min-width: 70px;
+            min-width: 50px;
+            padding: 6px 8px;
         }
 
         /* Edit buttons - make them more compact */
