@@ -25,10 +25,16 @@
             top: 0;
             left: 0;
         }
-        #controls { 
-            width: 200px; 
+        #controls {
+            width: 200px;
+            flex-shrink: 0;
             padding: 10px;
+            box-sizing: border-box;
+            height: 100vh;
+            overflow-y: auto;
+            overflow-x: hidden;
             transform-origin: top right;
+            -webkit-overflow-scrolling: touch;
         }
         #editor-panel {
             position: fixed;
@@ -1234,4 +1240,30 @@
             color: #777;
             margin-top: 4px;
             font-style: italic;
+        }
+
+        /* Narrow screens (phones / small tablets): stack the viewer on top of
+           the controls so the 200px sidebar isn't clipped horizontally, and let
+           the whole page scroll vertically. */
+        @media (max-width: 768px) {
+            #container {
+                flex-direction: column;
+                height: auto;
+                min-height: 100vh;
+                overflow: visible;
+            }
+            #viewer,
+            #jsmeContainer {
+                flex: none;
+                width: 100%;
+                min-width: 0;
+                height: 60vh;
+            }
+            #controls {
+                width: 100%;
+                flex-shrink: 1;
+                height: auto;
+                overflow-y: visible;
+                transform-origin: top left;
+            }
         }
