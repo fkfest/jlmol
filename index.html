@@ -160,7 +160,10 @@
         </div>
         <div class="selection-hint">Click atoms in the 3D structure or the rows below to select them.</div>
         <div id="xyz-content"></div>
-        <textarea id="xyz-content-edit" class="xyz-editor"></textarea>
+        <div id="xyz-edit-wrap">
+            <div id="xyz-edit-backdrop"><div id="xyz-edit-highlights"></div></div>
+            <textarea id="xyz-content-edit" class="xyz-editor"></textarea>
+        </div>
         <div class="action-buttons">
             <button onclick="updateStructure()" title="Update molecular structure with current XYZ coordinates">Update Structure</button>
             <button onclick="optimizeStructure()" title="Optimize molecular geometry using built-in force field">Optimize Structure</button>

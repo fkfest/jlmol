@@ -106,7 +106,9 @@ function showXYZEditor() {
         // Update textarea content
         const editArea = document.getElementById('xyz-content-edit');
         editArea.value = lastXYZData;
-        editArea.style.display = 'none';  // Ensure we start in selection mode
+        initXYZEditHighlights();
+        renderXYZEditHighlights();
+        document.getElementById('xyz-edit-wrap').style.display = 'none';  // Ensure we start in selection mode
         xyzContent.style.display = 'block';
         document.getElementById('toggle-edit-mode').textContent = 'Switch to Edit Mode';
         
@@ -126,16 +128,16 @@ function showXYZEditor() {
 
 function toggleEditMode() {
     const selectionView = document.getElementById('xyz-content');
-    const editView = document.getElementById('xyz-content-edit');
+    const editView = document.getElementById('xyz-edit-wrap');
     const editButton = document.getElementById('toggle-edit-mode');
-    
+
     if (selectionView.style.display !== 'none') {
-        // Switch to edit mode
+        // Switch to edit mode. Keep the current selection so the chosen atoms
+        // stay highlighted in the textarea, making them easy to edit.
         selectionView.style.display = 'none';
         editView.style.display = 'block';
         editButton.textContent = 'Switch to Selection Mode';
-        // Clear any existing selections (keeps state Set, rows and halos in sync)
-        clearAtomSelection();
+        renderXYZEditHighlights();
     } else {
         // Switch to selection mode
         selectionView.style.display = 'block';
@@ -144,6 +146,51 @@ function toggleEditMode() {
         // Re-draw halos for any atoms selected via the 3D structure
         reapplySelectionToRows();
     }
+}
+
+// Escape text so user-entered atom names/coordinates can't inject markup into
+// the highlight overlay.
+function escapeHtmlForHighlight(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// Re-draw the edit-mode highlight overlay: tint the textarea lines that belong
+// to currently selected atoms. Atom i (0-based) lives on text line i + 2
+// (line 0 = atom count, line 1 = comment).
+function renderXYZEditHighlights() {
+    const textarea = document.getElementById('xyz-content-edit');
+    const backdrop = document.getElementById('xyz-edit-backdrop');
+    const highlights = document.getElementById('xyz-edit-highlights');
+    if (!textarea || !backdrop || !highlights) return;
+
+    const selectedLines = new Set(Array.from(selectedAtoms).map(i => i + 2));
+    const lines = textarea.value.split('\n');
+    highlights.innerHTML = lines.map((line, idx) => {
+        const safe = escapeHtmlForHighlight(line);
+        return selectedLines.has(idx) ? `<span class="xyz-edit-hl">${safe}</span>` : safe;
+    }).join('\n');
+
+    // Keep the overlay scroll-aligned with the textarea.
+    backdrop.scrollTop = textarea.scrollTop;
+    backdrop.scrollLeft = textarea.scrollLeft;
+}
+
+// Attach the textarea listeners that keep the highlight overlay in sync. Runs
+// once; guarded by a data flag so repeated showXYZEditor() calls don't stack
+// listeners.
+function initXYZEditHighlights() {
+    const textarea = document.getElementById('xyz-content-edit');
+    if (!textarea || textarea.dataset.hlInit) return;
+    textarea.dataset.hlInit = '1';
+
+    const backdrop = document.getElementById('xyz-edit-backdrop');
+    textarea.addEventListener('input', renderXYZEditHighlights);
+    textarea.addEventListener('scroll', function() {
+        if (backdrop) {
+            backdrop.scrollTop = textarea.scrollTop;
+            backdrop.scrollLeft = textarea.scrollLeft;
+        }
+    });
 }
 
 function updateStructure() {

@@ -10,6 +10,16 @@ function updateSelectionUI() {
         const n = selectedAtoms.size;
         countEl.textContent = n > 0 ? `${n} selected` : '';
     }
+    refreshEditHighlightsIfVisible();
+}
+
+// When the XYZ editor's text edit mode is open, keep its highlight overlay in
+// sync with the current selection (e.g. atoms picked in the 3D structure).
+function refreshEditHighlightsIfVisible() {
+    const wrap = document.getElementById('xyz-edit-wrap');
+    if (wrap && wrap.style.display !== 'none' && typeof renderXYZEditHighlights === 'function') {
+        renderXYZEditHighlights();
+    }
 }
 
 // Turn the 3D halo on/off for a single atom (atomIndex is 0-based).
