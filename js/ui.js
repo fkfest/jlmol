@@ -13,20 +13,40 @@ function initDraggable() {
         document.addEventListener('mousemove', drag);
         document.addEventListener('mouseup', dragEnd);
 
+        // Touch support so panels can be dragged on mobile devices too.
+        header.addEventListener('touchstart', dragStart, { passive: false });
+        document.addEventListener('touchmove', drag, { passive: false });
+        document.addEventListener('touchend', dragEnd);
+        document.addEventListener('touchcancel', dragEnd);
+
+        // Read the pointer position from either a mouse or a touch event.
+        function getPoint(e) {
+            if (e.touches && e.touches.length) {
+                return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            }
+            return { x: e.clientX, y: e.clientY };
+        }
+
         function dragStart(e) {
-            initialX = e.clientX - xOffset;
-            initialY = e.clientY - yOffset;
+            const point = getPoint(e);
+            initialX = point.x - xOffset;
+            initialY = point.y - yOffset;
 
             if (e.target === header) {
                 isDragging = true;
+                // Prevent the page from scrolling while dragging on touch.
+                if (e.type === 'touchstart') {
+                    e.preventDefault();
+                }
             }
         }
 
         function drag(e) {
             if (isDragging) {
                 e.preventDefault();
-                currentX = e.clientX - initialX;
-                currentY = e.clientY - initialY;
+                const point = getPoint(e);
+                currentX = point.x - initialX;
+                currentY = point.y - initialY;
                 xOffset = currentX;
                 yOffset = currentY;
 
