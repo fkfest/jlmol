@@ -25,7 +25,10 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          # Pin the minimum where require() of an ESM module is unflagged.
+          # electron-builder's @noble/hashes v2 is ESM-only and is require()-d,
+          # which throws ERR_REQUIRE_ESM on Node < 22.12 (or < 20.19).
+          node-version: '22.12.0'
 
       - name: Install Dependencies
         run: npm install
