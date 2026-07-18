@@ -38,20 +38,13 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
-            npm run build:linux
+            npm run build:linux -- --publish always
           else
-            npm run build:windows
+            npm run build:windows -- --publish always
           fi
         shell: bash
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
-        with:
-          draft: true
-          files: |
-            dist/*.exe
-            dist/*.deb
-            dist/*.rpm
-            dist/*.AppImage
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # electron-builder is the sole publisher (--publish always). It uploads each
+      # installer once, plus the latest*.yml / blockmap update metadata, to a draft
+      # GitHub release (see the "publish" config in package.json). A previous
+      # softprops/action-gh-release step also uploaded dist/*, which double-published
+      # the Windows installer under a differently sanitized name; it has been removed.
