@@ -37,6 +37,12 @@
     "directories": {
       "output": "dist"
     },
+    "publish": [
+      {
+        "provider": "github",
+        "releaseType": "draft"
+      }
+    ],
     "win": {
       "target": "nsis",
       "icon": "build/icon.ico"
