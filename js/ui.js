@@ -33,7 +33,7 @@ function initDraggable() {
         // and default size — a quick escape hatch if it's been dragged somewhere
         // awkward or resized larger than the screen.
         header.addEventListener('dblclick', (e) => {
-            if (e.target === header) resetPanel();
+            if (isDragHandle(e.target)) resetPanel();
         });
 
         // Panels are opened by other modules simply setting display:block. Watch
@@ -55,6 +55,18 @@ function initDraggable() {
                 return { x: e.touches[0].clientX, y: e.touches[0].clientY };
             }
             return { x: e.clientX, y: e.clientY };
+        }
+
+        // The header holds the title (and sometimes an icon and a Close button).
+        // A drag or double-click reset should work from the header or any of its
+        // non-interactive parts (title text, icon) — the whole bar, not just the
+        // slivers around the children — but never from a control such as the Close
+        // button, so those keep working normally.
+        function isDragHandle(target) {
+            if (!target || !header.contains(target)) return false;
+            const control = target.closest && target.closest('button, a, input, select, textarea');
+            if (control && header.contains(control)) return false;
+            return true;
         }
 
         // Constrain a candidate translate so the header (the only drag handle)
@@ -156,7 +168,7 @@ function initDraggable() {
             initialX = point.x - xOffset;
             initialY = point.y - yOffset;
 
-            if (e.target === header) {
+            if (isDragHandle(e.target)) {
                 isDragging = true;
                 // While dragging, stop the JSmol viewer / 2D editor from capturing
                 // mouse events. They handle (and swallow) mouseup, so a release over
