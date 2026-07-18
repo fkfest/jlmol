@@ -28,10 +28,11 @@ function initDraggable() {
         document.addEventListener('touchend', dragEnd);
         document.addEventListener('touchcancel', dragEnd);
 
-        // Double-clicking the header snaps the panel back to its default spot —
-        // a quick escape hatch if it's been dragged somewhere awkward.
+        // Double-clicking the header snaps the panel back to its default spot
+        // and default size — a quick escape hatch if it's been dragged somewhere
+        // awkward or resized larger than the screen.
         header.addEventListener('dblclick', (e) => {
-            if (e.target === header) resetPosition();
+            if (e.target === header) resetPanel();
         });
 
         // Read the pointer position from either a mouse or a touch event.
@@ -78,7 +79,12 @@ function initDraggable() {
             panel.style.transform = `translate(${x}px, ${y}px)`;
         }
 
-        function resetPosition() {
+        // Restore the panel's default position and size (clearing the inline
+        // width/height that the CSS resize handle writes reverts it to the size
+        // defined in the stylesheet).
+        function resetPanel() {
+            panel.style.width = '';
+            panel.style.height = '';
             apply(0, 0);
         }
 

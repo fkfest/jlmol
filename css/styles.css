@@ -116,6 +116,8 @@
             overflow: auto;
             min-width: 200px;
             min-height: 200px;
+            max-width: 90vw;
+            max-height: 90vh;
         }
         #orbital-header {
             cursor: move;
@@ -528,6 +530,7 @@
             overflow-y: auto;
             min-width: 250px; /* Reduced from 300px */
             min-height: 300px; /* Reduced from 400px */
+            max-width: 90vw;
             max-height: 90vh;
         }
         #elemcoPanel * {
@@ -1097,6 +1100,8 @@
             overflow: auto;
             min-width: 400px;
             min-height: 400px;
+            max-width: 90vw;
+            max-height: 90vh;
             border-radius: 8px;
         }
 
