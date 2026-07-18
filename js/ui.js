@@ -149,12 +149,20 @@ function initDraggable() {
         }
 
         function dragStart(e) {
+            // Only the left mouse button starts a drag (touchstart has no button).
+            if (e.type === 'mousedown' && e.button !== 0) return;
+
             const point = getPoint(e);
             initialX = point.x - xOffset;
             initialY = point.y - yOffset;
 
             if (e.target === header) {
                 isDragging = true;
+                // While dragging, stop the JSmol viewer / 2D editor from capturing
+                // mouse events. They handle (and swallow) mouseup, so a release over
+                // them never reaches our document handler — which would leave the
+                // drag "stuck" and the panel following the mouse afterwards.
+                document.body.classList.add('dragging-panel');
                 // Prevent the page from scrolling while dragging on touch.
                 if (e.type === 'touchstart') {
                     e.preventDefault();
@@ -163,18 +171,34 @@ function initDraggable() {
         }
 
         function drag(e) {
-            if (isDragging) {
-                e.preventDefault();
-                const point = getPoint(e);
-                const c = clampToViewport(point.x - initialX, point.y - initialY);
-                apply(c.x, c.y);
+            if (!isDragging) return;
+
+            // Safety net: a mousemove with no button held means the button was
+            // released somewhere we couldn't see the mouseup (e.g. swallowed by the
+            // viewer, or outside the window). Treat it as the end of the drag rather
+            // than moving the panel. (touchmove has no `buttons`; touch ends cleanly
+            // via touchend/touchcancel.)
+            if (e.type === 'mousemove' && e.buttons === 0) {
+                dragEnd();
+                return;
             }
+
+            e.preventDefault();
+            const point = getPoint(e);
+            const c = clampToViewport(point.x - initialX, point.y - initialY);
+            apply(c.x, c.y);
         }
 
-        function dragEnd() {
+        function dragEnd(e) {
+            // Ignore releases of a non-left mouse button, so pressing/releasing
+            // another button mid-drag doesn't abort an in-progress left drag.
+            // touchend/touchcancel and the internal buttons===0 call pass no mouse
+            // button, so they still end the drag.
+            if (e && e.type === 'mouseup' && e.button !== 0) return;
             initialX = currentX;
             initialY = currentY;
             isDragging = false;
+            document.body.classList.remove('dragging-panel');
         }
 
         draggables.push({ clampIntoView });

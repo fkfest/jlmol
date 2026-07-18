@@ -1319,6 +1319,15 @@
             }
         }
 
+        /* While a panel is being dragged (js/ui.js adds this class to <body>),
+           don't let the JSmol viewer or 2D editor capture mouse events. They
+           swallow mouseup, so a release over them would otherwise never reach the
+           document handler and the drag would get stuck to the cursor. */
+        body.dragging-panel #viewer,
+        body.dragging-panel #jsmeContainer {
+            pointer-events: none;
+        }
+
         /* ---- Update-available dialog (js/updater.js) ---- */
         #updateOverlay {
             position: fixed;
