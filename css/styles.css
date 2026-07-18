@@ -116,6 +116,8 @@
             overflow: auto;
             min-width: 200px;
             min-height: 200px;
+            max-width: 90vw;
+            max-height: 90vh;
         }
         #orbital-header {
             cursor: move;
@@ -126,6 +128,8 @@
             justify-content: space-between;
             align-items: center;
             border-bottom: 1px solid #ccc;
+            -webkit-user-select: none;
+            user-select: none;
         }
         #orbital-header h3 {
             margin: 0;
@@ -528,6 +532,7 @@
             overflow-y: auto;
             min-width: 250px; /* Reduced from 300px */
             min-height: 300px; /* Reduced from 400px */
+            max-width: 90vw;
             max-height: 90vh;
         }
         #elemcoPanel * {
@@ -1097,6 +1102,8 @@
             overflow: auto;
             min-width: 400px;
             min-height: 400px;
+            max-width: 90vw;
+            max-height: 90vh;
             border-radius: 8px;
         }
 
@@ -1312,6 +1319,15 @@
                 overflow-y: visible;
                 transform-origin: top left;
             }
+        }
+
+        /* While a panel is being dragged (js/ui.js adds this class to <body>),
+           don't let the JSmol viewer or 2D editor capture mouse events. They
+           swallow mouseup, so a release over them would otherwise never reach the
+           document handler and the drag would get stuck to the cursor. */
+        body.dragging-panel #viewer,
+        body.dragging-panel #jsmeContainer {
+            pointer-events: none;
         }
 
         /* ---- Update-available dialog (js/updater.js) ---- */
