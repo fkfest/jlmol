@@ -7,9 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.1] - 2026-07-18
+
 ### Added
 
 - Update checker (desktop app): jlmol now checks GitHub for a newer release and, if one is available, shows a dialog with the new version and its release notes and asks whether to update. Choosing "Download update" opens the appropriate installer for your OS (or the release page) in your browser to install manually; "Later" defers until next launch and "Skip this version" suppresses reminders for that version. Checks run quietly once on startup (only prompting when an update exists) and can be triggered any time from **Settings → General → Check for Updates Now**. The automatic startup check can be turned off with "Automatically check for updates on startup" in the same section. The feature is desktop-only (the browser version is always up to date).
+- Highlight of selected atoms in the XYZ text editor: when editing coordinates in the XYZ editor's text mode, the lines belonging to currently selected atoms are tinted via a highlight overlay behind the textarea, so they are easy to find and edit. The overlay updates live as atoms are selected in the 3D view or the row view, and entering edit mode no longer clears the selection.
+- Touch support for the floating panels: the draggable pop-up panels (XYZ editor, orbitals, ElemCo, preferences, xtb) can now be moved with touch on mobile and tablet devices, not just with a mouse.
+
+### Changed
+
+- Floating panels are much easier to position and resize: drag from anywhere on the title bar (not just the slivers around the title); the header is kept on-screen so a panel can never be dragged out of reach; double-click a header to reset the panel to its default position and size; and each panel is capped to the visible area — sized to the space to its right and below rather than a fixed fraction of the window — so its resize handle always stays reachable.
+- Aligned the in-app g-xTB messages (xtb panel note, Settings descriptions, browser-mode message, and failure hints) and the documentation with the corrected setup: the g-xTB distribution from [grimme-lab/g-xtb](https://github.com/grimme-lab/g-xtb) bundles the parameters, so you only download and extract it and put its `xtb` binary on `PATH` (or set the full path in Settings) — no separate xtb installation or parameter-file download is required. WSL examples now use the login-shell form (`wsl --shell-type login xtb`) so the environment and `PATH` are picked up.
+
+### Fixed
+
+- Panels no longer stick to the cursor after a drag when the mouse button is released over the 3D viewer: the release could be swallowed by the JSmol canvas, leaving the drag active so the panel kept following the mouse. Releasing over the viewer now reliably ends the drag.
+- The controls sidebar no longer clips on small or mobile screens: it scrolls vertically when taller than the window and stacks into a single scrollable column on narrow screens, and the zoom "Reset" button no longer overflows.
 
 ## [1.4.0] - 2026-05-31
 
