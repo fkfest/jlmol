@@ -1,8 +1,9 @@
 // Make editor panel draggable
 function initDraggable() {
     // How far the header must stay inside the window so it's always grabbable.
-    const EDGE = 8;            // min gap kept between the header and the top edge
+    const EDGE = 8;            // min gap kept between a panel and the window edges
     const MIN_VISIBLE_X = 60;  // min px of the header kept reachable horizontally
+    const MIN_PANEL = 120;     // never cap a panel smaller than this
 
     // Every panel we've wired up, so window resizes can re-clamp them all.
     const draggables = [];
@@ -34,6 +35,19 @@ function initDraggable() {
         header.addEventListener('dblclick', (e) => {
             if (e.target === header) resetPanel();
         });
+
+        // Panels are opened by other modules simply setting display:block. Watch
+        // for that so the size limit is applied as soon as a panel is shown, not
+        // only after the first drag. Guarded on the display value so our own
+        // style writes (transform / max-*) don't retrigger it.
+        let lastDisplay = panel.style.display;
+        new MutationObserver(() => {
+            const display = panel.style.display;
+            if (display !== lastDisplay) {
+                lastDisplay = display;
+                if (display !== 'none') applySizeLimit();
+            }
+        }).observe(panel, { attributes: true, attributeFilter: ['style'] });
 
         // Read the pointer position from either a mouse or a touch event.
         function getPoint(e) {
@@ -71,12 +85,48 @@ function initDraggable() {
             };
         }
 
+        // Padding + border around the content box. max-width/height apply to the
+        // content box under the default box-sizing: content-box, so we subtract
+        // this chrome to keep the panel's outer edge (where the resize handle is)
+        // at the intended margin. Measured once — it doesn't change.
+        let chromeW = null;
+        let chromeH = null;
+        function measureChrome() {
+            const cs = getComputedStyle(panel);
+            const px = (v) => parseFloat(v) || 0;
+            if (cs.boxSizing === 'border-box') {
+                chromeW = 0;
+                chromeH = 0;
+                return;
+            }
+            chromeW = px(cs.paddingLeft) + px(cs.paddingRight)
+                + px(cs.borderLeftWidth) + px(cs.borderRightWidth);
+            chromeH = px(cs.paddingTop) + px(cs.paddingBottom)
+                + px(cs.borderTopWidth) + px(cs.borderBottomWidth);
+        }
+
+        // Let the panel grow to fill the space right of / below where it now sits,
+        // leaving only a small margin so the resize handle stays on screen. Using
+        // the panel's live position (not a fixed 90vh/vw) means it neither wastes
+        // visible space when near an edge nor lets the bottom-right handle run off
+        // the screen when positioned lower down. Recomputed on move/resize/show.
+        function applySizeLimit() {
+            const rect = panel.getBoundingClientRect();
+            if (rect.width === 0 && rect.height === 0) return; // not visible
+            if (chromeW === null) measureChrome();
+            const maxW = Math.max(MIN_PANEL, window.innerWidth - rect.left - EDGE - chromeW);
+            const maxH = Math.max(MIN_PANEL, window.innerHeight - rect.top - EDGE - chromeH);
+            panel.style.maxWidth = maxW + 'px';
+            panel.style.maxHeight = maxH + 'px';
+        }
+
         function apply(x, y) {
             currentX = x;
             currentY = y;
             xOffset = x;
             yOffset = y;
             panel.style.transform = `translate(${x}px, ${y}px)`;
+            applySizeLimit();
         }
 
         // Restore the panel's default position and size (clearing the inline
