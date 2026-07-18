@@ -1,6 +1,15 @@
 // Make editor panel draggable
 function initDraggable() {
+    // How far the header must stay inside the window so it's always grabbable.
+    const EDGE = 8;            // min gap kept between the header and the top edge
+    const MIN_VISIBLE_X = 60;  // min px of the header kept reachable horizontally
+
+    // Every panel we've wired up, so window resizes can re-clamp them all.
+    const draggables = [];
+
     function makeDraggable(panel, header) {
+        if (!panel || !header) return;
+
         let isDragging = false;
         let currentX;
         let currentY;
@@ -19,12 +28,68 @@ function initDraggable() {
         document.addEventListener('touchend', dragEnd);
         document.addEventListener('touchcancel', dragEnd);
 
+        // Double-clicking the header snaps the panel back to its default spot —
+        // a quick escape hatch if it's been dragged somewhere awkward.
+        header.addEventListener('dblclick', (e) => {
+            if (e.target === header) resetPosition();
+        });
+
         // Read the pointer position from either a mouse or a touch event.
         function getPoint(e) {
             if (e.touches && e.touches.length) {
                 return { x: e.touches[0].clientX, y: e.touches[0].clientY };
             }
             return { x: e.clientX, y: e.clientY };
+        }
+
+        // Constrain a candidate translate so the header (the only drag handle)
+        // always stays reachable: fully on screen vertically, and with at least
+        // MIN_VISIBLE_X px within the window horizontally. Without this a panel
+        // could be dragged past the top edge and become impossible to grab back.
+        function clampToViewport(rawX, rawY) {
+            const rect = header.getBoundingClientRect();
+            const winW = window.innerWidth;
+            const winH = window.innerHeight;
+
+            // Where the header would land if we applied (rawX, rawY).
+            const predLeft = rect.left + (rawX - xOffset);
+            const predTop = rect.top + (rawY - yOffset);
+
+            const minLeft = MIN_VISIBLE_X - rect.width;
+            const maxLeft = winW - MIN_VISIBLE_X;
+            const minTop = EDGE;
+            const maxTop = Math.max(EDGE, winH - rect.height - EDGE);
+
+            const clampedLeft = Math.min(Math.max(predLeft, minLeft), maxLeft);
+            const clampedTop = Math.min(Math.max(predTop, minTop), maxTop);
+
+            // Convert the clamped screen position back into a translate value.
+            return {
+                x: xOffset + (clampedLeft - rect.left),
+                y: yOffset + (clampedTop - rect.top),
+            };
+        }
+
+        function apply(x, y) {
+            currentX = x;
+            currentY = y;
+            xOffset = x;
+            yOffset = y;
+            panel.style.transform = `translate(${x}px, ${y}px)`;
+        }
+
+        function resetPosition() {
+            apply(0, 0);
+        }
+
+        // Nudge a visible panel back into view (e.g. after the window shrinks).
+        function clampIntoView() {
+            const rect = header.getBoundingClientRect();
+            // Skip panels that aren't currently rendered (getBoundingClientRect
+            // returns zeros), otherwise we'd shove hidden panels around.
+            if (rect.width === 0 && rect.height === 0) return;
+            const c = clampToViewport(xOffset, yOffset);
+            apply(c.x, c.y);
         }
 
         function dragStart(e) {
@@ -45,12 +110,8 @@ function initDraggable() {
             if (isDragging) {
                 e.preventDefault();
                 const point = getPoint(e);
-                currentX = point.x - initialX;
-                currentY = point.y - initialY;
-                xOffset = currentX;
-                yOffset = currentY;
-
-                panel.style.transform = `translate(${currentX}px, ${currentY}px)`;
+                const c = clampToViewport(point.x - initialX, point.y - initialY);
+                apply(c.x, c.y);
             }
         }
 
@@ -59,6 +120,8 @@ function initDraggable() {
             initialY = currentY;
             isDragging = false;
         }
+
+        draggables.push({ clampIntoView });
     }
 
     // Make all panels draggable
@@ -82,6 +145,12 @@ function initDraggable() {
         document.getElementById('xtbPanel'),
         document.getElementById('xtb-header')
     );
+
+    // If the window is resized smaller, pull any now-off-screen panel back so its
+    // header stays reachable.
+    window.addEventListener('resize', () => {
+        draggables.forEach(d => d.clampIntoView());
+    });
 }
 
 // Add page zoom functionality
