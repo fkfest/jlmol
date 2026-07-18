@@ -1313,3 +1313,126 @@
                 transform-origin: top left;
             }
         }
+
+        /* ---- Update-available dialog (js/updater.js) ---- */
+        #updateOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.45);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100000;
+        }
+
+        #updateDialog {
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+            width: 460px;
+            max-width: 90vw;
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .update-dialog-header {
+            padding: 12px 18px;
+            background: linear-gradient(to bottom, #f8f8f8, #e8e8e8);
+            border-bottom: 1px solid #ccc;
+        }
+
+        .update-dialog-header h3 {
+            margin: 0;
+            font-size: 16px;
+            color: #333;
+        }
+
+        .update-dialog-body {
+            padding: 16px 18px;
+            overflow-y: auto;
+        }
+
+        .update-summary {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            color: #333;
+        }
+
+        .update-notes-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 4px;
+        }
+
+        .update-notes {
+            margin: 0 0 12px 0;
+            padding: 10px;
+            background: #f5f5f5;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            font-size: 12px;
+            line-height: 1.4;
+            color: #333;
+            white-space: pre-wrap;
+            word-break: break-word;
+            max-height: 220px;
+            overflow-y: auto;
+        }
+
+        .update-releasepage-link {
+            font-size: 12px;
+            color: #2e7d32;
+            text-decoration: none;
+        }
+
+        .update-releasepage-link:hover {
+            text-decoration: underline;
+        }
+
+        .update-dialog-footer {
+            padding: 12px 18px;
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+
+        .update-dialog-footer button {
+            padding: 8px 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background: #f5f5f5;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .update-download-button {
+            background: #4CAF50 !important;
+            color: white;
+            border-color: #45a049 !important;
+        }
+
+        .update-download-button:hover {
+            background: #45a049 !important;
+            transform: translateY(-1px);
+        }
+
+        .update-later-button:hover,
+        .update-skip-button:hover {
+            background: #e0e0e0;
+            transform: translateY(-1px);
+        }
+
+        .update-skip-button {
+            margin-right: auto;
+            color: #666;
+        }

@@ -394,6 +394,18 @@ Click the **Settings** button next to the Console button in the main interface t
 #### Application Settings
 
 - **Julia Command**: Configure the command used to run Julia for ElemCo.jl calculations
+- **Automatically check for updates on startup**: When enabled (default), the desktop app quietly checks GitHub for a newer release each time it starts and notifies you if one is available. Use **Check for Updates Now** to check on demand.
+
+### Checking for Updates
+
+The desktop app can tell you when a newer version of jlmol has been released:
+
+- On startup it quietly asks GitHub for the latest release and, only if a newer version exists, shows a dialog with the new version number and release notes.
+- You can check any time from **Settings → General → Check for Updates Now**.
+- If an update is available, choose **Download update** to open the right installer for your operating system (or the [releases page](https://github.com/fkfest/jlmol/releases/latest)) in your browser and install it manually, **Later** to be reminded next launch, or **Skip this version** to stop reminders for that release.
+- Automatic checks can be disabled with **Automatically check for updates on startup**.
+
+Updates are handled manually (jlmol never installs anything on its own), and update checks apply only to the desktop app — the [browser version](https://app.jlmol.com) is always up to date.
 
 ### Julia Command Configuration
 

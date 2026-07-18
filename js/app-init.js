@@ -45,6 +45,9 @@ function initializeApplication() {
                 updateInputPlaceholder();
                 setupDatabaseInputHandlers();
                 initPreferences();
+                if (typeof initUpdateChecker === 'function') {
+                    initUpdateChecker();
+                }
                 console.log('Application initialized successfully');
             } catch (error) {
                 console.warn('Error during initialization:', error);

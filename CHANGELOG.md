@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Update checker (desktop app): jlmol now checks GitHub for a newer release and, if one is available, shows a dialog with the new version and its release notes and asks whether to update. Choosing "Download update" opens the appropriate installer for your OS (or the release page) in your browser to install manually; "Later" defers until next launch and "Skip this version" suppresses reminders for that version. Checks run quietly once on startup (only prompting when an update exists) and can be triggered any time from **Settings → General → Check for Updates Now**. The automatic startup check can be turned off with "Automatically check for updates on startup" in the same section. The feature is desktop-only (the browser version is always up to date).
+
 ## [1.4.0] - 2026-05-31
 
 ### Added

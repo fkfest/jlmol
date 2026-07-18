@@ -8,6 +8,7 @@ const DEFAULT_PREFERENCES = {
     confirmOverwrite: true,
     exportFormat: 'png',
     exportTransparentBackground: true,
+    checkUpdatesOnStartup: true,
     
     // Display settings
     autoSpin: false,
@@ -99,8 +100,15 @@ function loadPreferencesIntoUI() {
     
     const exportTransparentCheckbox = document.getElementById('pref-export-transparent');
     if (exportTransparentCheckbox) exportTransparentCheckbox.checked = prefs.exportTransparentBackground !== false;
-    
-    // Display settings  
+
+    const checkUpdatesCheckbox = document.getElementById('pref-check-updates');
+    if (checkUpdatesCheckbox) checkUpdatesCheckbox.checked = prefs.checkUpdatesOnStartup !== false;
+
+    // Clear any stale "Check for Updates" result from a previous time the panel was open.
+    const updateResult = document.getElementById('update-check-result');
+    if (updateResult) updateResult.textContent = '';
+
+    // Display settings
     const autoSpinCheckbox = document.getElementById('pref-auto-spin');
     if (autoSpinCheckbox) autoSpinCheckbox.checked = prefs.autoSpin || false;
     
@@ -227,7 +235,10 @@ function savePreferencesFromUI() {
     
     const exportTransparentCheckbox = document.getElementById('pref-export-transparent');
     if (exportTransparentCheckbox) prefs.exportTransparentBackground = exportTransparentCheckbox.checked;
-    
+
+    const checkUpdatesCheckbox = document.getElementById('pref-check-updates');
+    if (checkUpdatesCheckbox) prefs.checkUpdatesOnStartup = checkUpdatesCheckbox.checked;
+
     // Display settings
     const autoSpinCheckbox = document.getElementById('pref-auto-spin');
     if (autoSpinCheckbox) prefs.autoSpin = autoSpinCheckbox.checked;
