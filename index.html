@@ -48,6 +48,7 @@
     <script type="text/javascript" src="js/xtb.js"></script>
     <script type="text/javascript" src="js/app-init.js"></script>
     <script type="text/javascript" src="js/preferences.js"></script>
+    <script type="text/javascript" src="js/updater.js"></script>
 </head>
 <body>
     <div id="container">
@@ -357,7 +358,22 @@
                         <div class="preference-description">Display helpful tooltips when hovering over buttons and controls</div>
                     </div>
                 </div>
-                
+
+                <div class="preference-section">
+                    <h4>Updates</h4>
+                    <div class="preference-item">
+                        <label class="preference-checkbox-label">
+                            <input type="checkbox" id="pref-check-updates">
+                            <span>Automatically check for updates on startup</span>
+                        </label>
+                        <div class="preference-description">Quietly check GitHub for a newer release when jlmol starts, and notify you if one is available</div>
+                    </div>
+                    <div class="preference-item">
+                        <button type="button" class="preference-reset-button" onclick="checkForUpdates({ silent: false })" title="Check GitHub for a newer version of jlmol">Check for Updates Now</button>
+                        <div id="update-check-result" class="preference-description" style="margin-top: 6px;"></div>
+                    </div>
+                </div>
+
                 <div class="preference-section">
                     <h4>File Handling</h4>
                     <div class="preference-item">
