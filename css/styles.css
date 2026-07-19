@@ -935,9 +935,10 @@
             border: 1px solid #ccc;
             border-radius: 4px;
             box-sizing: border-box;
-            overflow-x: hidden;
-            word-wrap: break-word;
-            white-space: pre-wrap;
+            /* No overflow-x:hidden / white-space:pre-wrap / word-wrap here: this
+               textarea is wrapped by the Julia highlight overlay (.elemco-code-input),
+               which needs white-space:pre + overflow:auto to scroll horizontally.
+               Those legacy declarations wrapped/clipped the long option line. */
         }
 
         .preview-note {
@@ -1836,6 +1837,15 @@
             color: #333;
         }
         .elemco-code-highlights {
+            /* Size to the widest line (not the container) so the scrollbar
+               compensation padding added in elcWireHighlight actually extends
+               the backdrop's scroll width. As a plain block it clamped to the
+               container width and absorbed the padding, so when the textarea
+               grew a vertical scrollbar (shrinking its client width) the overlay
+               could not scroll as far right as the caret and the last options
+               were hidden. */
+            width: max-content;
+            min-width: 100%;
             min-height: 100%;
         }
         .elemco-code-highlights .j-com { color: #8c8c8c; font-style: italic; }
