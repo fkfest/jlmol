@@ -54,18 +54,17 @@ Download: [Latest Release Executables](https://github.com/fkfest/jlmol/releases/
   - Atom selection mode
   - Save edited structures
   - Draggable and resizable editor window
-- **NEW**: Two-way atom selection — click atoms in the 3D structure or the XYZ viewer to select/deselect them; the selection is mirrored in both views and can be inserted into the ElemCo.jl input editor as an atom-index list with one click
+- Two-way atom selection — click atoms in the 3D structure or the XYZ viewer to select/deselect them; the selection is mirrored in both views and can be inserted into the ElemCo.jl input editor as an atom-index list with one click
 
 ### ElemCo.jl Input Generation and Calculation
 
-- Built-in support for generating ElemCo.jl input files
-- Direct conversion of molecular structures to ElemCo.jl input format
-- Support for common quantum chemistry methods (HF, MP2, CCSD, etc.)
-- Basis set selection
-- Density fitting toggle for supported methods
-- **NEW**: Integrated calculation runner with customizable Julia command support
-- **NEW**: Windows Subsystem for Linux (WSL) support for running calculations
-- **NEW**: User preferences system for persistent settings
+- Method-driven "building block" input builder: assemble a calculation from an ordered list of steps (reference, correlation method, FCIDUMP, export, or any ElemCo.jl macro), reorder and collapse them, and watch the generated Julia update live
+- Full options browser: search and set any ElemCo.jl option, with defaults pre-filled and descriptions on hover; only the options you change are written to the input
+- Composable method selection covering HF, MP2, the coupled-cluster and distinguishable-cluster families, ΛCCSD(T), quasi-variational methods, excited states (EOM), FCI and CIPHI, with spin (U/R) and other prefixes
+- FCIDUMP mode for calculations that read integrals from a file instead of a geometry + basis
+- Julia syntax highlighting in the input and custom-code editors
+- Integrated calculation runner with customizable Julia command and Windows Subsystem for Linux (WSL) support
+- User preferences system for persistent settings
 
 ## Troubleshooting
 
@@ -86,8 +85,8 @@ For troubleshooting guides and solutions to common issues, see [Troubleshooting.
   - Native desktop application experience
   - Multi-format file support
   - Structure optimization capabilities
-  - **NEW**: User preferences system with persistent settings
-  - **NEW**: ElemCo.jl calculation runner with WSL support
+  - User preferences system with persistent settings
+  - ElemCo.jl calculation runner with WSL support
 
 ## Installation
 
@@ -300,41 +299,35 @@ The application includes built-in support for generating ElemCo.jl input files f
 
 ### ElemCo.jl Features
 
-- Direct conversion of molecular structures to ElemCo.jl input format
-- Support for common quantum chemistry methods:
-  - Hartree-Fock (HF)
-  - Second-order Møller-Plesset perturbation theory (MP2)
-  - Distinguishable Cluster Singles and Doubles (DCSD)
-  - Coupled Cluster with Singles, Doubles, and perturbative Triples (CCSD(T))
-  - Coupled Cluster with Singles, Doubles, and Triples (CCSDT)
-  - Distinguishable Cluster CCSDT (DC-CCSDT)
-  - SVD-Distinguishable Cluster methods (SVD-DC-CCSDT and SVD-DCSD)
+- A method-driven "building block" input builder — a calculation is an ordered list of steps (reference, correlation method, FCIDUMP, export, or any ElemCo.jl macro) that you add, remove, reorder (buttons or drag), and collapse; the generated Julia updates live
+- A wide range of methods, selected from grouped menus with composable prefixes:
+  - Hartree-Fock references (DF-HF / DF-UHF) and Møller-Plesset (MP2)
+  - Coupled cluster: CCD, CCSD, CCSD(T), ΛCCSD(T), CCSDT
+  - Distinguishable cluster: DCD, DCSD, DC-CCSDT
+  - Quasi-variational: QV-CCD, QV-DCD, OQV-CCD, OQV-DCD
+  - Factorized (SVD): SVD-DCSD, SVD-DC-CCSDT
+  - Excited states (EOM-CCSD, EOM-DCSD), full CI (FCI) and selected CI (CIPHI)
+  - Spin variants via a selector (closed-shell, unrestricted `U`, restricted-open `R`), composed into the ElemCo.jl method string (e.g. `UCCSD`, `EOM-UCCSD`, `ΛCCSD(T)`)
+- Works from a molecular structure (geometry + basis) or from an FCIDUMP integrals file
 
 ### Available Options
 
-- Basis Sets:
-  - Correlation-consistent basis sets (cc-pVDZ, cc-pVTZ)
-  - Augmented correlation-consistent basis sets (aug-cc-pVDZ, aug-cc-pVTZ)
-  - Automatic or manual selection of auxiliary basis sets for:
-    - JK-fitting (cc-pVXZ-jkfit, def2-universal-jkfit)
-    - MP2-fitting (cc-pVXZ-mpfit, aug-cc-pVXZ-mpfit)
-- Density Fitting (DF) toggle for supported methods
-- Charge and multiplicity specification
-- Direct text editing of generated input
-- **Insert Selected Atoms**: insert the atoms currently selected in the structure/XYZ viewer as a 1-based index list (e.g. `[1, 3, 5]`) at the cursor (for dummy atoms, active regions, etc.)
+- Basis sets: correlation-consistent (cc-pVDZ, cc-pVTZ) and augmented (aug-cc-pVDZ, aug-cc-pVTZ) sets, with automatic or manual auxiliary basis selection for JK-fitting and MP2-fitting
+- Every ElemCo.jl calculation option, in a searchable, grouped browser — each pre-filled with its default and its description on hover, with per-option reset. Options set on a step are emitted as a local `@set` block; global options are emitted at the top level. Only values changed from their ElemCo.jl defaults are written, keeping the input minimal
+- Charge and spin (`ms2`) specification
+- A **FCIDUMP** mode (Molecule / FCIDUMP switch): reads integrals from a file (`fcidump = "…"`) instead of a geometry + basis, with no reference step; selected automatically when no molecule is loaded
+- A **Macro** step for any macro exported by ElemCo.jl, with its signature and docstring shown as help and a local options block where the macro supports one
+- Direct text editing of the generated input, with Julia syntax highlighting
+- **Insert Selected Atoms**: insert the atoms currently selected in the structure/XYZ viewer as a 1-based index list (e.g. `[1, 3, 5]`) at the cursor of whichever field you're editing (for dummy atoms, active regions, etc.)
 
 ### Using ElemCo.jl Integration
 
-1. Load or create a molecular structure in the viewer
+1. Load a molecular structure in the viewer (or switch the "System & basis" card to **FCIDUMP** mode to work from an integrals file)
 2. Click the ElemCo.jl logo button in the control panel
-3. Select desired calculation options:
-   - Choose quantum chemistry method
-   - Select basis sets
-   - Toggle density fitting if desired
-   - Set charge and multiplicity if needed
-4. Review the generated input in the text editor
-5. Copy the input directly to clipboard
-6. Use the input with ElemCo.jl for calculations
+3. In "System & basis", pick the basis set(s) and set the charge/spin
+4. Build the calculation from steps: for a molecule a DF-HF reference is added automatically; choose the correlation method (and spin) in the **Method** block, and add further Method, Export, Macro, or Custom steps as needed (drag the grip to reorder, click a step's badge to collapse it)
+5. Optionally open a step's **Options** to set any ElemCo.jl option (only changed values are written)
+6. Review the generated Julia in the editor, then copy it to the clipboard or run it directly (see below)
 
 The integration provides a convenient way to prepare quantum chemistry calculations while visualizing the molecular structure. For more information about ElemCo.jl and its capabilities, visit [elem.co.il](https://elem.co.il).
 
@@ -344,7 +337,7 @@ jlmol now includes an integrated calculation runner that can execute ElemCo.jl c
 
 1. **Generate ElemCo.jl Input**: Use the ElemCo.jl integration to create input files
 2. **Configure Julia Command**: Set up your Julia executable path in Settings (see User Preferences below)
-3. **Run Calculation**: Click "Run ElemCo.jl" to execute the calculation
+3. **Run Calculation**: Click "Run Calculation" to execute the calculation
 4. **View Results**: Monitor progress and view calculation output in real-time
 
 #### WSL (Windows Subsystem for Linux) Support
@@ -387,9 +380,9 @@ Click the **Settings** button next to the Console button in the main interface t
 
 #### ElemCo.jl Defaults
 
-- **Default Method**: Set your preferred quantum chemistry method (HF, MP2, CCSD(T), etc.)
-- **Default Basis Set**: Choose your standard basis set for calculations
-- **Density Fitting**: Enable/disable density fitting by default
+- **Default Method (molecule)**: the correlated method used for molecular (geometry + basis) calculations (default CCSD(T)); a DF-HF reference step is added automatically
+- **Default Method (FCIDUMP)**: the correlated method used for FCIDUMP calculations (default ΛCCSD(T)); no reference step is added
+- **Default Basis Set**: your standard AO basis set for molecular calculations
 
 #### Application Settings
 
