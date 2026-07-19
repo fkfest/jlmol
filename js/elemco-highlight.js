@@ -35,7 +35,15 @@ function elcWireHighlight(ta, backdrop, highlights) {
     const sync = () => { backdrop.scrollTop = ta.scrollTop; backdrop.scrollLeft = ta.scrollLeft; };
     ta.addEventListener('input', () => { refresh(); sync(); });
     ta.addEventListener('scroll', sync);
-    ta._elcHighlight = () => { refresh(); sync(); };
+    // After a programmatic value change (e.g. generating the input) the textarea's
+    // scroll position settles on a later frame, so an immediate sync can latch a
+    // stale scrollTop and the overlay drifts. Re-sync on the next frame(s) too.
+    ta._elcHighlight = () => {
+        refresh();
+        sync();
+        if (typeof requestAnimationFrame === 'function') requestAnimationFrame(sync);
+        setTimeout(sync, 0);
+    };
     refresh();
 }
 
