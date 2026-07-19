@@ -308,11 +308,13 @@ function elcEl(tag, props, children) {
 // --- state init / reset -----------------------------------------------------
 function elcMapDefaultMethod(m) {
     if (!m || m === 'HF') return null;
-    const map = { MP2: 'mp2', DCSD: 'dcsd', 'CCSD(T)': 'ccsd(t)', CCSD: 'ccsd' };
+    const map = { MP2: 'mp2', DCSD: 'dcsd', 'CCSD(T)': 'ccsd_t', CCSD: 'ccsd' };
     return map[m] || 'dcsd';
 }
 function makeMethodStep(category, methodId) {
-    return { id: 's' + (elcStepSeq++), kind: 'method', category, method: methodId, options: {}, _optsOpen: false };
+    const step = { id: 's' + (elcStepSeq++), kind: 'method', category, method: methodId, options: {}, _optsOpen: false };
+    if (category === 'correlation') { step.spin = ''; step.custom = ''; }
+    return step;
 }
 function initElemCoState() {
     if (elemcoState && elemcoState._init) return;
@@ -499,14 +501,29 @@ function renderStepCard(step) {
 
     head.appendChild(elcEl('span', { class: 'elemco-badge' }, elcStepBadge(step)));
 
-    if (step.kind === 'method') {
+    if (step.kind === 'method' && step.category === 'reference') {
         const sel = elcEl('select', { class: 'elemco-step-method' });
-        (ELEMCO_METHODS[step.category] || []).forEach((m) => sel.appendChild(elcEl('option', { value: m.id }, m.label)));
+        (ELEMCO_METHODS.reference || []).forEach((m) => sel.appendChild(elcEl('option', { value: m.id }, m.label)));
         sel.value = step.method;
         sel.addEventListener('change', () => {
             step.method = sel.value;
             updateElemCoInput();
             if (step._optsOpen) renderStepOptions(step);
+        });
+        head.appendChild(sel);
+    } else if (step.kind === 'method' && step.category === 'correlation') {
+        const sel = elcEl('select', { class: 'elemco-step-method' });
+        ELEMCO_CORRELATION_GROUPS.forEach((g) => {
+            const og = elcEl('optgroup', { label: g.group });
+            g.methods.forEach((m) => og.appendChild(elcEl('option', { value: m.id }, m.label)));
+            sel.appendChild(og);
+        });
+        sel.appendChild(elcEl('option', { value: 'custom' }, 'Custom…'));
+        sel.value = step.method;
+        sel.addEventListener('change', () => {
+            step.method = sel.value;
+            renderElemCoSteps(); // spin selector / readout / option groups depend on the base
+            updateElemCoInput();
         });
         head.appendChild(sel);
     } else if (step.kind === 'export') {
@@ -555,6 +572,7 @@ function renderStepCard(step) {
     card.appendChild(head);
 
     if (step.kind === 'method') {
+        if (step.category === 'correlation') card.appendChild(renderCorrelationDetail(step));
         const chipsEl = elcEl('div', { class: 'elemco-chips' });
         optsMount = elcEl('div', { class: 'elemco-step-options' });
         optsMount.style.display = step._optsOpen ? 'block' : 'none';
@@ -572,6 +590,57 @@ function renderStepCard(step) {
         card.appendChild(codeMount);
     }
     return card;
+}
+// The ElemCo.jl call a method step emits (macro + optional method-string arg),
+// without the local-options block. Used both for generation and the live readout.
+function elemcoStepHeadString(step) {
+    if (step.category === 'reference') {
+        const def = elemcoMethodDef('reference', step.method);
+        return def ? def.macro : '';
+    }
+    // correlation
+    let macro, methodStr;
+    if (step.method === 'custom') {
+        macro = '@cc';
+        methodStr = (step.custom || '').trim();
+    } else {
+        const def = elemcoCorrelationDef(step.method);
+        if (!def) return '';
+        macro = def.macro;
+        methodStr = elemcoComposeMethod(def, step.spin);
+    }
+    const takesArg = (macro === '@cc' || macro === '@dfcc');
+    return macro + (takesArg && methodStr ? ' ' + elcJuliaStringLiteral(methodStr) : '');
+}
+
+// The detail line under a correlation step's header: a spin selector (for methods
+// that support U/R) plus a live readout of the emitted call, or a free-text field
+// for the Custom… method.
+function renderCorrelationDetail(step) {
+    const detail = elcEl('div', { class: 'elemco-method-detail' });
+    if (step.method === 'custom') {
+        detail.appendChild(elcEl('span', { class: 'elemco-detail-label' }, 'method:'));
+        const inp = elcEl('input', { type: 'text', class: 'elemco-step-file', placeholder: 'e.g. UCCSD(T)', title: 'Method string passed to @cc' });
+        inp.value = step.custom || '';
+        inp.addEventListener('input', () => { step.custom = inp.value; updateElemCoInput(); });
+        detail.appendChild(inp);
+        return detail;
+    }
+    const def = elemcoCorrelationDef(step.method);
+    const readout = elcEl('span', { class: 'elemco-method-readout', title: 'Emitted ElemCo.jl call' }, elemcoStepHeadString(step));
+    if (def && def.spins) {
+        const spinSel = elcEl('select', { class: 'elemco-spin-select', title: 'Spin type (adds the U or R prefix)' });
+        (window.ELEMCO_SPINS || []).forEach((sp) => spinSel.appendChild(elcEl('option', { value: sp.id }, sp.label)));
+        spinSel.value = step.spin || '';
+        spinSel.addEventListener('change', () => {
+            step.spin = spinSel.value;
+            readout.textContent = elemcoStepHeadString(step);
+            updateElemCoInput();
+        });
+        detail.appendChild(spinSel);
+    }
+    detail.appendChild(readout);
+    return detail;
 }
 function renderStepOptions(step) {
     if (!step._optsMount || typeof renderOptionsBrowserInto !== 'function') return;
@@ -901,18 +970,23 @@ function updateElemCoInput() {
     function elcStepComment(step) {
         if (step.kind === 'export') return 'Export orbitals (Molden)';
         if (step.kind === 'custom') return (step.label || '').trim();
+        if (step.category === 'correlation') {
+            if (step.method === 'custom') return (step.custom || '').trim();
+            const def = elemcoCorrelationDef(step.method);
+            if (!def) return step.method;
+            return elemcoComposeMethod(def, step.spin) || def.label;
+        }
         const def = elemcoMethodDef(step.category, step.method);
         return def ? def.label : step.method;
     }
+    // The method name is emitted as a string literal (ElemCo.jl accepts `@cc "CCSD"`
+    // / `@dfcc "SVD-DCSD"`); bare forms like ccsd(t) or svd-dcsd would parse as a
+    // call / subtraction in Julia. Composition happens in elemcoStepHeadString.
     function elcStepEmit(step) {
         if (step.kind === 'export') return `@export_molden ${elcJuliaStringLiteral(step.filename || 'orbitals.molden')}`;
         if (step.kind === 'custom') return (step.code || '').replace(/\s+$/, '');
-        const def = elemcoMethodDef(step.category, step.method);
-        if (!def) return `# unknown method: ${step.method}`;
-        // Pass the method name as a string literal (ElemCo.jl accepts `@cc "CCSD"`
-        // / `@dfcc "SVD-DCSD"`). Bare forms like ccsd(t) or svd-dcsd would parse as
-        // a call / subtraction in Julia, so quoting is the unambiguous choice.
-        const head = def.macro + (def.arg ? ' "' + def.arg + '"' : '');
+        const head = elemcoStepHeadString(step);
+        if (!head) return `# unknown method: ${step.method}`;
         const lines = bagSetLines(step.options || {});
         if (lines.length === 0) return head;
         return head + ' begin\n' + lines.map((l) => '  ' + l).join('\n') + '\nend';

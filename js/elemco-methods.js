@@ -1,56 +1,108 @@
 // Curated ElemCo.jl method registry (hand-maintained).
 //
-// The per-option metadata in js/elemco-options.js is generated from ElemCo.jl's
-// options.jl, but the mapping of a user-facing *method* to the macro that runs
-// it — and which option groups are most relevant to that method — is editorial
-// and lives here. Each method knows the macro it emits, an optional method-name
-// argument, and the option groups surfaced first in its options browser (the
-// full set of 13 groups is always reachable via "show all groups").
+// This is deliberately shaped like machine-readable catalog data so it could
+// later be *generated* from an ElemCo.jl-side method catalog (the way
+// js/elemco-options.js is generated from options.jl) with no change to the UI.
 //
-// Macro facts are taken from ElemCo.jl src/ElemCo.jl (public @-macros):
-//   references : @dfhf (RHF), @dfuhf, @dfmcscf, @bohf, @bouhf
-//   correlation: @cc <method>, @dfcc <method>, @dfmp2, @fci, @ciphi
-// A method macro may be followed by a `begin ... end` block of local `@set`
-// lines; those options are automatically reset by ElemCo.jl after the call.
+// Model mirrors ElemCo.jl's ECMethod (src/infos/ecmethods.jl): a method name is
+// `[prefixes…] + core`, where `core` is theory+excitation (CCSD, CCSD(T), DCD,
+// DC-CCSDT, …) and prefixes are composable flags. U/R (spin) come from a separate
+// selector; the remaining prefixes (Λ, EOM-, SVD-, QV-, O, …) are part of a named
+// method. Prefixes are emitted in ElemCo's canonical order.
 
+// References (first step): the SCF wavefunction. These are macros, not method
+// strings (so no core/prefix composition).
 const ELEMCO_METHODS = {
-  // First step of a calculation: the reference wavefunction.
   reference: [
-    { id: 'dfhf',    label: 'DF-HF (RHF)',      macro: '@dfhf',    arg: null, groups: ['scf', 'int'] },
-    { id: 'dfuhf',   label: 'DF-UHF',           macro: '@dfuhf',   arg: null, groups: ['scf', 'int'] },
-    { id: 'dfmcscf', label: 'DF-MCSCF',         macro: '@dfmcscf', arg: null, groups: ['scf', 'wf'] },
-    { id: 'bohf',    label: 'BO-HF (FCIDUMP)',  macro: '@bohf',    arg: null, groups: ['scf'], advanced: true },
-    { id: 'bouhf',   label: 'BO-UHF (FCIDUMP)', macro: '@bouhf',   arg: null, groups: ['scf'], advanced: true },
-  ],
-  // Correlation / post-HF methods run on top of a reference.
-  correlation: [
-    { id: 'mp2',          label: 'MP2 (DF)',          macro: '@dfmp2', arg: null,           groups: ['cc'] },
-    { id: 'ccsd',         label: 'CCSD',              macro: '@cc',    arg: 'ccsd',          groups: ['cc'] },
-    { id: 'ccsd(t)',      label: 'CCSD(T)',           macro: '@cc',    arg: 'ccsd(t)',       groups: ['cc'] },
-    { id: 'dcsd',         label: 'DCSD',              macro: '@cc',    arg: 'dcsd',          groups: ['cc'] },
-    { id: 'ccsdt',        label: 'CCSDT',             macro: '@cc',    arg: 'ccsdt',         groups: ['cc'] },
-    { id: 'dc-ccsdt',     label: 'DC-CCSDT',          macro: '@cc',    arg: 'dc-ccsdt',      groups: ['cc'] },
-    { id: 'svd-dcsd',     label: 'SVD-DCSD (DF)',     macro: '@dfcc',  arg: 'svd-dcsd',      groups: ['cc'] },
-    { id: 'svd-dc-ccsdt', label: 'SVD-DC-CCSDT',      macro: '@cc',    arg: 'svd-dc-ccsdt',  groups: ['cc'] },
-    { id: 'fci',          label: 'FCI',               macro: '@fci',   arg: null,            groups: ['fci', 'davidson'] },
-    { id: 'ciphi',        label: 'CIPHI / SCI',       macro: '@ciphi', arg: null,            groups: ['ciphi'] },
+    { id: 'dfhf',    label: 'DF-HF (RHF)',      macro: '@dfhf',    groups: ['scf', 'int'] },
+    { id: 'dfuhf',   label: 'DF-UHF',           macro: '@dfuhf',   groups: ['scf', 'int'] },
+    { id: 'dfmcscf', label: 'DF-MCSCF',         macro: '@dfmcscf', groups: ['scf', 'wf'] },
+    { id: 'bohf',    label: 'BO-HF (FCIDUMP)',  macro: '@bohf',    groups: ['scf'], advanced: true },
+    { id: 'bouhf',   label: 'BO-UHF (FCIDUMP)', macro: '@bouhf',   groups: ['scf'], advanced: true },
   ],
 };
 
-// Option groups shown on the global "System & basis" card (apply to the whole
-// run, emitted as top-level @set). charge/ms2 have dedicated inputs, so they are
-// excluded from the wf group here to avoid duplication.
+// Canonical prefix order (ElemCo.jl Prefix4Methods). U/R are supplied by the spin
+// selector; the rest are baked into named methods below.
+const ELEMCO_PREFIX_ORDER = ['EOM-', 'SVD-', '2D-', 'FRS-', 'FRT-', 'Λ', 'U', 'R', 'O', 'QV-', 'SOS-'];
+
+// Spin type -> prefix. Closed-shell adds nothing.
+const ELEMCO_SPINS = [
+  { id: '',  label: 'Closed-shell' },
+  { id: 'U', label: 'Unrestricted (U)' },
+  { id: 'R', label: 'Restricted-open (R)' },
+];
+
+// Correlation methods, grouped for the dropdown. `core` = theory+excitation;
+// `prefixes` = the fixed flags that define this named method; `macro` = the macro
+// that runs it; `spins` = whether the U/R selector applies; `groups` = option
+// groups surfaced first. Emitted string = canonical(prefixes + spin) + core.
+const ELEMCO_CORRELATION_GROUPS = [
+  { group: 'Møller–Plesset', methods: [
+    { id: 'mp2', label: 'MP2', core: 'MP2', prefixes: [], macro: '@dfmp2', spins: false, groups: ['cc'] },
+  ] },
+  { group: 'Coupled cluster', methods: [
+    { id: 'ccd',           label: 'CCD',      core: 'CCD',     prefixes: [],    macro: '@cc', spins: true, groups: ['cc'] },
+    { id: 'ccsd',          label: 'CCSD',     core: 'CCSD',    prefixes: [],    macro: '@cc', spins: true, groups: ['cc'] },
+    { id: 'ccsd_t',        label: 'CCSD(T)',  core: 'CCSD(T)', prefixes: [],    macro: '@cc', spins: true, groups: ['cc'] },
+    { id: 'lambda_ccsd_t', label: 'ΛCCSD(T)', core: 'CCSD(T)', prefixes: ['Λ'], macro: '@cc', spins: true, groups: ['cc'] },
+    { id: 'ccsdt',         label: 'CCSDT',    core: 'CCSDT',   prefixes: [],    macro: '@cc', spins: true, groups: ['cc'] },
+  ] },
+  { group: 'Distinguishable cluster', methods: [
+    { id: 'dcd',      label: 'DCD',      core: 'DCD',      prefixes: [], macro: '@cc', spins: true, groups: ['cc'] },
+    { id: 'dcsd',     label: 'DCSD',     core: 'DCSD',     prefixes: [], macro: '@cc', spins: true, groups: ['cc'] },
+    { id: 'dc_ccsdt', label: 'DC-CCSDT', core: 'DC-CCSDT', prefixes: [], macro: '@cc', spins: true, groups: ['cc'] },
+  ] },
+  { group: 'Quasi-variational', methods: [
+    { id: 'qv_ccd',  label: 'QV-CCD',  core: 'CCD', prefixes: ['QV-'],      macro: '@cc', spins: true, groups: ['cc'] },
+    { id: 'qv_dcd',  label: 'QV-DCD',  core: 'DCD', prefixes: ['QV-'],      macro: '@cc', spins: true, groups: ['cc'] },
+    { id: 'oqv_ccd', label: 'OQV-CCD', core: 'CCD', prefixes: ['O', 'QV-'], macro: '@cc', spins: true, groups: ['cc'] },
+    { id: 'oqv_dcd', label: 'OQV-DCD', core: 'DCD', prefixes: ['O', 'QV-'], macro: '@cc', spins: true, groups: ['cc'] },
+  ] },
+  { group: 'Factorized (SVD)', methods: [
+    { id: 'svd_dcsd',     label: 'SVD-DCSD',     core: 'DCSD',     prefixes: ['SVD-'], macro: '@dfcc', spins: false, groups: ['cc'] },
+    { id: 'svd_dc_ccsdt', label: 'SVD-DC-CCSDT', core: 'DC-CCSDT', prefixes: ['SVD-'], macro: '@cc',   spins: false, groups: ['cc'] },
+  ] },
+  { group: 'Excited states (EOM)', methods: [
+    { id: 'eom_ccsd', label: 'EOM-CCSD', core: 'CCSD', prefixes: ['EOM-'], macro: '@cc', spins: true, groups: ['cc', 'eom'] },
+    { id: 'eom_dcsd', label: 'EOM-DCSD', core: 'DCSD', prefixes: ['EOM-'], macro: '@cc', spins: true, groups: ['cc', 'eom'] },
+  ] },
+  { group: 'Full CI', methods: [
+    { id: 'fci',   label: 'FCI',         core: '', prefixes: [], macro: '@fci',   spins: false, groups: ['fci', 'davidson'] },
+    { id: 'ciphi', label: 'CIPHI / SCI', core: '', prefixes: [], macro: '@ciphi', spins: false, groups: ['ciphi'] },
+  ] },
+];
+
+// Option groups shown on the global "System & basis" card (top-level @set).
 const ELEMCO_GLOBAL_GROUPS = ['wf', 'int', 'print'];
 const ELEMCO_GLOBAL_EXCLUDE = { wf: ['charge', 'ms2'] };
 
+// Flatten correlation methods for id lookup.
+const ELEMCO_CORRELATION_BY_ID = {};
+ELEMCO_CORRELATION_GROUPS.forEach((g) => g.methods.forEach((m) => { ELEMCO_CORRELATION_BY_ID[m.id] = m; }));
+
+function elemcoCorrelationDef(id) { return ELEMCO_CORRELATION_BY_ID[id] || null; }
+
 function elemcoMethodDef(category, id) {
-  const list = ELEMCO_METHODS[category];
-  if (!list) return null;
-  return list.find((m) => m.id === id) || null;
+  if (category === 'reference') return (ELEMCO_METHODS.reference || []).find((m) => m.id === id) || null;
+  if (category === 'correlation') return elemcoCorrelationDef(id);
+  return null;
+}
+
+// (built-in prefixes + spin) in canonical order, then core -> ElemCo.jl method string.
+function elemcoComposeMethod(def, spin) {
+  if (!def) return '';
+  const all = (def.prefixes || []).slice();
+  if (spin) all.push(spin);
+  all.sort((a, b) => ELEMCO_PREFIX_ORDER.indexOf(a) - ELEMCO_PREFIX_ORDER.indexOf(b));
+  return all.join('') + (def.core || '');
 }
 
 if (typeof window !== 'undefined') {
   window.ELEMCO_METHODS = ELEMCO_METHODS;
+  window.ELEMCO_CORRELATION_GROUPS = ELEMCO_CORRELATION_GROUPS;
+  window.ELEMCO_SPINS = ELEMCO_SPINS;
+  window.ELEMCO_PREFIX_ORDER = ELEMCO_PREFIX_ORDER;
   window.ELEMCO_GLOBAL_GROUPS = ELEMCO_GLOBAL_GROUPS;
   window.ELEMCO_GLOBAL_EXCLUDE = ELEMCO_GLOBAL_EXCLUDE;
 }
