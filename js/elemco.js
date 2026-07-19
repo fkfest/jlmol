@@ -618,6 +618,15 @@ function buildStepDetail(step) {
         return d;
     }
     if (step.kind === 'custom') {
+        if (typeof elcMakeJuliaEditor === 'function') {
+            const ed = elcMakeJuliaEditor('elemco-step-code');
+            ed.textarea.title = 'Raw Julia inserted verbatim';
+            ed.textarea.placeholder = '# your Julia here';
+            ed.textarea.value = step.code || '';
+            ed.textarea.addEventListener('input', () => { step.code = ed.textarea.value; updateElemCoInput(); });
+            if (ed.textarea._elcHighlight) ed.textarea._elcHighlight();
+            return ed.wrap;
+        }
         const ta = elcEl('textarea', { class: 'elemco-step-code', title: 'Raw Julia inserted verbatim', placeholder: '# your Julia here' });
         ta.value = step.code || '';
         ta.addEventListener('input', () => { step.code = ta.value; updateElemCoInput(); });
@@ -1045,6 +1054,7 @@ function updateElemCoInput() {
         // Molecule mode: geometry from the viewer + basis set.
         if (!xyz) {
             inputArea.value = '# Please load a molecule first (or switch to FCIDUMP mode in System & basis)';
+            if (inputArea._elcHighlight) inputArea._elcHighlight();
             return;
         }
         const b = elemcoState.basis;
@@ -1071,6 +1081,7 @@ function updateElemCoInput() {
     parts.push('', 'end', 'main()', '');
 
     inputArea.value = parts.join('\n');
+    if (inputArea._elcHighlight) inputArea._elcHighlight();
     debugLog('ElemCo', 'Successfully generated input');
 }
 

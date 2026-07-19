@@ -1780,6 +1780,61 @@
             font-style: italic;
         }
 
+        /* --- Julia syntax highlighting: transparent textarea over a colored
+           backdrop; both share identical metrics so text lines up exactly. --- */
+        .elemco-code-wrap {
+            position: relative;
+            width: 100%;
+        }
+        #elemcoPanel .elemco-code-input,
+        #elemcoPanel .elemco-code-backdrop {
+            box-sizing: border-box;
+            width: 100%;
+            margin: 0;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+            font-size: 12.5px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            overflow-wrap: break-word;
+            word-break: break-word;
+            tab-size: 4;
+        }
+        #elemcoPanel .elemco-code-input {
+            position: relative;
+            z-index: 1;
+            display: block;
+            resize: vertical;
+            overflow: auto;
+            background: transparent;
+            color: transparent;
+            caret-color: #111;
+        }
+        #elemcoPanel .elemco-code-backdrop {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 0;
+            overflow: hidden;
+            pointer-events: none;
+            border-color: transparent;
+            background: #fff;
+            color: #333;
+        }
+        .elemco-code-highlights {
+            min-height: 100%;
+        }
+        .elemco-code-highlights .j-com { color: #8c8c8c; font-style: italic; }
+        .elemco-code-highlights .j-str { color: #067d17; }
+        .elemco-code-highlights .j-key { color: #0033b3; font-weight: 600; }
+        .elemco-code-highlights .j-macro { color: #7a3e9d; font-weight: 600; }
+        .elemco-code-highlights .j-num { color: #1750eb; }
+        .elemco-code-highlights .j-lit { color: #0033b3; }
+
         /* --- drag-to-reorder grip + drop state --- */
         .elemco-step-grip {
             cursor: grab;

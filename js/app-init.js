@@ -7,6 +7,10 @@ function initElemCoPanel() {
     if (typeof syncElemCoControlsFromState === 'function') syncElemCoControlsFromState();
     if (typeof renderElemCoSteps === 'function') renderElemCoSteps();
     if (typeof renderGlobalChips === 'function') renderGlobalChips();
+    if (typeof elcAttachJuliaHighlight === 'function') {
+        const ta = document.getElementById('elemco-input');
+        if (ta) elcAttachJuliaHighlight(ta);
+    }
     updateElemCoInput();
 }
 
