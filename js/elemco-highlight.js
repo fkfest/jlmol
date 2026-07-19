@@ -28,9 +28,30 @@ function elcHighlightJulia(code) {
     return out;
 }
 
+// Native scrollbar thickness (0 on overlay-scrollbar platforms). Measured once.
+let _elcScrollbarSize = null;
+function elcScrollbarSize() {
+    if (_elcScrollbarSize != null) return _elcScrollbarSize;
+    _elcScrollbarSize = 0;
+    try {
+        const d = document.createElement('div');
+        d.style.cssText = 'position:absolute;top:-9999px;left:-9999px;width:100px;height:100px;overflow:scroll;';
+        document.body.appendChild(d);
+        _elcScrollbarSize = d.offsetWidth - d.clientWidth;
+        document.body.removeChild(d);
+    } catch (e) { _elcScrollbarSize = 0; }
+    return _elcScrollbarSize;
+}
+
 // Wire a textarea + its backdrop/highlights so the overlay tracks edits & scroll.
 // Exposes ta._elcHighlight() to refresh after programmatic value changes.
 function elcWireHighlight(ta, backdrop, highlights) {
+    // A textarea's scrollbars reserve space and shrink its client area, so it can
+    // scroll further than the (scrollbar-less) backdrop — at the very bottom/right
+    // the overlay would clamp short and the last line drifts. Pad the highlights by
+    // the scrollbar thickness so both scroll ranges match exactly.
+    const sb = elcScrollbarSize();
+    if (sb > 0) { highlights.style.paddingBottom = sb + 'px'; highlights.style.paddingRight = sb + 'px'; }
     const refresh = () => { highlights.innerHTML = elcHighlightJulia(ta.value || ''); };
     const sync = () => { backdrop.scrollTop = ta.scrollTop; backdrop.scrollLeft = ta.scrollLeft; };
     ta.addEventListener('input', () => { refresh(); sync(); });
