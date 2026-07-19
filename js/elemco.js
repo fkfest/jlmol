@@ -313,7 +313,7 @@ function elcMapDefaultMethod(m) {
 }
 function makeMethodStep(category, methodId) {
     const step = { id: 's' + (elcStepSeq++), kind: 'method', category, method: methodId, options: {}, _optsOpen: false };
-    if (category === 'correlation') { step.spin = ''; step.custom = ''; }
+    if (category === 'correlation') { step.spin = ''; step.custom = ''; step.customDf = false; }
     return step;
 }
 function initElemCoState() {
@@ -396,7 +396,7 @@ function addElemCoStep(type) {
     if (type === 'reference') step = makeMethodStep('reference', 'dfhf');
     else if (type === 'correlation') step = makeMethodStep('correlation', 'dcsd');
     else if (type === 'export') step = { id: 's' + (elcStepSeq++), kind: 'export', filename: 'orbitals.molden' };
-    else if (type === 'custom') step = { id: 's' + (elcStepSeq++), kind: 'custom', label: '', code: '', _codeOpen: true };
+    else if (type === 'custom') step = { id: 's' + (elcStepSeq++), kind: 'custom', label: '', code: '' };
     else return;
     elemcoState.steps.push(step);
     renderElemCoSteps();
@@ -499,7 +499,15 @@ function renderStepCard(step) {
     });
     head.appendChild(grip);
 
-    head.appendChild(elcEl('span', { class: 'elemco-badge' }, elcStepBadge(step)));
+    // Clickable badge: folds/unfolds the step's detail region (readout / spin / code).
+    const badgeCaret = elcEl('span', { class: 'elemco-caret' }, step._detailOpen !== false ? '▾' : '▸');
+    const badgeToggle = elcEl('span', { class: 'elemco-badge-toggle', title: 'Show or hide details' }, [badgeCaret, elcEl('span', { class: 'elemco-badge' }, elcStepBadge(step))]);
+    badgeToggle.addEventListener('click', () => {
+        step._detailOpen = !(step._detailOpen !== false);
+        badgeCaret.textContent = step._detailOpen ? '▾' : '▸';
+        if (step._detailEl) step._detailEl.style.display = step._detailOpen ? '' : 'none';
+    });
+    head.appendChild(badgeToggle);
 
     if (step.kind === 'method' && step.category === 'reference') {
         const sel = elcEl('select', { class: 'elemco-step-method' });
@@ -507,6 +515,7 @@ function renderStepCard(step) {
         sel.value = step.method;
         sel.addEventListener('change', () => {
             step.method = sel.value;
+            if (step._readoutEl) step._readoutEl.textContent = elemcoStepHeadString(step);
             updateElemCoInput();
             if (step._optsOpen) renderStepOptions(step);
         });
@@ -529,7 +538,11 @@ function renderStepCard(step) {
     } else if (step.kind === 'export') {
         const fn = elcEl('input', { type: 'text', class: 'elemco-step-file', title: 'Molden filename' });
         fn.value = step.filename || 'orbitals.molden';
-        fn.addEventListener('input', () => { step.filename = fn.value.trim() || 'orbitals.molden'; updateElemCoInput(); });
+        fn.addEventListener('input', () => {
+            step.filename = fn.value.trim() || 'orbitals.molden';
+            if (step._readoutEl) step._readoutEl.textContent = elcExportReadout(step);
+            updateElemCoInput();
+        });
         head.appendChild(fn);
     } else {
         const lbl = elcEl('input', { type: 'text', class: 'elemco-step-file', placeholder: 'Custom Julia (used as a comment)', title: 'Label — added as a comment line above the code' });
@@ -540,7 +553,6 @@ function renderStepCard(step) {
 
     const actions = elcEl('span', { class: 'elemco-step-actions' });
     let optsMount = null;
-    let codeMount = null;
     if (step.kind === 'method') {
         const optCaret = elcEl('span', { class: 'elemco-caret' }, step._optsOpen ? '▾' : '▸');
         const optBtn = elcEl('button', { type: 'button', class: 'elemco-step-optbtn', title: 'Set options for this method' }, [optCaret, ' Options']);
@@ -551,15 +563,6 @@ function renderStepCard(step) {
             if (step._optsOpen) renderStepOptions(step);
         });
         actions.appendChild(optBtn);
-    } else if (step.kind === 'custom') {
-        const codeCaret = elcEl('span', { class: 'elemco-caret' }, step._codeOpen !== false ? '▾' : '▸');
-        const codeBtn = elcEl('button', { type: 'button', class: 'elemco-step-optbtn', title: 'Show or hide the code' }, [codeCaret, ' Code']);
-        codeBtn.addEventListener('click', () => {
-            step._codeOpen = !(step._codeOpen !== false);
-            codeCaret.textContent = step._codeOpen ? '▾' : '▸';
-            if (codeMount) codeMount.style.display = step._codeOpen ? 'block' : 'none';
-        });
-        actions.appendChild(codeBtn);
     }
     const up = elcEl('button', { type: 'button', class: 'elemco-step-move', title: 'Move up' }, '▲');
     up.addEventListener('click', () => moveElemCoStep(step.id, -1));
@@ -571,8 +574,16 @@ function renderStepCard(step) {
     head.appendChild(actions);
     card.appendChild(head);
 
+    // Foldable detail region (readout / spin / code), toggled by the badge above.
+    const detail = buildStepDetail(step);
+    if (detail) {
+        detail.style.display = step._detailOpen !== false ? '' : 'none';
+        step._detailEl = detail;
+        card.appendChild(detail);
+    }
+
+    // Option chips + options browser (method steps only), below the detail.
     if (step.kind === 'method') {
-        if (step.category === 'correlation') card.appendChild(renderCorrelationDetail(step));
         const chipsEl = elcEl('div', { class: 'elemco-chips' });
         optsMount = elcEl('div', { class: 'elemco-step-options' });
         optsMount.style.display = step._optsOpen ? 'block' : 'none';
@@ -582,14 +593,37 @@ function renderStepCard(step) {
         step._optsMount = optsMount;
         renderStepChips(step);
         if (step._optsOpen) renderStepOptions(step);
-    } else if (step.kind === 'custom') {
-        codeMount = elcEl('textarea', { class: 'elemco-step-code', title: 'Raw Julia inserted verbatim', placeholder: '# your Julia here' });
-        codeMount.value = step.code || '';
-        codeMount.style.display = step._codeOpen !== false ? 'block' : 'none';
-        codeMount.addEventListener('input', () => { step.code = codeMount.value; updateElemCoInput(); });
-        card.appendChild(codeMount);
     }
     return card;
+}
+
+// The foldable content below a step's header. Reference/export show a one-line
+// readout of the emitted call; correlation shows spin + readout (or the custom
+// method field); custom shows the raw Julia code editor.
+function elcExportReadout(step) {
+    return `@export_molden ${elcJuliaStringLiteral(step.filename || 'orbitals.molden')}`;
+}
+function buildStepDetail(step) {
+    if (step.kind === 'method' && step.category === 'correlation') return renderCorrelationDetail(step);
+    if (step.kind === 'method' && step.category === 'reference') {
+        const d = elcEl('div', { class: 'elemco-method-detail' });
+        step._readoutEl = elcEl('span', { class: 'elemco-method-readout', title: 'Emitted ElemCo.jl call' }, elemcoStepHeadString(step));
+        d.appendChild(step._readoutEl);
+        return d;
+    }
+    if (step.kind === 'export') {
+        const d = elcEl('div', { class: 'elemco-method-detail' });
+        step._readoutEl = elcEl('span', { class: 'elemco-method-readout', title: 'Emitted ElemCo.jl call' }, elcExportReadout(step));
+        d.appendChild(step._readoutEl);
+        return d;
+    }
+    if (step.kind === 'custom') {
+        const ta = elcEl('textarea', { class: 'elemco-step-code', title: 'Raw Julia inserted verbatim', placeholder: '# your Julia here' });
+        ta.value = step.code || '';
+        ta.addEventListener('input', () => { step.code = ta.value; updateElemCoInput(); });
+        return ta;
+    }
+    return null;
 }
 // The ElemCo.jl call a method step emits (macro + optional method-string arg),
 // without the local-options block. Used both for generation and the live readout.
@@ -601,7 +635,7 @@ function elemcoStepHeadString(step) {
     // correlation
     let macro, methodStr;
     if (step.method === 'custom') {
-        macro = '@cc';
+        macro = step.customDf ? '@dfcc' : '@cc';
         methodStr = (step.custom || '').trim();
     } else {
         const def = elemcoCorrelationDef(step.method);
@@ -620,10 +654,20 @@ function renderCorrelationDetail(step) {
     const detail = elcEl('div', { class: 'elemco-method-detail' });
     if (step.method === 'custom') {
         detail.appendChild(elcEl('span', { class: 'elemco-detail-label' }, 'method:'));
-        const inp = elcEl('input', { type: 'text', class: 'elemco-step-file', placeholder: 'e.g. UCCSD(T)', title: 'Method string passed to @cc' });
+        const inp = elcEl('input', { type: 'text', class: 'elemco-step-file', placeholder: 'e.g. UCCSD(T)', title: 'Method string' });
         inp.value = step.custom || '';
-        inp.addEventListener('input', () => { step.custom = inp.value; updateElemCoInput(); });
+        const readout = elcEl('span', { class: 'elemco-method-readout', title: 'Emitted ElemCo.jl call' }, elemcoStepHeadString(step));
+        const refresh = () => { readout.textContent = elemcoStepHeadString(step); updateElemCoInput(); };
+        inp.addEventListener('input', () => { step.custom = inp.value; refresh(); });
         detail.appendChild(inp);
+        const dfLabel = elcEl('label', { class: 'elemco-df-toggle', title: 'Use density fitting (@dfcc instead of @cc)' });
+        const dfCb = elcEl('input', { type: 'checkbox' });
+        dfCb.checked = !!step.customDf;
+        dfCb.addEventListener('change', () => { step.customDf = dfCb.checked; refresh(); });
+        dfLabel.appendChild(dfCb);
+        dfLabel.appendChild(elcEl('span', {}, 'DF'));
+        detail.appendChild(dfLabel);
+        detail.appendChild(readout);
         return detail;
     }
     const def = elemcoCorrelationDef(step.method);
