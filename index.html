@@ -44,7 +44,12 @@
     <script type="text/javascript" src="js/selection.js"></script>
     <script type="text/javascript" src="js/ui.js"></script>
     <script type="text/javascript" src="js/jsme-2d.js"></script>
+    <script type="text/javascript" src="js/elemco-options.js"></script>
+    <script type="text/javascript" src="js/elemco-methods.js"></script>
+    <script type="text/javascript" src="js/elemco-macros.js"></script>
     <script type="text/javascript" src="js/elemco.js"></script>
+    <script type="text/javascript" src="js/elemco-options-ui.js"></script>
+    <script type="text/javascript" src="js/elemco-highlight.js"></script>
     <script type="text/javascript" src="js/xtb.js"></script>
     <script type="text/javascript" src="js/app-init.js"></script>
     <script type="text/javascript" src="js/preferences.js"></script>
@@ -179,85 +184,98 @@
             </div>
             <button onclick="hideElemCoPanel()" title="Close ElemCo.jl input panel">Close</button>
         </div>
-        <div class="elemco-input-group">
-            <label for="elemco-method">Method:</label>
-            <div class="method-df-line">
-                <select id="elemco-method">
-                    <option value="HF">HF</option>
-                    <option value="MP2">MP2</option>
-                    <option value="DCSD" selected>DCSD</option>
-                    <option value="CCSD(T)">CCSD(T)</option>
-                    <option value="CCSDT">CCSDT</option>
-                    <option value="DC-CCSDT">DC-CCSDT</option>
+        <!-- Global "System & basis" card: options here apply to the whole run -->
+        <div class="elemco-card" id="elemco-global-card">
+            <div class="elemco-card-header">
+                <button type="button" class="elemco-card-title elemco-fold-title" onclick="toggleElemCoGlobalCard()" title="Show or hide the system &amp; basis settings"><span class="elemco-caret" id="elemco-global-caret">▾</span><span id="elemco-global-titletext">System &amp; basis</span></button>
+                <select id="elemco-mode" class="elemco-mode-select" onchange="setElemCoMode(this.value)" title="Molecule: geometry + basis. FCIDUMP: read integrals from a file.">
+                    <option value="molecule">Molecule</option>
+                    <option value="fcidump">FCIDUMP</option>
                 </select>
-                <label class="df-toggle-label" for="elemco-df">
-                    <input type="checkbox" id="elemco-df" onchange="updateMethodOptions()">
-                    <span>DF</span>
-                </label>
             </div>
-        </div>
-        <div class="elemco-input-group">
-            <label for="elemco-basis">AO Basis Set:</label>
-            <select id="elemco-basis">
-                <option value="cc-pVDZ" selected>cc-pVDZ</option>
-                <option value="cc-pVTZ">cc-pVTZ</option>
-                <option value="aug-cc-pVDZ">aug-cc-pVDZ</option>
-                <option value="aug-cc-pVTZ">aug-cc-pVTZ</option>
-            </select>
-        </div>
-        <div class="elemco-input-group">
-            <label for="elemco-jkfit">JKfit Basis:</label>
-            <select id="elemco-jkfit">
-                <option value="auto" selected>Auto (Based on AO)</option>
-                <option value="cc-pVDZ-jkfit">cc-pVDZ-jkfit</option>
-                <option value="cc-pVTZ-jkfit">cc-pVTZ-jkfit</option>
-                <option value="cc-pVQZ-jkfit">cc-pVQZ-jkfit</option>
-                <option value="cc-pV5Z-jkfit">cc-pV5Z-jkfit</option>
-                <option value="def2-universal-jkfit">def2-universal-jkfit</option>
-            </select>
-        </div>
-        <div class="elemco-input-group">
-            <label for="elemco-mpfit">MPfit Basis:</label>
-            <select id="elemco-mpfit">
-                <option value="auto" selected>Auto (Based on AO)</option>
-                <option value="cc-pVDZ-mpfit">cc-pVDZ-mpfit</option>
-                <option value="cc-pVTZ-mpfit">cc-pVTZ-mpfit</option>
-                <option value="cc-pVQZ-mpfit">cc-pVQZ-mpfit</option>
-                <option value="aug-cc-pVDZ-mpfit">aug-cc-pVDZ-mpfit</option>
-                <option value="aug-cc-pVTZ-mpfit">aug-cc-pVTZ-mpfit</option>
-                <option value="aug-cc-pVQZ-mpfit">aug-cc-pVQZ-mpfit</option>
-            </select>
-        </div>
-        <div class="charge-multiplicity-group">
-            <div class="charge-multiplicity-item">
-                <label for="elemco-charge">Charge:</label>
-                <input type="number" id="elemco-charge" value="0" min="-99" max="99">
+            <div id="elemco-global-body">
+            <div id="elemco-molecule-fields">
+            <div class="elemco-input-group">
+                <label for="elemco-basis">AO Basis Set:</label>
+                <select id="elemco-basis">
+                    <option value="cc-pVDZ" selected>cc-pVDZ</option>
+                    <option value="cc-pVTZ">cc-pVTZ</option>
+                    <option value="aug-cc-pVDZ">aug-cc-pVDZ</option>
+                    <option value="aug-cc-pVTZ">aug-cc-pVTZ</option>
+                </select>
             </div>
-            <div class="charge-multiplicity-item">
-                <label for="elemco-multiplicity">Multiplicity:</label>
-                <input type="number" id="elemco-multiplicity" value="0" min="0" max="99">
+            <div class="elemco-input-group">
+                <label for="elemco-jkfit">JKfit Basis:</label>
+                <select id="elemco-jkfit">
+                    <option value="auto" selected>Auto (Based on AO)</option>
+                    <option value="cc-pVDZ-jkfit">cc-pVDZ-jkfit</option>
+                    <option value="cc-pVTZ-jkfit">cc-pVTZ-jkfit</option>
+                    <option value="cc-pVQZ-jkfit">cc-pVQZ-jkfit</option>
+                    <option value="cc-pV5Z-jkfit">cc-pV5Z-jkfit</option>
+                    <option value="def2-universal-jkfit">def2-universal-jkfit</option>
+                </select>
             </div>
+            <div class="elemco-input-group">
+                <label for="elemco-mpfit">MPfit Basis:</label>
+                <select id="elemco-mpfit">
+                    <option value="auto" selected>Auto (Based on AO)</option>
+                    <option value="cc-pVDZ-mpfit">cc-pVDZ-mpfit</option>
+                    <option value="cc-pVTZ-mpfit">cc-pVTZ-mpfit</option>
+                    <option value="cc-pVQZ-mpfit">cc-pVQZ-mpfit</option>
+                    <option value="aug-cc-pVDZ-mpfit">aug-cc-pVDZ-mpfit</option>
+                    <option value="aug-cc-pVTZ-mpfit">aug-cc-pVTZ-mpfit</option>
+                    <option value="aug-cc-pVQZ-mpfit">aug-cc-pVQZ-mpfit</option>
+                </select>
+            </div>
+            </div><!-- /#elemco-molecule-fields -->
+            <div id="elemco-fcidump-fields" style="display:none;">
+                <div class="elemco-input-group">
+                    <label for="elemco-fcidump">FCIDUMP file:</label>
+                    <input type="text" id="elemco-fcidump" value="FCIDUMP" title="Path to the FCIDUMP integrals file">
+                </div>
+            </div>
+            <div class="charge-multiplicity-group">
+                <div class="charge-multiplicity-item">
+                    <label for="elemco-charge" title="Total charge (wf.charge)">Charge:</label>
+                    <input type="number" id="elemco-charge" value="0" min="-99" max="99">
+                </div>
+                <div class="charge-multiplicity-item">
+                    <label for="elemco-multiplicity" title="Spin: 2·S_z = number of unpaired electrons (wf.ms2). 0 = closed shell.">ms2 (2·S_z):</label>
+                    <input type="number" id="elemco-multiplicity" value="0" min="0" max="99">
+                </div>
+            </div>
+            <div class="elemco-opt-toggle-row">
+                <button type="button" id="elemco-global-optbtn" class="elemco-opt-togglebtn" onclick="toggleGlobalOptions()" title="Set global wavefunction / integral / printing options"><span class="elemco-caret" id="elemco-global-optcaret">▸</span>Global options</button>
+            </div>
+            <div class="elemco-chips" id="elemco-global-chips"></div>
+            <div class="elemco-step-options" id="elemco-global-options" style="display:none;"></div>
+            </div><!-- /#elemco-global-body -->
         </div>
-        <div class="elemco-input-group molden-export-group">
-            <label class="molden-toggle-label" for="elemco-molden">
-                <input type="checkbox" id="elemco-molden">
-                <span>Export Molden</span>
-            </label>
-            <input type="text" id="elemco-molden-file" placeholder="orbitals.molden" value="orbitals.molden" title="Filename for molden orbital export">
+
+        <!-- Calculation steps (building blocks): reference, methods, export, ... -->
+        <div class="elemco-steps-label">Calculation steps</div>
+        <div id="elemco-steps"></div>
+        <div class="elemco-add-step">
+            <span>Add step:</span>
+            <button type="button" onclick="addElemCoStep('reference')" title="Add a reference (SCF) step">Reference</button>
+            <button type="button" onclick="addElemCoStep('correlation')" title="Add a correlation / post-HF method step">Method</button>
+            <button type="button" onclick="addElemCoStep('export')" title="Add an @export_molden step">Export</button>
+            <button type="button" onclick="addElemCoStep('macro')" title="Add any exported ElemCo.jl macro">Macro</button>
+            <button type="button" onclick="addElemCoStep('custom')" title="Add a raw Julia snippet">Custom</button>
         </div>
+
         <div class="elemco-input-group vertical">
-            <div style="margin-bottom: 8px;">
+            <div class="elemco-editor-toolbar">
                 <a href="https://elem.co.il" target="_blank" rel="noopener noreferrer">Documentation →</a>
-            </div>
-            <label for="elemco-input">Input Editor:</label>
-            <div style="margin-bottom: 6px;">
                 <button type="button" onclick="insertSelectedAtomsIntoElemCo()" title="Insert the list of atoms currently selected in the structure/XYZ viewer at the cursor (e.g. for dummy atoms or active regions)">Insert Selected Atoms</button>
             </div>
+            <label for="elemco-input">Generated input (editable):</label>
             <textarea id="elemco-input"></textarea>
-            <div class="preview-note">Note: Changes to parameters will update this editor. You can also edit directly.</div>
+            <div class="preview-note">Changing steps or options regenerates this script. You can also edit it directly (edits are overwritten on the next change).</div>
+            <div class="preview-note elemco-source-note" id="elemco-source-note"></div>
         </div>
         <div class="action-buttons">
-            <button onclick="generateElemCoInput()" title="Reset input to default settings">Reset Input</button>
+            <button onclick="generateElemCoInput()" title="Reset the whole builder to defaults">Reset</button>
             <button onclick="copyElemCoInput()" title="Copy input text to clipboard">Copy to Clipboard</button>
             <button onclick="runJuliaCalculation()" title="Execute the Julia calculation using ElemCo.jl">Run Calculation</button>
         </div>
@@ -539,24 +557,18 @@
                         <div class="preference-description">Default basis set for new calculations</div>
                     </div>
                     <div class="preference-item">
-                        <label class="preference-label">Default method:</label>
-                        <select id="pref-method" class="preference-select">
-                            <option value="HF">HF</option>
-                            <option value="MP2">MP2</option>
-                            <option value="DCSD">DCSD</option>
-                            <option value="CCSD(T)">CCSD(T)</option>
-                        </select>
-                        <div class="preference-description">Default calculation method</div>
+                        <label class="preference-label">Default method (molecule):</label>
+                        <select id="pref-method-molecule" class="preference-select"></select>
+                        <div class="preference-description">Default correlated method for molecular (geometry + basis) calculations. A DF-HF reference step is added automatically.</div>
                     </div>
                     <div class="preference-item">
-                        <label class="preference-checkbox-label">
-                            <input type="checkbox" id="pref-use-df">
-                            <span>Use density fitting by default</span>
-                        </label>
-                        <div class="preference-description">Enable density fitting approximation for faster calculations</div>
+                        <label class="preference-label">Default method (FCIDUMP):</label>
+                        <select id="pref-method-fcidump" class="preference-select"></select>
+                        <div class="preference-description">Default correlated method for FCIDUMP calculations. No reference step is added.</div>
                     </div>
+                    <div class="preference-description" style="margin-top: 6px;">Density fitting and the reference/correlation macros are now chosen per step in the ElemCo.jl panel (Reference and Method blocks).</div>
                 </div>
-                
+
                 <div class="preference-section">
                     <h4>Output Settings</h4>
                     <div class="preference-item">

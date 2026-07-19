@@ -1,20 +1,16 @@
 // Initialize ElemCo panel elements
 function initElemCoPanel() {
-    // Clean up any existing elements first
-    const dfLabel = document.querySelector('.df-toggle-label');
-    if (dfLabel) {
-        // Remove existing content to prevent memory leaks
-        dfLabel.innerHTML = '';
-        dfLabel.innerHTML = `
-                    <input type="checkbox" id="elemco-df" onchange="updateMethodOptions()">
-                    <span>Use DF</span>
-                `;
+    // Build the builder state (seeded from preferences) and wire the fixed
+    // System & basis controls, then render the step list and generate the input.
+    if (typeof initElemCoState === 'function') initElemCoState();
+    if (typeof initializeElemCoListeners === 'function') initializeElemCoListeners();
+    if (typeof syncElemCoControlsFromState === 'function') syncElemCoControlsFromState();
+    if (typeof renderElemCoSteps === 'function') renderElemCoSteps();
+    if (typeof renderGlobalChips === 'function') renderGlobalChips();
+    if (typeof elcAttachJuliaHighlight === 'function') {
+        const ta = document.getElementById('elemco-input');
+        if (ta) elcAttachJuliaHighlight(ta);
     }
-
-    // Initialize method options
-    updateMethodOptions();
-
-    // Update input text
     updateElemCoInput();
 }
 

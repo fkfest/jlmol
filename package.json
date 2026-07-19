@@ -15,7 +15,9 @@
     "build:windows": "electron-builder --win",
     "build:mac": "electron-builder --mac",
     "build:linux": "electron-builder --linux",
-    "check-version": "node build-version.js"
+    "check-version": "node build-version.js",
+    "update-elemco-options": "node scripts/parse-elemco-options.js",
+    "update-elemco-macros": "node scripts/parse-elemco-macros.js"
   },
   "build": {
     "appId": "com.jlmol.viewer",

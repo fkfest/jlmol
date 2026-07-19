@@ -27,7 +27,8 @@ const DEFAULT_PREFERENCES = {
     
     // ElemCo.jl settings
     defaultBasisSet: 'cc-pVDZ',
-    defaultMethod: 'HF',
+    defaultMethodMolecule: 'ccsd_t',
+    defaultMethodFcidump: 'lambda_ccsd_t',
     juliaCommand: 'julia',
     calcTimeout: 5,
     useDF: false,
@@ -37,6 +38,28 @@ const DEFAULT_PREFERENCES = {
     // xtb (g-xTB) settings
     xtbCommand: 'xtb'
 };
+
+// Fill a default-method <select> with a leading "reference only" (HF) option and
+// the grouped correlation methods from the ElemCo method registry.
+function elcPopulateMethodPrefSelect(sel, refOnlyLabel) {
+    if (!sel) return;
+    sel.innerHTML = '';
+    const none = document.createElement('option');
+    none.value = 'HF';
+    none.textContent = refOnlyLabel;
+    sel.appendChild(none);
+    ((typeof window !== 'undefined' && window.ELEMCO_CORRELATION_GROUPS) || []).forEach((g) => {
+        const og = document.createElement('optgroup');
+        og.label = g.group;
+        g.methods.forEach((m) => {
+            const o = document.createElement('option');
+            o.value = m.id;
+            o.textContent = m.label;
+            og.appendChild(o);
+        });
+        sel.appendChild(og);
+    });
+}
 
 // Switch between preference tabs
 function switchPreferencesTab(tabName) {
@@ -190,8 +213,12 @@ function loadPreferencesIntoUI() {
     const basisSetSelect = document.getElementById('pref-basis-set');
     if (basisSetSelect) basisSetSelect.value = prefs.defaultBasisSet || 'cc-pVDZ';
     
-    const methodSelect = document.getElementById('pref-method');
-    if (methodSelect) methodSelect.value = prefs.defaultMethod || 'HF';
+    const molMethodSelect = document.getElementById('pref-method-molecule');
+    const fciMethodSelect = document.getElementById('pref-method-fcidump');
+    elcPopulateMethodPrefSelect(molMethodSelect, 'HF (reference only)');
+    elcPopulateMethodPrefSelect(fciMethodSelect, 'BO-HF (reference only)');
+    if (molMethodSelect) molMethodSelect.value = prefs.defaultMethodMolecule || 'ccsd_t';
+    if (fciMethodSelect) fciMethodSelect.value = prefs.defaultMethodFcidump || 'lambda_ccsd_t';
     
     const juliaCommandInput = document.getElementById('pref-julia-command');
     if (juliaCommandInput) juliaCommandInput.value = prefs.juliaCommand || 'julia';
@@ -281,8 +308,10 @@ function savePreferencesFromUI() {
     const basisSetSelect = document.getElementById('pref-basis-set');
     if (basisSetSelect) prefs.defaultBasisSet = basisSetSelect.value;
     
-    const methodSelect = document.getElementById('pref-method');
-    if (methodSelect) prefs.defaultMethod = methodSelect.value;
+    const molMethodSelect = document.getElementById('pref-method-molecule');
+    if (molMethodSelect) prefs.defaultMethodMolecule = molMethodSelect.value;
+    const fciMethodSelect = document.getElementById('pref-method-fcidump');
+    if (fciMethodSelect) prefs.defaultMethodFcidump = fciMethodSelect.value;
     
     const juliaCommandInput = document.getElementById('pref-julia-command');
     if (juliaCommandInput) prefs.juliaCommand = juliaCommandInput.value.trim() || 'julia';
@@ -342,29 +371,12 @@ function applyPreferences() {
         }
     }
     
-    // Apply default basis set to ElemCo panel
+    // Apply the default basis set to the ElemCo builder state. The default
+    // method only seeds the initial steps (in initElemCoState), so it is not
+    // re-applied here — that would clobber steps the user has built.
     try {
-        const basisSelect = document.getElementById('elemco-basis');
-        if (basisSelect && prefs.defaultBasisSet) {
-            basisSelect.value = prefs.defaultBasisSet;
-        }
-        
-        // Apply default method to ElemCo panel
-        const methodSelect = document.getElementById('elemco-method');
-        if (methodSelect && prefs.defaultMethod) {
-            methodSelect.value = prefs.defaultMethod;
-        }
-        
-        // Apply DF preference
-        const dfCheckbox = document.getElementById('elemco-df');
-        if (dfCheckbox && prefs.useDF !== undefined) {
-            dfCheckbox.checked = prefs.useDF;
-            updateMethodOptions(); // Update available methods based on DF setting
-        }
-        
-        // Update ElemCo input with these preferences
-        if ((basisSelect || methodSelect) && typeof updateElemCoInput === 'function') {
-            updateElemCoInput();
+        if (typeof syncElemCoBasisFromPrefs === 'function') {
+            syncElemCoBasisFromPrefs();
         }
     } catch (e) {
         console.warn('Could not apply ElemCo preferences:', e);
@@ -376,7 +388,16 @@ function loadPreferences() {
     try {
         const saved = localStorage.getItem('jlmol-preferences');
         if (saved) {
-            return { ...DEFAULT_PREFERENCES, ...JSON.parse(saved) };
+            const parsed = JSON.parse(saved);
+            const prefs = { ...DEFAULT_PREFERENCES, ...parsed };
+            // Migrate the legacy single default method (a UI label such as
+            // "CCSD(T)") to the per-mode molecule default (a method id like
+            // "ccsd_t"), so upgrading users keep their preferred method.
+            if (parsed.defaultMethod && parsed.defaultMethodMolecule === undefined) {
+                const map = { HF: 'HF', MP2: 'mp2', DCSD: 'dcsd', CCSD: 'ccsd', 'CCSD(T)': 'ccsd_t' };
+                if (map[parsed.defaultMethod]) prefs.defaultMethodMolecule = map[parsed.defaultMethod];
+            }
+            return prefs;
         }
     } catch (error) {
         console.warn('Error loading preferences:', error);
@@ -531,6 +552,28 @@ function initPreferences() {
     console.log('User preferences initialized');
 }
 
+// Convert the always-visible per-option descriptions into hover help (an ⓘ icon
+// next to the label, description as its tooltip) so preference rows stay compact.
+// Standalone notes and dynamic result messages (no label) are left visible. Once.
+function elcCompactPreferenceDescriptions() {
+    const panel = document.getElementById('preferencesPanel');
+    if (!panel || panel._descsCompacted) return;
+    panel._descsCompacted = true;
+    panel.querySelectorAll('.preference-item').forEach((item) => {
+        const desc = item.querySelector('.preference-description');
+        const label = item.querySelector('.preference-label, .preference-checkbox-label');
+        if (!desc || !label) return;
+        const text = desc.textContent.trim();
+        if (!text) return;
+        const info = document.createElement('span');
+        info.className = 'preference-help';
+        info.textContent = 'ⓘ';
+        info.title = text;
+        label.appendChild(info);
+        desc.style.display = 'none';
+    });
+}
+
 // Show preferences panel
 function showPreferencesPanel() {
     const panel = document.getElementById('preferencesPanel');
@@ -539,6 +582,7 @@ function showPreferencesPanel() {
         // Reset transform to avoid it appearing in a strange location if previously dragged
         panel.style.transform = 'translate(0px, 0px)';
         loadPreferencesIntoUI();
+        elcCompactPreferenceDescriptions();
     }
 }
 
