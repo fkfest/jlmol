@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-07-19
+
 ### Added
 
 - ElemCo.jl input builder rework: the ElemCo.jl panel is now a method-driven "building block" editor. A calculation is assembled from an ordered list of steps (Reference, Method, Export, Macro, Custom) that you can add, remove, reorder (with the up/down buttons or by dragging the grip), and collapse. Each step emits its ElemCo.jl macro, and only the options you change from their ElemCo.jl defaults are emitted, as a local `begin … end @set` block, keeping the generated script minimal.
