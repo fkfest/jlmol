@@ -364,7 +364,7 @@ function addElemCoStep(type) {
     if (type === 'reference') step = makeMethodStep('reference', 'dfhf');
     else if (type === 'correlation') step = makeMethodStep('correlation', 'dcsd');
     else if (type === 'export') step = { id: 's' + (elcStepSeq++), kind: 'export', filename: 'orbitals.molden' };
-    else if (type === 'custom') step = { id: 's' + (elcStepSeq++), kind: 'custom', code: '# custom Julia code\n' };
+    else if (type === 'custom') step = { id: 's' + (elcStepSeq++), kind: 'custom', label: '', code: '', _codeOpen: true };
     else return;
     elemcoState.steps.push(step);
     renderElemCoSteps();
@@ -416,6 +416,22 @@ function renderElemCoSteps() {
         return;
     }
     elemcoState.steps.forEach((step) => host.appendChild(renderStepCard(step)));
+
+    // Nudge the user to add a reference (SCF) step — correlation methods need one.
+    const hasReference = elemcoState.steps.some((s) => s.kind === 'method' && s.category === 'reference');
+    if (!hasReference) {
+        const warn = elcEl('div', { class: 'elemco-suggest' });
+        warn.appendChild(elcEl('span', {}, '⚠ No reference (SCF) step — correlation methods need one to run. '));
+        const b = elcEl('button', { type: 'button' }, 'Add reference');
+        b.addEventListener('click', () => {
+            initElemCoState();
+            elemcoState.steps.unshift(makeMethodStep('reference', 'dfhf'));
+            renderElemCoSteps();
+            updateElemCoInput();
+        });
+        warn.appendChild(b);
+        host.appendChild(warn);
+    }
 }
 var elcDraggingStepId = null;
 function renderStepCard(step) {
@@ -468,20 +484,34 @@ function renderStepCard(step) {
         fn.addEventListener('input', () => { step.filename = fn.value.trim() || 'orbitals.molden'; updateElemCoInput(); });
         head.appendChild(fn);
     } else {
-        head.appendChild(elcEl('span', { class: 'elemco-step-custom-label' }, 'Custom Julia'));
+        const lbl = elcEl('input', { type: 'text', class: 'elemco-step-file', placeholder: 'Custom Julia (used as a comment)', title: 'Label — added as a comment line above the code' });
+        lbl.value = step.label || '';
+        lbl.addEventListener('input', () => { step.label = lbl.value; updateElemCoInput(); });
+        head.appendChild(lbl);
     }
 
     const actions = elcEl('span', { class: 'elemco-step-actions' });
     let optsMount = null;
+    let codeMount = null;
     if (step.kind === 'method') {
-        const optBtn = elcEl('button', { type: 'button', class: 'elemco-step-optbtn', title: 'Set options for this method' }, step._optsOpen ? 'Options ▾' : 'Options ▸');
+        const optCaret = elcEl('span', { class: 'elemco-caret' }, step._optsOpen ? '▾' : '▸');
+        const optBtn = elcEl('button', { type: 'button', class: 'elemco-step-optbtn', title: 'Set options for this method' }, [optCaret, ' Options']);
         optBtn.addEventListener('click', () => {
             step._optsOpen = !step._optsOpen;
-            optBtn.textContent = step._optsOpen ? 'Options ▾' : 'Options ▸';
+            optCaret.textContent = step._optsOpen ? '▾' : '▸';
             if (optsMount) optsMount.style.display = step._optsOpen ? 'block' : 'none';
             if (step._optsOpen) renderStepOptions(step);
         });
         actions.appendChild(optBtn);
+    } else if (step.kind === 'custom') {
+        const codeCaret = elcEl('span', { class: 'elemco-caret' }, step._codeOpen !== false ? '▾' : '▸');
+        const codeBtn = elcEl('button', { type: 'button', class: 'elemco-step-optbtn', title: 'Show or hide the code' }, [codeCaret, ' Code']);
+        codeBtn.addEventListener('click', () => {
+            step._codeOpen = !(step._codeOpen !== false);
+            codeCaret.textContent = step._codeOpen ? '▾' : '▸';
+            if (codeMount) codeMount.style.display = step._codeOpen ? 'block' : 'none';
+        });
+        actions.appendChild(codeBtn);
     }
     const up = elcEl('button', { type: 'button', class: 'elemco-step-move', title: 'Move up' }, '▲');
     up.addEventListener('click', () => moveElemCoStep(step.id, -1));
@@ -504,10 +534,11 @@ function renderStepCard(step) {
         renderStepChips(step);
         if (step._optsOpen) renderStepOptions(step);
     } else if (step.kind === 'custom') {
-        const ta = elcEl('textarea', { class: 'elemco-step-code', title: 'Raw Julia inserted verbatim' });
-        ta.value = step.code || '';
-        ta.addEventListener('input', () => { step.code = ta.value; updateElemCoInput(); });
-        card.appendChild(ta);
+        codeMount = elcEl('textarea', { class: 'elemco-step-code', title: 'Raw Julia inserted verbatim', placeholder: '# your Julia here' });
+        codeMount.value = step.code || '';
+        codeMount.style.display = step._codeOpen !== false ? 'block' : 'none';
+        codeMount.addEventListener('input', () => { step.code = codeMount.value; updateElemCoInput(); });
+        card.appendChild(codeMount);
     }
     return card;
 }
@@ -554,9 +585,9 @@ function renderStepChips(step) {
 // --- rendering: global options card ----------------------------------------
 function toggleGlobalOptions() {
     const mount = document.getElementById('elemco-global-options');
-    const btn = document.getElementById('elemco-global-optbtn');
+    const caret = document.getElementById('elemco-global-optcaret');
     elemcoGlobalOptsOpen = !elemcoGlobalOptsOpen;
-    if (btn) btn.textContent = elemcoGlobalOptsOpen ? 'Global options ▾' : 'Global options ▸';
+    if (caret) caret.textContent = elemcoGlobalOptsOpen ? '▾' : '▸';
     if (mount) {
         mount.style.display = elemcoGlobalOptsOpen ? 'block' : 'none';
         if (elemcoGlobalOptsOpen) renderGlobalOptions();
@@ -868,7 +899,7 @@ function updateElemCoInput() {
     // with any changed options as a local `begin ... end` @set block.
     function elcStepComment(step) {
         if (step.kind === 'export') return 'Export orbitals (Molden)';
-        if (step.kind === 'custom') return 'Custom Julia';
+        if (step.kind === 'custom') return (step.label || '').trim();
         const def = elemcoMethodDef(step.category, step.method);
         return def ? def.label : step.method;
     }
@@ -901,7 +932,10 @@ function updateElemCoInput() {
     const gl = globalSetLines();
     if (gl.length) { parts.push('', '# Global settings'); gl.forEach((l) => parts.push(l)); }
     (elemcoState.steps || []).forEach((step) => {
-        parts.push('', '# ' + elcStepComment(step), elcStepEmit(step));
+        const comment = elcStepComment(step);
+        parts.push('');
+        if (comment) parts.push('# ' + comment);
+        parts.push(elcStepEmit(step));
     });
     parts.push('', 'end', 'main()', '');
     let elemcoInput = parts.join('\n');

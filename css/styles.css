@@ -1551,6 +1551,24 @@
             padding: 4px 10px;
             font-size: 12px;
         }
+        .elemco-suggest {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin: 4px 0 12px;
+            padding: 6px 8px;
+            font-size: 11px;
+            color: #8a6d00;
+            background: #fff8e1;
+            border: 1px solid #f0e0a0;
+            border-radius: 6px;
+        }
+        .elemco-suggest button {
+            min-width: 0;
+            padding: 3px 10px;
+            font-size: 11px;
+        }
 
         /* --- changed-option chips --- */
         .elemco-chips {
@@ -1628,7 +1646,11 @@
         }
         .elemco-caret {
             color: #888;
-            width: 10px;
+            width: 16px;
+            font-size: 15px;
+            line-height: 1;
+            display: inline-block;
+            text-align: center;
         }
         .elemco-opt-group-title {
             flex: 1;
