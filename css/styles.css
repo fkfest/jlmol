@@ -1295,6 +1295,16 @@
             font-style: italic;
         }
 
+        .preference-help {
+            margin-left: 6px;
+            color: #4CAF50;
+            cursor: help;
+            font-size: 12px;
+            font-style: normal;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
         /* Narrow screens (phones / small tablets): stack the viewer on top of
            the controls so the 200px sidebar isn't clipped horizontally, and let
            the whole page scroll vertically. */

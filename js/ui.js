@@ -8,8 +8,17 @@ function initDraggable() {
     // Every panel we've wired up, so window resizes can re-clamp them all.
     const draggables = [];
 
+    // Bumped each time a panel is clicked or shown so it comes to the front. The
+    // base (10000) stays above the main window, so panels are always on top of it.
+    let panelTopZ = 10000;
+
     function makeDraggable(panel, header) {
         if (!panel || !header) return;
+
+        // Clicking (or opening) a panel raises it above the other panels.
+        function bringToFront() { panel.style.zIndex = ++panelTopZ; }
+        panel.addEventListener('mousedown', bringToFront);
+        panel.addEventListener('touchstart', bringToFront, { passive: true });
 
         let isDragging = false;
         let currentX;
@@ -45,7 +54,7 @@ function initDraggable() {
             const display = panel.style.display;
             if (display !== lastDisplay) {
                 lastDisplay = display;
-                if (display !== 'none') applySizeLimit();
+                if (display !== 'none') { applySizeLimit(); bringToFront(); }
             }
         }).observe(panel, { attributes: true, attributeFilter: ['style'] });
 

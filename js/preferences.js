@@ -543,6 +543,28 @@ function initPreferences() {
     console.log('User preferences initialized');
 }
 
+// Convert the always-visible per-option descriptions into hover help (an ⓘ icon
+// next to the label, description as its tooltip) so preference rows stay compact.
+// Standalone notes and dynamic result messages (no label) are left visible. Once.
+function elcCompactPreferenceDescriptions() {
+    const panel = document.getElementById('preferencesPanel');
+    if (!panel || panel._descsCompacted) return;
+    panel._descsCompacted = true;
+    panel.querySelectorAll('.preference-item').forEach((item) => {
+        const desc = item.querySelector('.preference-description');
+        const label = item.querySelector('.preference-label, .preference-checkbox-label');
+        if (!desc || !label) return;
+        const text = desc.textContent.trim();
+        if (!text) return;
+        const info = document.createElement('span');
+        info.className = 'preference-help';
+        info.textContent = 'ⓘ';
+        info.title = text;
+        label.appendChild(info);
+        desc.style.display = 'none';
+    });
+}
+
 // Show preferences panel
 function showPreferencesPanel() {
     const panel = document.getElementById('preferencesPanel');
@@ -551,6 +573,7 @@ function showPreferencesPanel() {
         // Reset transform to avoid it appearing in a strange location if previously dragged
         panel.style.transform = 'translate(0px, 0px)';
         loadPreferencesIntoUI();
+        elcCompactPreferenceDescriptions();
     }
 }
 
