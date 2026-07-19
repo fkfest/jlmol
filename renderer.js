@@ -2,7 +2,7 @@
 (function checkVersion(retryCount) {
     retryCount = retryCount || 0;
     const maxRetries = 50; // Max 5 seconds (50 * 100ms)
-    
+
     const versionElement = document.getElementById('version-number');
     if (versionElement && window.appVersion) {
         versionElement.textContent = window.appVersion;
@@ -23,33 +23,11 @@
 // are defined as globals in the js/ feature scripts (js/elemco.js, js/xtb.js), which
 // load after this file. We do NOT redefine them here — earlier definitions would just
 // be overridden, and the feature-script versions are authoritative.
-
-// Add event listeners for input changes when the DOM is ready
-document.addEventListener('DOMContentLoaded', () => {
-    const method = document.getElementById('elemco-method');
-    const aoBasis = document.getElementById('elemco-basis');
-    const jkfitBasis = document.getElementById('elemco-jkfit');
-    const mpfitBasis = document.getElementById('elemco-mpfit');
-    const charge = document.getElementById('elemco-charge');
-    const multiplicity = document.getElementById('elemco-multiplicity');
-    const dfToggle = document.getElementById('elemco-df');
-    const moldenCheckbox = document.getElementById('elemco-molden');
-    const moldenFile = document.getElementById('elemco-molden-file');
-
-    // Add event listeners
-    method?.addEventListener('change', updateElemCoInput);
-    aoBasis?.addEventListener('change', updateElemCoInput);
-    jkfitBasis?.addEventListener('change', updateElemCoInput);
-    mpfitBasis?.addEventListener('change', updateElemCoInput);
-    charge?.addEventListener('input', updateElemCoInput);
-    multiplicity?.addEventListener('input', updateElemCoInput);
-    moldenCheckbox?.addEventListener('change', updateElemCoInput);
-    moldenFile?.addEventListener('input', updateElemCoInput);
-    dfToggle?.addEventListener('change', () => {
-        updateMethodOptions();
-        updateElemCoInput();
-    });
-});
+//
+// ElemCo panel initialization and its control listeners are owned by the builder:
+// js/app-init.js (initializeApplication, on window load) and js/elemco.js
+// (showElemCoPanel -> initElemCoPanel each time the panel opens). renderer.js no
+// longer wires ElemCo controls, to avoid duplicate handlers and redundant re-inits.
 
 // Wait for the window to load completely
 window.addEventListener('load', () => {
@@ -62,42 +40,5 @@ window.addEventListener('load', () => {
     // Ensure JSME is properly initialized in Electron context
     if (window.jsmeOnLoad) {
         window.jsmeOnLoad();
-    }
-
-    // Initialize ElemCo panel after a delay to ensure DOM is ready
-    setTimeout(() => {
-        if (typeof initElemCoPanel === 'function') {
-            try {
-                initElemCoPanel();
-                initializeElemCoListeners();
-            } catch (e) {
-                console.error('Error initializing ElemCo panel:', e);
-            }
-        }
-    }, 1000);
-
-    // Re-initialize on visibility changes (but only once per change)
-    let isHidden = false;
-    document.addEventListener('visibilitychange', () => {
-        if (!document.hidden && isHidden && typeof initElemCoPanel === 'function') {
-            try {
-                initElemCoPanel();
-                initializeElemCoListeners();
-            } catch (e) {
-                console.error('Error re-initializing ElemCo panel:', e);
-            }
-        }
-        isHidden = document.hidden;
-    });
-});
-
-// Handle window resize events
-window.addEventListener('resize', () => {
-    // Reinitialize panels if they're visible
-    const elemcoPanel = document.getElementById('elemcoPanel');
-    if (elemcoPanel && elemcoPanel.style.display !== 'none') {
-        if (typeof initElemCoPanel === 'function') {
-            initElemCoPanel();
-        }
     }
 });

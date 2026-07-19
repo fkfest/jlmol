@@ -388,7 +388,16 @@ function loadPreferences() {
     try {
         const saved = localStorage.getItem('jlmol-preferences');
         if (saved) {
-            return { ...DEFAULT_PREFERENCES, ...JSON.parse(saved) };
+            const parsed = JSON.parse(saved);
+            const prefs = { ...DEFAULT_PREFERENCES, ...parsed };
+            // Migrate the legacy single default method (a UI label such as
+            // "CCSD(T)") to the per-mode molecule default (a method id like
+            // "ccsd_t"), so upgrading users keep their preferred method.
+            if (parsed.defaultMethod && parsed.defaultMethodMolecule === undefined) {
+                const map = { HF: 'HF', MP2: 'mp2', DCSD: 'dcsd', CCSD: 'ccsd', 'CCSD(T)': 'ccsd_t' };
+                if (map[parsed.defaultMethod]) prefs.defaultMethodMolecule = map[parsed.defaultMethod];
+            }
+            return prefs;
         }
     } catch (error) {
         console.warn('Error loading preferences:', error);

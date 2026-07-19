@@ -116,7 +116,10 @@ function parseMacros(text) {
     }
     const al = line.match(/^\s*var"@([A-Za-z_][\w!ϕΛ]*)"\s*=\s*var"@([A-Za-z_][\w!ϕΛ]*)"/);
     if (al) { aliases.push({ name: al[1], target: al[2] }); pendingDoc = null; continue; }
-    if (line.trim() !== '') pendingDoc = pendingDoc; // keep doc across blanks only
+    // A docstring attaches only to an immediately-following macro/alias (blank
+    // lines allowed). Any intervening code ends the association so a docstring
+    // can't leak onto a later definition.
+    if (line.trim() !== '') pendingDoc = null;
   }
 
   // 3) acceptsOptions: does the macro body use an options block?
