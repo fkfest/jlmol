@@ -518,7 +518,7 @@
 
         #elemcoPanel {
             position: fixed;
-            width: 350px; /* Reduced from 400px */
+            width: 390px;
             padding: 10px;
             display: none;
             background: white;
@@ -530,7 +530,7 @@
             resize: both;
             overflow-x: hidden;
             overflow-y: auto;
-            min-width: 250px; /* Reduced from 300px */
+            min-width: 280px;
             min-height: 300px; /* Reduced from 400px */
             max-width: 90vw;
             max-height: 90vh;
@@ -1768,6 +1768,23 @@
             transform: none;
             box-shadow: none;
             color: #000;
+        }
+        .elemco-card-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        #elemcoPanel .elemco-card-header .elemco-fold-title {
+            flex: 1;
+            width: auto;
+            margin: 0;
+        }
+        #elemcoPanel .elemco-mode-select {
+            flex: 0 0 auto;
+            width: auto;
+            font-size: 11px;
+            padding: 2px 4px;
         }
 
         /* ===================================================================

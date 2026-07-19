@@ -172,6 +172,10 @@ function initializeElemCoListeners() {
         elemcoState.ms2 = parseInt(document.getElementById('elemco-multiplicity').value) || 0;
         updateElemCoInput();
     });
+    bind('elemco-fcidump', 'input', () => {
+        elemcoState.fcidump = document.getElementById('elemco-fcidump').value.trim() || 'FCIDUMP';
+        updateElemCoInput();
+    });
     setupElemcoFocusTracking();
 }
 
@@ -317,7 +321,31 @@ function initElemCoState() {
     const steps = [makeMethodStep('reference', 'dfhf')];
     const corr = elcMapDefaultMethod(prefs.defaultMethod);
     if (corr) steps.push(makeMethodStep('correlation', corr));
-    elemcoState = { _init: true, basis: { ao, jkfit: 'auto', mpfit: 'auto' }, charge: 0, ms2: 0, global: {}, steps };
+    elemcoState = { _init: true, mode: 'molecule', modeUserSet: false, fcidump: 'FCIDUMP', basis: { ao, jkfit: 'auto', mpfit: 'auto' }, charge: 0, ms2: 0, global: {}, steps };
+}
+
+// Show the basis-set fields (molecule mode) or the FCIDUMP field, and update the
+// mode selector + card title to match elemcoState.mode.
+function applyElemCoModeUI() {
+    const fci = elemcoState.mode === 'fcidump';
+    const molFields = document.getElementById('elemco-molecule-fields');
+    const fciFields = document.getElementById('elemco-fcidump-fields');
+    const modeSel = document.getElementById('elemco-mode');
+    const title = document.getElementById('elemco-global-titletext');
+    if (molFields) molFields.style.display = fci ? 'none' : '';
+    if (fciFields) fciFields.style.display = fci ? '' : 'none';
+    if (modeSel) modeSel.value = elemcoState.mode;
+    if (title) title.textContent = fci ? 'System & FCIDUMP' : 'System & basis';
+}
+
+// User picked a mode explicitly (so stop auto-switching from molecule presence).
+function setElemCoMode(mode) {
+    initElemCoState();
+    elemcoState.mode = mode === 'fcidump' ? 'fcidump' : 'molecule';
+    elemcoState.modeUserSet = true;
+    applyElemCoModeUI();
+    renderElemCoSteps();
+    updateElemCoInput();
 }
 function resetElemCoBuilder() {
     elemcoState = { _init: false };
@@ -339,6 +367,8 @@ function syncElemCoControlsFromState() {
     set('elemco-mpfit', elemcoState.basis.mpfit);
     set('elemco-charge', elemcoState.charge);
     set('elemco-multiplicity', elemcoState.ms2);
+    set('elemco-fcidump', elemcoState.fcidump);
+    applyElemCoModeUI();
     const note = document.getElementById('elemco-source-note');
     const d = elcOptionsData();
     if (note && d) note.textContent = `Options from ElemCo.jl @ ${d.sourceRef} (${d.groupOrder.length} groups, generated ${d.generated})`;
@@ -418,8 +448,9 @@ function renderElemCoSteps() {
     elemcoState.steps.forEach((step) => host.appendChild(renderStepCard(step)));
 
     // Nudge the user to add a reference (SCF) step — correlation methods need one.
+    // Skipped in FCIDUMP mode, where the reference/integrals come from the file.
     const hasReference = elemcoState.steps.some((s) => s.kind === 'method' && s.category === 'reference');
-    if (!hasReference) {
+    if (elemcoState.mode !== 'fcidump' && !hasReference) {
         const warn = elcEl('div', { class: 'elemco-suggest' });
         warn.appendChild(elcEl('span', {}, '⚠ No reference (SCF) step — correlation methods need one to run. '));
         const b = elcEl('button', { type: 'button' }, 'Add reference');
@@ -832,68 +863,38 @@ function getXYZDataWithNumberedAtoms() {
     }
 }
 
+// Is the molecular XYZ from JSmol usable? Returns the trimmed data or null.
+function elcValidMoleculeXYZ() {
+    const xyzData = getXYZDataWithNumberedAtoms();
+    if (!xyzData || xyzData.trim().length === 0) return null;
+    const lines = xyzData.trim().split('\n');
+    if (lines.length < 3) return null;
+    const atomCount = parseInt(lines[0]);
+    if (isNaN(atomCount) || atomCount <= 0) return null;
+    const dataLines = lines.slice(2);
+    if (dataLines.length < atomCount) return null;
+    let valid = 0;
+    for (let i = 0; i < Math.min(dataLines.length, atomCount); i++) {
+        const p = dataLines[i].trim().split(/\s+/);
+        if (p.length >= 4 && !isNaN(parseFloat(p[1])) && !isNaN(parseFloat(p[2])) && !isNaN(parseFloat(p[3]))) valid++;
+    }
+    return valid >= atomCount ? xyzData.trim() : null;
+}
+
 function updateElemCoInput() {
     debugLog('ElemCo', 'Starting input generation');
-    
     initElemCoState();
+    const inputArea = document.getElementById('elemco-input');
+    if (!inputArea) return;
 
-    // Get current molecular structure from JSmol (with numbered atoms if available)
-    debugLog('ElemCo', 'Calling getXYZDataWithNumberedAtoms');
-    const xyzData = getXYZDataWithNumberedAtoms();
-    
-    if (!xyzData || xyzData.trim().length === 0) {
-        debugLog('ElemCo', 'No XYZ data received', 'warning');
-        document.getElementById('elemco-input').value = '# Please load a molecule first';
-        return;
+    const xyz = elcValidMoleculeXYZ();
+
+    // Auto-select the calculation mode from molecule presence, unless the user
+    // has explicitly chosen one (no molecule loaded -> FCIDUMP mode).
+    if (!elemcoState.modeUserSet) {
+        const auto = xyz ? 'molecule' : 'fcidump';
+        if (auto !== elemcoState.mode) { elemcoState.mode = auto; applyElemCoModeUI(); renderElemCoSteps(); }
     }
-    
-    debugLog('ElemCo', `Received XYZ data, length: ${xyzData.length}`);
-    
-    // Double-check that we have valid XYZ data
-    const lines = xyzData.trim().split('\n');
-    if (lines.length < 3) {
-        console.warn('updateElemCoInput: XYZ data has insufficient lines:', lines.length);
-        document.getElementById('elemco-input').value = '# Invalid molecular structure - please reload molecule';
-        return;
-    }
-    
-    // Check if first line contains atom count
-    const atomCount = parseInt(lines[0]);
-    if (isNaN(atomCount) || atomCount <= 0) {
-        console.warn('updateElemCoInput: Invalid atom count in first line:', lines[0]);
-        document.getElementById('elemco-input').value = '# Invalid molecular structure - please reload molecule';
-        return;
-    }
-    
-    // Verify we have enough data lines for all atoms
-    const dataLines = lines.slice(2); // Skip atom count and comment lines
-    if (dataLines.length < atomCount) {
-        console.warn('updateElemCoInput: Insufficient atom data lines. Expected:', atomCount, 'Found:', dataLines.length);
-        document.getElementById('elemco-input').value = '# Incomplete molecular structure - please reload molecule';
-        return;
-    }
-    
-    // Validate that atom data lines have proper format
-    let validAtomLines = 0;
-    for (let i = 0; i < Math.min(dataLines.length, atomCount); i++) {
-        const parts = dataLines[i].trim().split(/\s+/);
-        if (parts.length >= 4) {
-            const x = parseFloat(parts[1]);
-            const y = parseFloat(parts[2]);
-            const z = parseFloat(parts[3]);
-            if (!isNaN(x) && !isNaN(y) && !isNaN(z)) {
-                validAtomLines++;
-            }
-        }
-    }
-    
-    if (validAtomLines < atomCount) {
-        console.warn('updateElemCoInput: Not all atom lines are valid. Valid:', validAtomLines, 'Expected:', atomCount);
-        document.getElementById('elemco-input').value = '# Malformed molecular structure - please reload molecule';
-        return;
-    }
-    
-    debugLog('ElemCo', `XYZ data validation passed. Atoms: ${atomCount}, Valid lines: ${validAtomLines}`);
 
     // Emit a single calculation step (building block) as its ElemCo.jl macro,
     // with any changed options as a local `begin ... end` @set block.
@@ -917,18 +918,30 @@ function updateElemCoInput() {
         return head + ' begin\n' + lines.map((l) => '  ' + l).join('\n') + '\nend';
     }
 
-    // Assemble the full script from the builder state.
-    const b = elemcoState.basis;
-    const parts = ['using ElemCo', '', 'function main()', '# Molecular geometry', 'geometry = """', xyzData.trim(), '"""', '', '# Basis set'];
-    if (b.jkfit === 'auto' && b.mpfit === 'auto') {
-        parts.push(`basis = "${b.ao}"`);
+    const parts = ['using ElemCo', '', 'function main()'];
+
+    if (elemcoState.mode === 'fcidump') {
+        // FCIDUMP mode: read integrals from a file, no geometry/basis.
+        parts.push('# Integrals from FCIDUMP', `fcidump = ${elcJuliaStringLiteral(elemcoState.fcidump || 'FCIDUMP')}`);
     } else {
-        let d = `basis = Dict(\n    "ao" => "${b.ao}"`;
-        if (b.jkfit !== 'auto') d += `,\n    "jkfit" => "${b.jkfit}"`;
-        if (b.mpfit !== 'auto') d += `,\n    "mpfit" => "${b.mpfit}"`;
-        d += '\n)';
-        parts.push(d);
+        // Molecule mode: geometry from the viewer + basis set.
+        if (!xyz) {
+            inputArea.value = '# Please load a molecule first (or switch to FCIDUMP mode in System & basis)';
+            return;
+        }
+        const b = elemcoState.basis;
+        parts.push('# Molecular geometry', 'geometry = """', xyz, '"""', '', '# Basis set');
+        if (b.jkfit === 'auto' && b.mpfit === 'auto') {
+            parts.push(`basis = "${b.ao}"`);
+        } else {
+            let d = `basis = Dict(\n    "ao" => "${b.ao}"`;
+            if (b.jkfit !== 'auto') d += `,\n    "jkfit" => "${b.jkfit}"`;
+            if (b.mpfit !== 'auto') d += `,\n    "mpfit" => "${b.mpfit}"`;
+            d += '\n)';
+            parts.push(d);
+        }
     }
+
     const gl = globalSetLines();
     if (gl.length) { parts.push('', '# Global settings'); gl.forEach((l) => parts.push(l)); }
     (elemcoState.steps || []).forEach((step) => {
@@ -938,16 +951,9 @@ function updateElemCoInput() {
         parts.push(elcStepEmit(step));
     });
     parts.push('', 'end', 'main()', '');
-    let elemcoInput = parts.join('\n');
 
-    // Set the input text
-    const inputArea = document.getElementById('elemco-input');
-    if (inputArea) {
-        inputArea.value = elemcoInput;
-        debugLog('ElemCo', 'Successfully generated input');
-    } else {
-        console.error('updateElemCoInput: Could not find elemco-input textarea');
-    }
+    inputArea.value = parts.join('\n');
+    debugLog('ElemCo', 'Successfully generated input');
 }
 
 // Function to run Julia calculation

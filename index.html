@@ -184,8 +184,15 @@
         </div>
         <!-- Global "System & basis" card: options here apply to the whole run -->
         <div class="elemco-card" id="elemco-global-card">
-            <button type="button" class="elemco-card-title elemco-fold-title" onclick="toggleElemCoGlobalCard()" title="Show or hide the system &amp; basis settings"><span class="elemco-caret" id="elemco-global-caret">▾</span>System &amp; basis</button>
+            <div class="elemco-card-header">
+                <button type="button" class="elemco-card-title elemco-fold-title" onclick="toggleElemCoGlobalCard()" title="Show or hide the system &amp; basis settings"><span class="elemco-caret" id="elemco-global-caret">▾</span><span id="elemco-global-titletext">System &amp; basis</span></button>
+                <select id="elemco-mode" class="elemco-mode-select" onchange="setElemCoMode(this.value)" title="Molecule: geometry + basis. FCIDUMP: read integrals from a file.">
+                    <option value="molecule">Molecule</option>
+                    <option value="fcidump">FCIDUMP</option>
+                </select>
+            </div>
             <div id="elemco-global-body">
+            <div id="elemco-molecule-fields">
             <div class="elemco-input-group">
                 <label for="elemco-basis">AO Basis Set:</label>
                 <select id="elemco-basis">
@@ -217,6 +224,13 @@
                     <option value="aug-cc-pVTZ-mpfit">aug-cc-pVTZ-mpfit</option>
                     <option value="aug-cc-pVQZ-mpfit">aug-cc-pVQZ-mpfit</option>
                 </select>
+            </div>
+            </div><!-- /#elemco-molecule-fields -->
+            <div id="elemco-fcidump-fields" style="display:none;">
+                <div class="elemco-input-group">
+                    <label for="elemco-fcidump">FCIDUMP file:</label>
+                    <input type="text" id="elemco-fcidump" value="FCIDUMP" title="Path to the FCIDUMP integrals file">
+                </div>
             </div>
             <div class="charge-multiplicity-group">
                 <div class="charge-multiplicity-item">
