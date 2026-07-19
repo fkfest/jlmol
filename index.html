@@ -557,14 +557,14 @@
                         <div class="preference-description">Default basis set for new calculations</div>
                     </div>
                     <div class="preference-item">
-                        <label class="preference-label">Default method:</label>
-                        <select id="pref-method" class="preference-select">
-                            <option value="HF">HF</option>
-                            <option value="MP2">MP2</option>
-                            <option value="DCSD">DCSD</option>
-                            <option value="CCSD(T)">CCSD(T)</option>
-                        </select>
-                        <div class="preference-description">Default calculation method</div>
+                        <label class="preference-label">Default method (molecule):</label>
+                        <select id="pref-method-molecule" class="preference-select"></select>
+                        <div class="preference-description">Default correlated method for molecular (geometry + basis) calculations. A DF-HF reference step is added automatically.</div>
+                    </div>
+                    <div class="preference-item">
+                        <label class="preference-label">Default method (FCIDUMP):</label>
+                        <select id="pref-method-fcidump" class="preference-select"></select>
+                        <div class="preference-description">Default correlated method for FCIDUMP calculations. No reference step is added.</div>
                     </div>
                     <div class="preference-description" style="margin-top: 6px;">Density fitting and the reference/correlation macros are now chosen per step in the ElemCo.jl panel (Reference and Method blocks).</div>
                 </div>

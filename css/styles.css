@@ -1797,9 +1797,9 @@
             font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
             font-size: 12.5px;
             line-height: 1.5;
-            white-space: pre-wrap;
-            overflow-wrap: break-word;
-            word-break: break-word;
+            /* No wrapping: a wrapped textarea narrows for its scrollbar and would
+               wrap earlier than the backdrop, drifting the overlay out of sync. */
+            white-space: pre;
             tab-size: 4;
         }
         #elemcoPanel .elemco-code-input {

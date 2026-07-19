@@ -306,24 +306,47 @@ function elcEl(tag, props, children) {
 }
 
 // --- state init / reset -----------------------------------------------------
-function elcMapDefaultMethod(m) {
-    if (!m || m === 'HF') return null;
-    const map = { MP2: 'mp2', DCSD: 'dcsd', 'CCSD(T)': 'ccsd_t', CCSD: 'ccsd' };
-    return map[m] || 'dcsd';
-}
 function makeMethodStep(category, methodId) {
     const step = { id: 's' + (elcStepSeq++), kind: 'method', category, method: methodId, options: {}, _optsOpen: false };
     if (category === 'correlation') { step.spin = ''; step.custom = ''; step.customDf = false; }
     return step;
 }
+// Default step list for a mode, from preferences. Molecule mode always starts
+// with a DF-HF reference; FCIDUMP mode adds no reference when a correlated method
+// is chosen. A method value of 'HF' means reference-only (no correlation step).
+function elcBuildDefaultSteps(mode) {
+    const prefs = (typeof getPreferences === 'function') ? getPreferences() : {};
+    if (mode === 'fcidump') {
+        const m = prefs.defaultMethodFcidump || 'lambda_ccsd_t';
+        if (!m || m === 'HF') return [makeMethodStep('reference', 'bohf')];
+        return [makeMethodStep('correlation', m)];
+    }
+    const m = prefs.defaultMethodMolecule || 'ccsd_t';
+    const steps = [makeMethodStep('reference', 'dfhf')];
+    if (m && m !== 'HF') steps.push(makeMethodStep('correlation', m));
+    return steps;
+}
+// Are the current steps still the untouched defaults for `mode`? (structural
+// comparison, ignoring ids). Used to decide whether a mode change may rebuild.
+function elcStepsMatchDefault(mode) {
+    const def = elcBuildDefaultSteps(mode);
+    const cur = (elemcoState && elemcoState.steps) || [];
+    if (cur.length !== def.length) return false;
+    return cur.every((a, i) => {
+        const b = def[i];
+        if (a.kind !== 'method' || b.kind !== 'method') return false;
+        if (a.category !== b.category || a.method !== b.method) return false;
+        if ((a.spin || '') !== (b.spin || '')) return false;
+        if (a.options && Object.keys(a.options).length) return false;
+        return true;
+    });
+}
 function initElemCoState() {
     if (elemcoState && elemcoState._init) return;
     const prefs = (typeof getPreferences === 'function') ? getPreferences() : {};
     const ao = prefs.defaultBasisSet || 'cc-pVDZ';
-    const steps = [makeMethodStep('reference', 'dfhf')];
-    const corr = elcMapDefaultMethod(prefs.defaultMethod);
-    if (corr) steps.push(makeMethodStep('correlation', corr));
-    elemcoState = { _init: true, mode: 'molecule', modeUserSet: false, fcidump: 'FCIDUMP', basis: { ao, jkfit: 'auto', mpfit: 'auto' }, charge: 0, ms2: 0, global: {}, steps };
+    const mode = (typeof elcValidMoleculeXYZ === 'function' && elcValidMoleculeXYZ()) ? 'molecule' : 'fcidump';
+    elemcoState = { _init: true, mode, modeUserSet: false, fcidump: 'FCIDUMP', basis: { ao, jkfit: 'auto', mpfit: 'auto' }, charge: 0, ms2: 0, global: {}, steps: elcBuildDefaultSteps(mode) };
 }
 
 // Show the basis-set fields (molecule mode) or the FCIDUMP field, and update the
@@ -343,7 +366,11 @@ function applyElemCoModeUI() {
 // User picked a mode explicitly (so stop auto-switching from molecule presence).
 function setElemCoMode(mode) {
     initElemCoState();
-    elemcoState.mode = mode === 'fcidump' ? 'fcidump' : 'molecule';
+    const newMode = mode === 'fcidump' ? 'fcidump' : 'molecule';
+    if (newMode !== elemcoState.mode && elcStepsMatchDefault(elemcoState.mode)) {
+        elemcoState.steps = elcBuildDefaultSteps(newMode);
+    }
+    elemcoState.mode = newMode;
     elemcoState.modeUserSet = true;
     applyElemCoModeUI();
     renderElemCoSteps();
@@ -1067,7 +1094,13 @@ function updateElemCoInput() {
     // has explicitly chosen one (no molecule loaded -> FCIDUMP mode).
     if (!elemcoState.modeUserSet) {
         const auto = xyz ? 'molecule' : 'fcidump';
-        if (auto !== elemcoState.mode) { elemcoState.mode = auto; applyElemCoModeUI(); renderElemCoSteps(); }
+        if (auto !== elemcoState.mode) {
+            const wasDefault = elcStepsMatchDefault(elemcoState.mode);
+            elemcoState.mode = auto;
+            if (wasDefault) elemcoState.steps = elcBuildDefaultSteps(auto);
+            applyElemCoModeUI();
+            renderElemCoSteps();
+        }
     }
 
     // Emit a single calculation step (building block) as its ElemCo.jl macro,

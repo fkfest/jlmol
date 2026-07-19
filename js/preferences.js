@@ -27,7 +27,8 @@ const DEFAULT_PREFERENCES = {
     
     // ElemCo.jl settings
     defaultBasisSet: 'cc-pVDZ',
-    defaultMethod: 'HF',
+    defaultMethodMolecule: 'ccsd_t',
+    defaultMethodFcidump: 'lambda_ccsd_t',
     juliaCommand: 'julia',
     calcTimeout: 5,
     useDF: false,
@@ -37,6 +38,28 @@ const DEFAULT_PREFERENCES = {
     // xtb (g-xTB) settings
     xtbCommand: 'xtb'
 };
+
+// Fill a default-method <select> with a leading "reference only" (HF) option and
+// the grouped correlation methods from the ElemCo method registry.
+function elcPopulateMethodPrefSelect(sel, refOnlyLabel) {
+    if (!sel) return;
+    sel.innerHTML = '';
+    const none = document.createElement('option');
+    none.value = 'HF';
+    none.textContent = refOnlyLabel;
+    sel.appendChild(none);
+    ((typeof window !== 'undefined' && window.ELEMCO_CORRELATION_GROUPS) || []).forEach((g) => {
+        const og = document.createElement('optgroup');
+        og.label = g.group;
+        g.methods.forEach((m) => {
+            const o = document.createElement('option');
+            o.value = m.id;
+            o.textContent = m.label;
+            og.appendChild(o);
+        });
+        sel.appendChild(og);
+    });
+}
 
 // Switch between preference tabs
 function switchPreferencesTab(tabName) {
@@ -190,8 +213,12 @@ function loadPreferencesIntoUI() {
     const basisSetSelect = document.getElementById('pref-basis-set');
     if (basisSetSelect) basisSetSelect.value = prefs.defaultBasisSet || 'cc-pVDZ';
     
-    const methodSelect = document.getElementById('pref-method');
-    if (methodSelect) methodSelect.value = prefs.defaultMethod || 'HF';
+    const molMethodSelect = document.getElementById('pref-method-molecule');
+    const fciMethodSelect = document.getElementById('pref-method-fcidump');
+    elcPopulateMethodPrefSelect(molMethodSelect, 'HF (reference only)');
+    elcPopulateMethodPrefSelect(fciMethodSelect, 'BO-HF (reference only)');
+    if (molMethodSelect) molMethodSelect.value = prefs.defaultMethodMolecule || 'ccsd_t';
+    if (fciMethodSelect) fciMethodSelect.value = prefs.defaultMethodFcidump || 'lambda_ccsd_t';
     
     const juliaCommandInput = document.getElementById('pref-julia-command');
     if (juliaCommandInput) juliaCommandInput.value = prefs.juliaCommand || 'julia';
@@ -281,8 +308,10 @@ function savePreferencesFromUI() {
     const basisSetSelect = document.getElementById('pref-basis-set');
     if (basisSetSelect) prefs.defaultBasisSet = basisSetSelect.value;
     
-    const methodSelect = document.getElementById('pref-method');
-    if (methodSelect) prefs.defaultMethod = methodSelect.value;
+    const molMethodSelect = document.getElementById('pref-method-molecule');
+    if (molMethodSelect) prefs.defaultMethodMolecule = molMethodSelect.value;
+    const fciMethodSelect = document.getElementById('pref-method-fcidump');
+    if (fciMethodSelect) prefs.defaultMethodFcidump = fciMethodSelect.value;
     
     const juliaCommandInput = document.getElementById('pref-julia-command');
     if (juliaCommandInput) prefs.juliaCommand = juliaCommandInput.value.trim() || 'julia';
