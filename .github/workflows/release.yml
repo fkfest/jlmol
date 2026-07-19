@@ -20,10 +20,10 @@ jobs:
     
     steps:
       - name: Check out Git repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
 
       - name: Install Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           # Pin the minimum where require() of an ESM module is unflagged.
           # electron-builder's @noble/hashes v2 is ESM-only and is require()-d,
