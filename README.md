@@ -58,7 +58,7 @@ Download: [Latest Release Executables](https://github.com/fkfest/jlmol/releases/
 
 ### ElemCo.jl Input Generation and Calculation
 
-- Method-driven "building block" input builder: assemble a calculation from an ordered list of steps (reference, correlation method, FCIDUMP, export, or any ElemCo.jl macro), reorder and collapse them, and watch the generated Julia update live
+- Method-driven "building block" input builder: assemble a calculation from an ordered list of steps (a reference, correlation methods, exports, custom Julia, or any ElemCo.jl macro), reorder and collapse them, and watch the generated Julia update live
 - Full options browser: search and set any ElemCo.jl option, with defaults pre-filled and descriptions on hover; only the options you change are written to the input
 - Composable method selection covering HF, MP2, the coupled-cluster and distinguishable-cluster families, ΛCCSD(T), quasi-variational methods, excited states (EOM), FCI and CIPHI, with spin (U/R) and other prefixes
 - FCIDUMP mode for calculations that read integrals from a file instead of a geometry + basis
@@ -299,7 +299,7 @@ The application includes built-in support for generating ElemCo.jl input files f
 
 ### ElemCo.jl Features
 
-- A method-driven "building block" input builder — a calculation is an ordered list of steps (reference, correlation method, FCIDUMP, export, or any ElemCo.jl macro) that you add, remove, reorder (buttons or drag), and collapse; the generated Julia updates live
+- A method-driven "building block" input builder — a calculation is an ordered list of steps (a reference, correlation methods, exports, custom Julia, or any ElemCo.jl macro) that you add, remove, reorder (buttons or drag), and collapse; the generated Julia updates live
 - A wide range of methods, selected from grouped menus with composable prefixes:
   - Hartree-Fock references (DF-HF / DF-UHF) and Møller-Plesset (MP2)
   - Coupled cluster: CCD, CCSD, CCSD(T), ΛCCSD(T), CCSDT
