@@ -396,6 +396,7 @@ function addElemCoStep(type) {
     if (type === 'reference') step = makeMethodStep('reference', 'dfhf');
     else if (type === 'correlation') step = makeMethodStep('correlation', 'dcsd');
     else if (type === 'export') step = { id: 's' + (elcStepSeq++), kind: 'export', filename: 'orbitals.molden' };
+    else if (type === 'macro') step = { id: 's' + (elcStepSeq++), kind: 'macro', macro: 'export_molden', args: '', options: {}, _optsOpen: false };
     else if (type === 'custom') step = { id: 's' + (elcStepSeq++), kind: 'custom', label: '', code: '' };
     else return;
     elemcoState.steps.push(step);
@@ -436,8 +437,28 @@ function reorderElemCoStep(draggedId, targetId, after) {
 // --- rendering: step list ---------------------------------------------------
 function elcStepBadge(step) {
     if (step.kind === 'export') return 'Export';
+    if (step.kind === 'macro') return 'Macro';
     if (step.kind === 'custom') return 'Custom';
     return step.category === 'reference' ? 'Reference' : 'Method';
+}
+// Metadata for a parsed ElemCo.jl macro (js/elemco-macros.js), and whether a step
+// exposes an options browser (methods always; macros only if they take a block).
+function elemcoMacroDef(name) {
+    const M = window.ELEMCO_MACROS && window.ELEMCO_MACROS.macros;
+    return M ? (M.find((m) => m.name === name) || null) : null;
+}
+function stepAcceptsOptions(step) {
+    if (step.kind === 'method') return true;
+    if (step.kind === 'macro') { const d = elemcoMacroDef(step.macro); return !!(d && d.acceptsOptions); }
+    return false;
+}
+// The argument hint shown in a macro step's args field (signature minus opts_block).
+function elcMacroArgsPlaceholder(def) {
+    if (!def) return 'arguments';
+    const m = def.signature.match(/\(([^)]*)\)/);
+    if (!m) return 'arguments';
+    const a = m[1].replace(/,?\s*opts_block=nothing/, '').trim();
+    return a || 'no arguments';
 }
 function renderElemCoSteps() {
     const host = document.getElementById('elemco-steps');
@@ -544,6 +565,20 @@ function renderStepCard(step) {
             updateElemCoInput();
         });
         head.appendChild(fn);
+    } else if (step.kind === 'macro') {
+        const sel = elcEl('select', { class: 'elemco-step-method' });
+        ((window.ELEMCO_MACROS && window.ELEMCO_MACROS.macros) || []).forEach((m) => {
+            sel.appendChild(elcEl('option', { value: m.name, title: m.doc || '' }, '@' + m.name));
+        });
+        sel.value = step.macro;
+        const mdef = elemcoMacroDef(step.macro);
+        if (mdef) sel.title = mdef.doc || '';
+        sel.addEventListener('change', () => {
+            step.macro = sel.value;
+            renderElemCoSteps(); // options button / args hint / readout depend on the macro
+            updateElemCoInput();
+        });
+        head.appendChild(sel);
     } else {
         const lbl = elcEl('input', { type: 'text', class: 'elemco-step-file', placeholder: 'Custom Julia (used as a comment)', title: 'Label — added as a comment line above the code' });
         lbl.value = step.label || '';
@@ -553,7 +588,7 @@ function renderStepCard(step) {
 
     const actions = elcEl('span', { class: 'elemco-step-actions' });
     let optsMount = null;
-    if (step.kind === 'method') {
+    if (stepAcceptsOptions(step)) {
         const optCaret = elcEl('span', { class: 'elemco-caret' }, step._optsOpen ? '▾' : '▸');
         const optBtn = elcEl('button', { type: 'button', class: 'elemco-step-optbtn', title: 'Set options for this method' }, [optCaret, ' Options']);
         optBtn.addEventListener('click', () => {
@@ -582,8 +617,8 @@ function renderStepCard(step) {
         card.appendChild(detail);
     }
 
-    // Option chips + options browser (method steps only), below the detail.
-    if (step.kind === 'method') {
+    // Option chips + options browser (steps that accept a local @set block).
+    if (stepAcceptsOptions(step)) {
         const chipsEl = elcEl('div', { class: 'elemco-chips' });
         optsMount = elcEl('div', { class: 'elemco-step-options' });
         optsMount.style.display = step._optsOpen ? 'block' : 'none';
@@ -617,6 +652,18 @@ function buildStepDetail(step) {
         d.appendChild(step._readoutEl);
         return d;
     }
+    if (step.kind === 'macro') {
+        const def = elemcoMacroDef(step.macro);
+        const d = elcEl('div', { class: 'elemco-method-detail' });
+        d.appendChild(elcEl('span', { class: 'elemco-detail-label' }, 'args:'));
+        const inp = elcEl('input', { type: 'text', class: 'elemco-step-file', title: def ? def.signature : '', placeholder: elcMacroArgsPlaceholder(def) });
+        inp.value = step.args || '';
+        step._readoutEl = elcEl('span', { class: 'elemco-method-readout', title: 'Emitted ElemCo.jl call' }, elemcoStepHeadString(step));
+        inp.addEventListener('input', () => { step.args = inp.value; step._readoutEl.textContent = elemcoStepHeadString(step); updateElemCoInput(); });
+        d.appendChild(inp);
+        d.appendChild(step._readoutEl);
+        return d;
+    }
     if (step.kind === 'custom') {
         if (typeof elcMakeJuliaEditor === 'function') {
             const ed = elcMakeJuliaEditor('elemco-step-code');
@@ -637,6 +684,10 @@ function buildStepDetail(step) {
 // The ElemCo.jl call a method step emits (macro + optional method-string arg),
 // without the local-options block. Used both for generation and the live readout.
 function elemcoStepHeadString(step) {
+    if (step.kind === 'macro') {
+        const args = (step.args || '').trim();
+        return '@' + step.macro + (args ? ' ' + args : '');
+    }
     if (step.category === 'reference') {
         const def = elemcoMethodDef('reference', step.method);
         return def ? def.macro : '';
@@ -697,8 +748,9 @@ function renderCorrelationDetail(step) {
 }
 function renderStepOptions(step) {
     if (!step._optsMount || typeof renderOptionsBrowserInto !== 'function') return;
-    const def = elemcoMethodDef(step.category, step.method);
-    const groups = def ? def.groups : ['cc'];
+    let groups;
+    if (step.kind === 'macro') groups = []; // any macro: show all option groups
+    else { const def = elemcoMethodDef(step.category, step.method); groups = def ? def.groups : ['cc']; }
     renderOptionsBrowserInto(step._optsMount, groups, step.options, () => {
         renderStepChips(step);
         updateElemCoInput();
@@ -1022,6 +1074,7 @@ function updateElemCoInput() {
     // with any changed options as a local `begin ... end` @set block.
     function elcStepComment(step) {
         if (step.kind === 'export') return 'Export orbitals (Molden)';
+        if (step.kind === 'macro') return '';
         if (step.kind === 'custom') return (step.label || '').trim();
         if (step.category === 'correlation') {
             if (step.method === 'custom') return (step.custom || '').trim();
@@ -1038,6 +1091,12 @@ function updateElemCoInput() {
     function elcStepEmit(step) {
         if (step.kind === 'export') return `@export_molden ${elcJuliaStringLiteral(step.filename || 'orbitals.molden')}`;
         if (step.kind === 'custom') return (step.code || '').replace(/\s+$/, '');
+        if (step.kind === 'macro') {
+            const head = elemcoStepHeadString(step);
+            const lines = stepAcceptsOptions(step) ? bagSetLines(step.options || {}) : [];
+            if (lines.length === 0) return head;
+            return head + ' begin\n' + lines.map((l) => '  ' + l).join('\n') + '\nend';
+        }
         const head = elemcoStepHeadString(step);
         if (!head) return `# unknown method: ${step.method}`;
         const lines = bagSetLines(step.options || {});
