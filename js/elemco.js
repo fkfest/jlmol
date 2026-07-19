@@ -63,7 +63,7 @@ function hideElemCoPanel() {
 }
 
 function generateElemCoInput() {
-    updateElemCoInput();
+    resetElemCoBuilder();
     document.getElementById('status').innerHTML = 'ElemCo.jl input reset to default';
 }
 
@@ -119,76 +119,393 @@ function fallbackCopyToClipboard(textArea) {
     }
 }
 
-// Remove previous event listeners and add new ones
+// Wire the fixed "System & basis" controls (basis sets, charge, ms2) to the
+// state model. Per-method and per-option controls are wired as they are
+// rendered (see renderElemCoSteps and the options browser), not here.
 function initializeElemCoListeners() {
-    const method = document.getElementById('elemco-method');
-    const aoBasis = document.getElementById('elemco-basis');
-    const jkfitBasis = document.getElementById('elemco-jkfit');
-    const mpfitBasis = document.getElementById('elemco-mpfit');
-    const charge = document.getElementById('elemco-charge');
-    const multiplicity = document.getElementById('elemco-multiplicity');
-    const moldenCheckbox = document.getElementById('elemco-molden');
-    const moldenFile = document.getElementById('elemco-molden-file');
-
-    // Store references to listeners for proper cleanup
-    const elements = [
-        { element: method, event: 'change', handler: updateElemCoInput },
-        { element: aoBasis, event: 'change', handler: updateElemCoInput },
-        { element: jkfitBasis, event: 'change', handler: updateElemCoInput },
-        { element: mpfitBasis, event: 'change', handler: updateElemCoInput },
-        { element: charge, event: 'input', handler: updateElemCoInput },
-        { element: multiplicity, event: 'input', handler: updateElemCoInput },
-        { element: moldenCheckbox, event: 'change', handler: updateElemCoInput },
-        { element: moldenFile, event: 'input', handler: updateElemCoInput }
-    ];
-
-    // Remove old listeners if they exist
-    elements.forEach(({ element, event, handler }) => {
-        if (element && element._elemcoHandler) {
-            element.removeEventListener(event, element._elemcoHandler);
-        }
+    const bind = (id, event, handler) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (el._elemcoHandler) el.removeEventListener(event, el._elemcoHandler);
+        el._elemcoHandler = handler;
+        el.addEventListener(event, handler);
+    };
+    bind('elemco-basis', 'change', () => {
+        elemcoState.basis.ao = document.getElementById('elemco-basis').value;
+        updateElemCoInput();
     });
-
-    // Add new listeners and store references
-    elements.forEach(({ element, event, handler }) => {
-        if (element) {
-            element._elemcoHandler = handler;
-            element.addEventListener(event, handler);
-        }
+    bind('elemco-jkfit', 'change', () => {
+        elemcoState.basis.jkfit = document.getElementById('elemco-jkfit').value;
+        updateElemCoInput();
+    });
+    bind('elemco-mpfit', 'change', () => {
+        elemcoState.basis.mpfit = document.getElementById('elemco-mpfit').value;
+        updateElemCoInput();
+    });
+    bind('elemco-charge', 'input', () => {
+        elemcoState.charge = parseInt(document.getElementById('elemco-charge').value) || 0;
+        updateElemCoInput();
+    });
+    bind('elemco-multiplicity', 'input', () => {
+        elemcoState.ms2 = parseInt(document.getElementById('elemco-multiplicity').value) || 0;
+        updateElemCoInput();
     });
 }
 
-// Function to update method options based on DF toggle
+// ===========================================================================
+// ElemCo.jl input builder — state model
+// ===========================================================================
+// A calculation is a global "System & basis" section plus an ordered list of
+// steps (building blocks). Each method step maps to an ElemCo.jl macro and
+// carries only the options the user changed from their ElemCo.jl defaults; those
+// are emitted as a local `@set` block (`@cc dcsd begin ... end`). Global options
+// (wf/int/print) are emitted as top-level `@set` lines. See js/elemco-methods.js
+// for the method→macro registry and js/elemco-options.js for option metadata.
+
+var elemcoState = { _init: false };
+var elcStepSeq = 0;
+var elemcoGlobalOptsOpen = false;
+
+// Back-compat shim: some callers (and older code paths) still invoke this.
 function updateMethodOptions() {
-    const dfEnabled = document.getElementById('elemco-df').checked;
-    const methodSelect = document.getElementById('elemco-method');
-    const selectedMethod = methodSelect.value;
-    
-    // Store all available methods
-    const allMethods = {
-        standard: ['HF', 'MP2', 'DCSD', 'CCSD(T)', 'CCSDT', 'DC-CCSDT', 'SVD-DC-CCSDT'],
-        df: ['HF', 'MP2', 'SVD-DCSD']
-    };
+    if (typeof renderElemCoSteps === 'function') renderElemCoSteps();
+    updateElemCoInput();
+}
 
-    // Clear existing options
-    methodSelect.innerHTML = '';
+// --- option metadata lookup -------------------------------------------------
+function elcOptionsData() { return (typeof window !== 'undefined' && window.ELEMCO_OPTIONS) || null; }
+function optionMeta(group, name) {
+    const d = elcOptionsData();
+    return (d && d.groups[group] && d.groups[group].fields[name]) || null;
+}
+function elcGroupOrder() {
+    const d = elcOptionsData();
+    return (d && d.groupOrder) || [];
+}
 
-    // Add appropriate methods based on DF toggle
-    const methods = dfEnabled ? allMethods.df : allMethods.standard;
-    methods.forEach(method => {
-        const option = document.createElement('option');
-        option.value = method;
-        option.text = method;
-        methodSelect.appendChild(option);
+// --- option value helpers (a "bag" is { group: { name: value } } of non-defaults)
+function bagHasOption(bag, group, name) {
+    return !!(bag && bag[group] && Object.prototype.hasOwnProperty.call(bag[group], name));
+}
+function optionEffectiveValue(bag, group, name) {
+    if (bagHasOption(bag, group, name)) return bag[group][name];
+    const meta = optionMeta(group, name);
+    return meta ? meta.default : undefined;
+}
+// Store a value only when it differs from the ElemCo.jl default; otherwise drop
+// it so the generated input stays minimal.
+function setBagOption(bag, group, name, val) {
+    const meta = optionMeta(group, name);
+    const isDefault = meta && JSON.stringify(val) === JSON.stringify(meta.default);
+    if (val === undefined || val === null || isDefault) {
+        if (bag[group]) {
+            delete bag[group][name];
+            if (Object.keys(bag[group]).length === 0) delete bag[group];
+        }
+    } else {
+        if (!bag[group]) bag[group] = {};
+        bag[group][name] = val;
+    }
+}
+
+// --- JS value -> Julia source literal --------------------------------------
+function elcFormatFloat(v) {
+    if (typeof v !== 'number' || !isFinite(v)) return String(v);
+    if (Number.isInteger(v)) return v.toFixed(1); // keep it a Float literal, e.g. 100.0
+    return String(v);
+}
+// Wrap a JS string as a Julia double-quoted literal. Julia requires escaping the
+// backslash, the double-quote, and '$' (string interpolation); backslash first.
+function elcJuliaStringLiteral(val) {
+    return '"' + String(val).replace(/\\/g, '\\\\').replace(/\$/g, '\\$').replace(/"/g, '\\"') + '"';
+}
+function formatJuliaValue(meta, val) {
+    const w = meta ? meta.widget : 'unknown';
+    switch (w) {
+        case 'bool': return val ? 'true' : 'false';
+        case 'int': return String(val);
+        case 'float': return elcFormatFloat(val);
+        case 'symbol': return ':' + val;
+        case 'string': return elcJuliaStringLiteral(val);
+        case 'vector-int': return '[' + (val || []).join(', ') + ']';
+        case 'vector-float': return '[' + (val || []).map(elcFormatFloat).join(', ') + ']';
+        default: return String(val);
+    }
+}
+
+// --- @set line generation ---------------------------------------------------
+function bagSetLines(bag) {
+    const lines = [];
+    const order = elcGroupOrder();
+    const groups = order.length ? order : Object.keys(bag);
+    groups.forEach((group) => {
+        const dict = bag[group];
+        if (!dict) return;
+        const parts = Object.keys(dict).map((name) => `${name}=${formatJuliaValue(optionMeta(group, name), dict[name])}`);
+        if (parts.length) lines.push(`@set ${group} ${parts.join(' ')}`);
     });
+    return lines;
+}
 
-    // Try to maintain selected method if it's still available
-    if (methods.includes(selectedMethod)) {
-        methodSelect.value = selectedMethod;
+// Top-level @set lines: global option groups, with charge/ms2 (dedicated inputs)
+// folded into the wf group. Charge/ms2 preserve the legacy rule of emitting both
+// whenever either is non-zero.
+function globalSetLines() {
+    const bag = {};
+    for (const g in elemcoState.global) bag[g] = Object.assign({}, elemcoState.global[g]);
+    if (elemcoState.charge !== 0 || elemcoState.ms2 !== 0) {
+        bag.wf = Object.assign({ charge: elemcoState.charge, ms2: elemcoState.ms2 }, bag.wf || {});
+    }
+    return bagSetLines(bag);
+}
+
+// --- DOM helper -------------------------------------------------------------
+function elcEl(tag, props, children) {
+    const e = document.createElement(tag);
+    if (props) {
+        for (const k in props) {
+            const v = props[k];
+            if (k === 'class') e.className = v;
+            else if (k === 'html') e.innerHTML = v;
+            else if (k in e) { try { e[k] = v; } catch (_) { e.setAttribute(k, v); } }
+            else e.setAttribute(k, v);
+        }
+    }
+    if (children != null) {
+        const kids = Array.isArray(children) ? children : [children];
+        kids.forEach((c) => { if (c != null) e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); });
+    }
+    return e;
+}
+
+// --- state init / reset -----------------------------------------------------
+function elcMapDefaultMethod(m) {
+    if (!m || m === 'HF') return null;
+    const map = { MP2: 'mp2', DCSD: 'dcsd', 'CCSD(T)': 'ccsd(t)', CCSD: 'ccsd' };
+    return map[m] || 'dcsd';
+}
+function makeMethodStep(category, methodId) {
+    return { id: 's' + (elcStepSeq++), kind: 'method', category, method: methodId, options: {}, _optsOpen: false };
+}
+function initElemCoState() {
+    if (elemcoState && elemcoState._init) return;
+    const prefs = (typeof getPreferences === 'function') ? getPreferences() : {};
+    const ao = prefs.defaultBasisSet || 'cc-pVDZ';
+    const steps = [makeMethodStep('reference', 'dfhf')];
+    const corr = elcMapDefaultMethod(prefs.defaultMethod);
+    if (corr) steps.push(makeMethodStep('correlation', corr));
+    elemcoState = { _init: true, basis: { ao, jkfit: 'auto', mpfit: 'auto' }, charge: 0, ms2: 0, global: {}, steps };
+}
+function resetElemCoBuilder() {
+    elemcoState = { _init: false };
+    elemcoGlobalOptsOpen = false;
+    initElemCoState();
+    syncElemCoControlsFromState();
+    renderElemCoSteps();
+    const gm = document.getElementById('elemco-global-options');
+    if (gm) { gm.style.display = 'none'; gm.innerHTML = ''; }
+    const gb = document.getElementById('elemco-global-optbtn');
+    if (gb) gb.textContent = 'Global options ▸';
+    renderGlobalChips();
+    updateElemCoInput();
+}
+function syncElemCoControlsFromState() {
+    const set = (id, val) => { const e = document.getElementById(id); if (e) e.value = val; };
+    set('elemco-basis', elemcoState.basis.ao);
+    set('elemco-jkfit', elemcoState.basis.jkfit);
+    set('elemco-mpfit', elemcoState.basis.mpfit);
+    set('elemco-charge', elemcoState.charge);
+    set('elemco-multiplicity', elemcoState.ms2);
+    const note = document.getElementById('elemco-source-note');
+    const d = elcOptionsData();
+    if (note && d) note.textContent = `Options from ElemCo.jl @ ${d.sourceRef} (${d.groupOrder.length} groups, generated ${d.generated})`;
+}
+
+// Apply relevant preferences to the live state (basis default). Called on load
+// and after saving preferences; must not clobber user-built steps.
+function syncElemCoBasisFromPrefs() {
+    const prefs = (typeof getPreferences === 'function') ? getPreferences() : {};
+    if (!elemcoState || !elemcoState._init) return;
+    if (prefs.defaultBasisSet) {
+        elemcoState.basis.ao = prefs.defaultBasisSet;
+        const sel = document.getElementById('elemco-basis');
+        if (sel) sel.value = prefs.defaultBasisSet;
+    }
+    updateElemCoInput();
+}
+
+// --- step CRUD --------------------------------------------------------------
+function addElemCoStep(type) {
+    initElemCoState();
+    let step;
+    if (type === 'reference') step = makeMethodStep('reference', 'dfhf');
+    else if (type === 'correlation') step = makeMethodStep('correlation', 'dcsd');
+    else if (type === 'export') step = { id: 's' + (elcStepSeq++), kind: 'export', filename: 'orbitals.molden' };
+    else if (type === 'custom') step = { id: 's' + (elcStepSeq++), kind: 'custom', code: '# custom Julia code\n' };
+    else return;
+    elemcoState.steps.push(step);
+    renderElemCoSteps();
+    updateElemCoInput();
+}
+function removeElemCoStep(id) {
+    elemcoState.steps = elemcoState.steps.filter((s) => s.id !== id);
+    renderElemCoSteps();
+    updateElemCoInput();
+}
+function moveElemCoStep(id, dir) {
+    const s = elemcoState.steps;
+    const i = s.findIndex((x) => x.id === id);
+    if (i < 0) return;
+    const j = i + dir;
+    if (j < 0 || j >= s.length) return;
+    [s[i], s[j]] = [s[j], s[i]];
+    renderElemCoSteps();
+    updateElemCoInput();
+}
+
+// --- rendering: step list ---------------------------------------------------
+function elcStepBadge(step) {
+    if (step.kind === 'export') return 'Export';
+    if (step.kind === 'custom') return 'Custom';
+    return step.category === 'reference' ? 'Reference' : 'Method';
+}
+function renderElemCoSteps() {
+    const host = document.getElementById('elemco-steps');
+    if (!host) return;
+    host.innerHTML = '';
+    if (!elemcoState.steps || elemcoState.steps.length === 0) {
+        host.appendChild(elcEl('div', { class: 'preview-note' }, 'No steps yet — add a reference and a method below.'));
+        return;
+    }
+    elemcoState.steps.forEach((step) => host.appendChild(renderStepCard(step)));
+}
+function renderStepCard(step) {
+    const card = elcEl('div', { class: 'elemco-step-card' });
+    const head = elcEl('div', { class: 'elemco-step-head' });
+    head.appendChild(elcEl('span', { class: 'elemco-badge' }, elcStepBadge(step)));
+
+    if (step.kind === 'method') {
+        const sel = elcEl('select', { class: 'elemco-step-method' });
+        (ELEMCO_METHODS[step.category] || []).forEach((m) => sel.appendChild(elcEl('option', { value: m.id }, m.label)));
+        sel.value = step.method;
+        sel.addEventListener('change', () => {
+            step.method = sel.value;
+            updateElemCoInput();
+            if (step._optsOpen) renderStepOptions(step);
+        });
+        head.appendChild(sel);
+    } else if (step.kind === 'export') {
+        const fn = elcEl('input', { type: 'text', class: 'elemco-step-file', title: 'Molden filename' });
+        fn.value = step.filename || 'orbitals.molden';
+        fn.addEventListener('input', () => { step.filename = fn.value.trim() || 'orbitals.molden'; updateElemCoInput(); });
+        head.appendChild(fn);
+    } else {
+        head.appendChild(elcEl('span', { class: 'elemco-step-custom-label' }, 'Custom Julia'));
     }
 
-    // Update the input text
-    updateElemCoInput();
+    const actions = elcEl('span', { class: 'elemco-step-actions' });
+    let optsMount = null;
+    if (step.kind === 'method') {
+        const optBtn = elcEl('button', { type: 'button', class: 'elemco-step-optbtn', title: 'Set options for this method' }, step._optsOpen ? 'Options ▾' : 'Options ▸');
+        optBtn.addEventListener('click', () => {
+            step._optsOpen = !step._optsOpen;
+            optBtn.textContent = step._optsOpen ? 'Options ▾' : 'Options ▸';
+            if (optsMount) optsMount.style.display = step._optsOpen ? 'block' : 'none';
+            if (step._optsOpen) renderStepOptions(step);
+        });
+        actions.appendChild(optBtn);
+    }
+    const up = elcEl('button', { type: 'button', class: 'elemco-step-move', title: 'Move up' }, '▲');
+    up.addEventListener('click', () => moveElemCoStep(step.id, -1));
+    const down = elcEl('button', { type: 'button', class: 'elemco-step-move', title: 'Move down' }, '▼');
+    down.addEventListener('click', () => moveElemCoStep(step.id, 1));
+    const del = elcEl('button', { type: 'button', class: 'elemco-step-del', title: 'Remove step' }, '✕');
+    del.addEventListener('click', () => removeElemCoStep(step.id));
+    actions.appendChild(up); actions.appendChild(down); actions.appendChild(del);
+    head.appendChild(actions);
+    card.appendChild(head);
+
+    if (step.kind === 'method') {
+        const chipsEl = elcEl('div', { class: 'elemco-chips' });
+        optsMount = elcEl('div', { class: 'elemco-step-options' });
+        optsMount.style.display = step._optsOpen ? 'block' : 'none';
+        card.appendChild(chipsEl);
+        card.appendChild(optsMount);
+        step._chipsEl = chipsEl;
+        step._optsMount = optsMount;
+        renderStepChips(step);
+        if (step._optsOpen) renderStepOptions(step);
+    } else if (step.kind === 'custom') {
+        const ta = elcEl('textarea', { class: 'elemco-step-code', title: 'Raw Julia inserted verbatim' });
+        ta.value = step.code || '';
+        ta.addEventListener('input', () => { step.code = ta.value; updateElemCoInput(); });
+        card.appendChild(ta);
+    }
+    return card;
+}
+function renderStepOptions(step) {
+    if (!step._optsMount || typeof renderOptionsBrowserInto !== 'function') return;
+    const def = elemcoMethodDef(step.category, step.method);
+    const groups = def ? def.groups : ['cc'];
+    renderOptionsBrowserInto(step._optsMount, groups, step.options, () => {
+        renderStepChips(step);
+        updateElemCoInput();
+    }, {});
+}
+
+// --- rendering: option chips ------------------------------------------------
+function renderBagChips(bag, chipsEl, afterRemove) {
+    if (!chipsEl) return;
+    chipsEl.innerHTML = '';
+    let any = false;
+    elcGroupOrder().forEach((group) => {
+        const dict = bag[group];
+        if (!dict) return;
+        Object.keys(dict).forEach((name) => {
+            any = true;
+            const meta = optionMeta(group, name);
+            const chip = elcEl('span', { class: 'elemco-chip', title: `${group}.${name}${meta ? ' — ' + meta.desc : ''}` });
+            chip.appendChild(elcEl('span', { class: 'elemco-chip-text' }, `${group}.${name}=${formatJuliaValue(meta, dict[name])}`));
+            const x = elcEl('button', { type: 'button', class: 'elemco-chip-x', title: 'Remove (reset to default)' }, '×');
+            x.addEventListener('click', () => {
+                setBagOption(bag, group, name, undefined);
+                renderBagChips(bag, chipsEl, afterRemove);
+                updateElemCoInput();
+                if (afterRemove) afterRemove();
+            });
+            chip.appendChild(x);
+            chipsEl.appendChild(chip);
+        });
+    });
+    chipsEl.style.display = any ? 'flex' : 'none';
+}
+function renderStepChips(step) {
+    renderBagChips(step.options, step._chipsEl, () => { if (step._optsOpen) renderStepOptions(step); });
+}
+
+// --- rendering: global options card ----------------------------------------
+function toggleGlobalOptions() {
+    const mount = document.getElementById('elemco-global-options');
+    const btn = document.getElementById('elemco-global-optbtn');
+    elemcoGlobalOptsOpen = !elemcoGlobalOptsOpen;
+    if (btn) btn.textContent = elemcoGlobalOptsOpen ? 'Global options ▾' : 'Global options ▸';
+    if (mount) {
+        mount.style.display = elemcoGlobalOptsOpen ? 'block' : 'none';
+        if (elemcoGlobalOptsOpen) renderGlobalOptions();
+    }
+}
+function renderGlobalOptions() {
+    const mount = document.getElementById('elemco-global-options');
+    if (!mount || typeof renderOptionsBrowserInto !== 'function') return;
+    renderOptionsBrowserInto(mount, window.ELEMCO_GLOBAL_GROUPS || ['wf', 'int', 'print'], elemcoState.global, () => {
+        renderGlobalChips();
+        updateElemCoInput();
+    }, { exclude: window.ELEMCO_GLOBAL_EXCLUDE || {} });
+}
+function renderGlobalChips() {
+    const el = document.getElementById('elemco-global-chips');
+    if (!el) return;
+    renderBagChips(elemcoState.global, el, () => { if (elemcoGlobalOptsOpen) renderGlobalOptions(); });
 }
 
 // Function to generate meaningful comment line for XYZ files
@@ -410,15 +727,7 @@ function getXYZDataWithNumberedAtoms() {
 function updateElemCoInput() {
     debugLog('ElemCo', 'Starting input generation');
     
-    const dfEnabled = document.getElementById('elemco-df').checked;
-    const method = document.getElementById('elemco-method').value;
-    const aoBasis = document.getElementById('elemco-basis').value;
-    const jkfitBasis = document.getElementById('elemco-jkfit').value;
-    const mpfitBasis = document.getElementById('elemco-mpfit').value;
-    const charge = parseInt(document.getElementById('elemco-charge').value) || 0;
-    const multiplicity = parseInt(document.getElementById('elemco-multiplicity').value) || 0;
-    const moldenEnabled = document.getElementById('elemco-molden').checked;
-    const moldenFile = document.getElementById('elemco-molden-file').value.trim() || 'orbitals.molden';
+    initElemCoState();
 
     // Get current molecular structure from JSmol (with numbered atoms if available)
     debugLog('ElemCo', 'Calling getXYZDataWithNumberedAtoms');
@@ -478,56 +787,47 @@ function updateElemCoInput() {
     
     debugLog('ElemCo', `XYZ data validation passed. Atoms: ${atomCount}, Valid lines: ${validAtomLines}`);
 
-    // Format ElemCo.jl input with complete XYZ specification
-    let elemcoInput = `using ElemCo
+    // Emit a single calculation step (building block) as its ElemCo.jl macro,
+    // with any changed options as a local `begin ... end` @set block.
+    function elcStepComment(step) {
+        if (step.kind === 'export') return 'Export orbitals (Molden)';
+        if (step.kind === 'custom') return 'Custom Julia';
+        const def = elemcoMethodDef(step.category, step.method);
+        return def ? def.label : step.method;
+    }
+    function elcStepEmit(step) {
+        if (step.kind === 'export') return `@export_molden ${elcJuliaStringLiteral(step.filename || 'orbitals.molden')}`;
+        if (step.kind === 'custom') return (step.code || '').replace(/\s+$/, '');
+        const def = elemcoMethodDef(step.category, step.method);
+        if (!def) return `# unknown method: ${step.method}`;
+        // Pass the method name as a string literal (ElemCo.jl accepts `@cc "CCSD"`
+        // / `@dfcc "SVD-DCSD"`). Bare forms like ccsd(t) or svd-dcsd would parse as
+        // a call / subtraction in Julia, so quoting is the unambiguous choice.
+        const head = def.macro + (def.arg ? ' "' + def.arg + '"' : '');
+        const lines = bagSetLines(step.options || {});
+        if (lines.length === 0) return head;
+        return head + ' begin\n' + lines.map((l) => '  ' + l).join('\n') + '\nend';
+    }
 
-function main()        
-# Molecule specification
-geometry = """
-${xyzData.trim()}
-"""
-        
-# Set basis set`;
-
-    // Handle basis set configuration based on selected options
-    if (jkfitBasis === 'auto' && mpfitBasis === 'auto') {
-        // Use simple basis set specification if no auxiliary basis sets are selected
-        elemcoInput += `\nbasis = "${aoBasis}"\n`;
+    // Assemble the full script from the builder state.
+    const b = elemcoState.basis;
+    const parts = ['using ElemCo', '', 'function main()', '# Molecular geometry', 'geometry = """', xyzData.trim(), '"""', '', '# Basis set'];
+    if (b.jkfit === 'auto' && b.mpfit === 'auto') {
+        parts.push(`basis = "${b.ao}"`);
     } else {
-        // Build the basis dictionary with selected auxiliary basis sets
-        elemcoInput += `\nbasis = Dict(\n    "ao" => "${aoBasis}"`;
-
-        if (jkfitBasis !== 'auto') {
-            elemcoInput += `,\n    "jkfit" => "${jkfitBasis}"`;
-        }
-
-        if (mpfitBasis !== 'auto') {
-            elemcoInput += `,\n    "mpfit" => "${mpfitBasis}"`;
-        }
-
-        elemcoInput += "\n)\n";
+        let d = `basis = Dict(\n    "ao" => "${b.ao}"`;
+        if (b.jkfit !== 'auto') d += `,\n    "jkfit" => "${b.jkfit}"`;
+        if (b.mpfit !== 'auto') d += `,\n    "mpfit" => "${b.mpfit}"`;
+        d += '\n)';
+        parts.push(d);
     }
-
-    // Add charge and multiplicity settings only if they are non-zero
-    if (charge !== 0 || multiplicity !== 0) {
-        elemcoInput += `\n# Set charge and multiplicity\n@set wf charge=${charge} ms2=${multiplicity}\n`;
-    }
-
-    // Add calculation commands
-    elemcoInput += `\n# Run HF calculation first\n${dfEnabled ? '@dfhf' : '@dfhf'}\n`;
-
-    // Add coupled cluster calculation if method is not HF
-    if (method !== 'HF') {
-        const ccCommand = dfEnabled ? '@dfcc' : '@cc';
-        elemcoInput += `\n# Run ${method} calculation\n${ccCommand} ${method.toLowerCase()}\n`;
-    }
-
-    // Add molden export if enabled
-    if (moldenEnabled) {
-        elemcoInput += `\n# Export orbitals to Molden file\n@export_molden "${moldenFile}"\n`;
-    }
-
-    elemcoInput += `\nend\nmain()\n`;
+    const gl = globalSetLines();
+    if (gl.length) { parts.push('', '# Global settings'); gl.forEach((l) => parts.push(l)); }
+    (elemcoState.steps || []).forEach((step) => {
+        parts.push('', '# ' + elcStepComment(step), elcStepEmit(step));
+    });
+    parts.push('', 'end', 'main()', '');
+    let elemcoInput = parts.join('\n');
 
     // Set the input text
     const inputArea = document.getElementById('elemco-input');

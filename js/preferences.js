@@ -342,29 +342,12 @@ function applyPreferences() {
         }
     }
     
-    // Apply default basis set to ElemCo panel
+    // Apply the default basis set to the ElemCo builder state. The default
+    // method only seeds the initial steps (in initElemCoState), so it is not
+    // re-applied here — that would clobber steps the user has built.
     try {
-        const basisSelect = document.getElementById('elemco-basis');
-        if (basisSelect && prefs.defaultBasisSet) {
-            basisSelect.value = prefs.defaultBasisSet;
-        }
-        
-        // Apply default method to ElemCo panel
-        const methodSelect = document.getElementById('elemco-method');
-        if (methodSelect && prefs.defaultMethod) {
-            methodSelect.value = prefs.defaultMethod;
-        }
-        
-        // Apply DF preference
-        const dfCheckbox = document.getElementById('elemco-df');
-        if (dfCheckbox && prefs.useDF !== undefined) {
-            dfCheckbox.checked = prefs.useDF;
-            updateMethodOptions(); // Update available methods based on DF setting
-        }
-        
-        // Update ElemCo input with these preferences
-        if ((basisSelect || methodSelect) && typeof updateElemCoInput === 'function') {
-            updateElemCoInput();
+        if (typeof syncElemCoBasisFromPrefs === 'function') {
+            syncElemCoBasisFromPrefs();
         }
     } catch (e) {
         console.warn('Could not apply ElemCo preferences:', e);

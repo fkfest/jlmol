@@ -1452,3 +1452,262 @@
             margin-right: auto;
             color: #666;
         }
+
+        /* ===================================================================
+           ElemCo.jl builder: global card, step cards, option chips & browser
+           =================================================================== */
+        .elemco-card {
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 10px;
+            margin-bottom: 12px;
+            background: #fafafa;
+        }
+        .elemco-card-title,
+        .elemco-steps-label {
+            font-weight: bold;
+            font-size: 13px;
+            margin-bottom: 8px;
+            color: #333;
+        }
+        .elemco-steps-label {
+            margin-top: 4px;
+        }
+
+        /* --- step cards (building blocks) --- */
+        .elemco-step-card {
+            border: 1px solid #e0e0e0;
+            border-left: 3px solid #4CAF50;
+            border-radius: 6px;
+            padding: 8px;
+            margin-bottom: 8px;
+            background: #fff;
+        }
+        .elemco-step-head {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .elemco-badge {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            font-weight: bold;
+            color: #fff;
+            background: #4CAF50;
+            border-radius: 3px;
+            padding: 2px 6px;
+            white-space: nowrap;
+        }
+        .elemco-step-method,
+        .elemco-step-file {
+            flex: 1;
+            min-width: 0;
+            padding: 4px;
+        }
+        .elemco-step-custom-label {
+            flex: 1;
+            color: #666;
+            font-style: italic;
+        }
+        .elemco-step-actions {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            margin-left: auto;
+        }
+        .elemco-step-actions button,
+        .elemco-opt-togglebtn,
+        .elemco-chip-x,
+        .elemco-opt-reset {
+            min-width: 0;
+            padding: 3px 7px;
+            font-size: 12px;
+        }
+        .elemco-step-move,
+        .elemco-step-del {
+            padding: 3px 6px;
+        }
+        .elemco-step-code {
+            width: 100%;
+            height: 70px;
+            margin-top: 6px;
+            font-family: monospace;
+            font-size: 12px;
+            resize: vertical;
+        }
+
+        .elemco-add-step {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 12px;
+            font-size: 12px;
+            color: #555;
+        }
+        .elemco-add-step button {
+            min-width: 0;
+            padding: 4px 10px;
+            font-size: 12px;
+        }
+
+        /* --- changed-option chips --- */
+        .elemco-chips {
+            display: none;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-top: 6px;
+        }
+        .elemco-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: #eef6ee;
+            border: 1px solid #cfe6cf;
+            border-radius: 10px;
+            padding: 1px 4px 1px 8px;
+            font-size: 11px;
+            font-family: monospace;
+            color: #2f6f2f;
+        }
+        .elemco-chip-x {
+            background: none;
+            border: none;
+            box-shadow: none;
+            color: #2f6f2f;
+            line-height: 1;
+            padding: 0 3px;
+        }
+        .elemco-chip-x:hover {
+            color: #c0392b;
+            background: none;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* --- options browser --- */
+        .elemco-opt-toggle-row {
+            margin-top: 8px;
+        }
+        .elemco-step-options {
+            margin-top: 8px;
+            border-top: 1px dashed #ddd;
+            padding-top: 8px;
+        }
+        .elemco-opt-search {
+            width: 100%;
+            padding: 5px;
+            margin-bottom: 8px;
+            box-sizing: border-box;
+        }
+        .elemco-opt-group {
+            border: 1px solid #eee;
+            border-radius: 4px;
+            margin-bottom: 6px;
+        }
+        .elemco-opt-group-head {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            text-align: left;
+            min-width: 0;
+            background: #f4f4f4;
+            border: none;
+            border-radius: 4px;
+            padding: 5px 8px;
+            font-weight: bold;
+            font-size: 12px;
+            box-shadow: none;
+        }
+        .elemco-opt-group-head:hover {
+            background: #ececec;
+            transform: none;
+            box-shadow: none;
+        }
+        .elemco-caret {
+            color: #888;
+            width: 10px;
+        }
+        .elemco-opt-group-title {
+            flex: 1;
+            min-width: 0;
+        }
+        .elemco-opt-group-count {
+            color: #4CAF50;
+            font-size: 11px;
+            font-weight: normal;
+        }
+        .elemco-opt-group-body {
+            padding: 4px 6px;
+        }
+        .elemco-opt-divider {
+            margin: 10px 0 6px;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #999;
+            border-top: 1px solid #eee;
+            padding-top: 6px;
+        }
+        .elemco-opt-row {
+            display: grid;
+            grid-template-columns: minmax(80px, 34%) 1fr auto auto;
+            align-items: center;
+            gap: 6px;
+            padding: 3px 2px;
+            border-bottom: 1px solid #f4f4f4;
+        }
+        .elemco-opt-row.elemco-opt-modified {
+            background: #fbfff8;
+        }
+        .elemco-opt-name {
+            font-family: monospace;
+            font-size: 12px;
+            font-weight: normal;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            cursor: help;
+            margin: 0;
+        }
+        .elemco-opt-modified .elemco-opt-name {
+            font-weight: bold;
+        }
+        .elemco-opt-widget {
+            min-width: 0;
+        }
+        .elemco-opt-input {
+            width: 100%;
+            padding: 3px 5px;
+            font-size: 12px;
+            box-sizing: border-box;
+        }
+        .elemco-opt-widget input[type="checkbox"] {
+            width: auto;
+        }
+        .elemco-opt-default {
+            font-size: 11px;
+            color: #999;
+            font-family: monospace;
+            white-space: nowrap;
+            cursor: help;
+        }
+        .elemco-opt-reset {
+            color: #c0392b;
+            line-height: 1;
+        }
+
+        .elemco-editor-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .elemco-source-note {
+            color: #999;
+            font-style: italic;
+        }
