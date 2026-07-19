@@ -180,7 +180,10 @@ function renderOptionsBrowserInto(mount, primaryGroups, bag, afterChange, opts) 
         groupsWrap.appendChild(sec);
     };
 
-    primary.forEach((g) => addGroup(g, true));
+    // Everything starts collapsed — some groups (e.g. cc has 45 options) are long,
+    // so a compact list of group headers is friendlier. The filter box and the
+    // group headers expand what the user actually wants.
+    primary.forEach((g) => addGroup(g, false));
     if (rest.length) {
         groupsWrap.appendChild(elcEl('div', { class: 'elemco-opt-divider' }, 'All option groups'));
         rest.forEach((g) => addGroup(g, false));

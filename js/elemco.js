@@ -67,9 +67,27 @@ function generateElemCoInput() {
     document.getElementById('status').innerHTML = 'ElemCo.jl input reset to default';
 }
 
+// Remember the last editable field the user focused inside the ElemCo panel (an
+// option text field, the custom-step editor, or the main input editor) so that
+// "Insert Selected Atoms" targets wherever they were typing. Clicking the button
+// itself moves focus to the button, which is not editable, so this value sticks.
+var elemcoLastFocusedField = null;
+function setupElemcoFocusTracking() {
+    const panel = document.getElementById('elemcoPanel');
+    if (!panel || panel._focusTrackWired) return;
+    panel._focusTrackWired = true;
+    panel.addEventListener('focusin', (e) => {
+        const t = e.target;
+        if (!t) return;
+        const editable = t.tagName === 'TEXTAREA' ||
+            (t.tagName === 'INPUT' && /^(text|search)$/i.test(t.type || 'text'));
+        if (editable) elemcoLastFocusedField = t;
+    });
+}
+
 // Insert the list of currently selected atoms (sorted, 1-based indices) at the
-// cursor position in the ElemCo input editor, e.g. for dummy atoms or active
-// regions. Falls back to appending at the end if no cursor position is known.
+// cursor of whichever field the user last edited, falling back to the main input
+// editor. Useful for dummy atoms, active regions, or option fields.
 function insertSelectedAtomsIntoElemCo() {
     const nums = getSelectedAtomNumbers();
     if (nums.length === 0) {
@@ -77,15 +95,19 @@ function insertSelectedAtomsIntoElemCo() {
             'No atoms selected — click atoms in the structure or XYZ viewer first';
         return;
     }
-    const textarea = document.getElementById('elemco-input');
+    let field = elemcoLastFocusedField;
+    if (!field || !document.contains(field)) field = document.getElementById('elemco-input');
+    if (!field) return;
     const listText = '[' + nums.join(', ') + ']';
-    const hasCursor = typeof textarea.selectionStart === 'number';
-    const start = hasCursor ? textarea.selectionStart : textarea.value.length;
-    const end = hasCursor ? textarea.selectionEnd : textarea.value.length;
-    textarea.value = textarea.value.slice(0, start) + listText + textarea.value.slice(end);
+    const hasCursor = typeof field.selectionStart === 'number';
+    const start = hasCursor ? field.selectionStart : field.value.length;
+    const end = hasCursor ? field.selectionEnd : field.value.length;
+    field.value = field.value.slice(0, start) + listText + field.value.slice(end);
     const pos = start + listText.length;
-    textarea.selectionStart = textarea.selectionEnd = pos;
-    textarea.focus();
+    try { field.selectionStart = field.selectionEnd = pos; } catch (_) { /* some inputs disallow selection */ }
+    field.focus();
+    // Let any state-backed field (option inputs, custom step) react to the edit.
+    field.dispatchEvent(new Event('input', { bubbles: true }));
     document.getElementById('status').innerHTML =
         `Inserted ${nums.length} selected atom${nums.length === 1 ? '' : 's'}: ${listText}`;
 }
@@ -150,6 +172,7 @@ function initializeElemCoListeners() {
         elemcoState.ms2 = parseInt(document.getElementById('elemco-multiplicity').value) || 0;
         updateElemCoInput();
     });
+    setupElemcoFocusTracking();
 }
 
 // ===========================================================================
@@ -362,6 +385,21 @@ function moveElemCoStep(id, dir) {
     renderElemCoSteps();
     updateElemCoInput();
 }
+// Move the dragged step next to the target step (before it, or after when the
+// pointer was dropped on the target's lower half).
+function reorderElemCoStep(draggedId, targetId, after) {
+    if (draggedId === targetId) return;
+    const s = elemcoState.steps;
+    const from = s.findIndex((x) => x.id === draggedId);
+    if (from < 0) return;
+    const [moved] = s.splice(from, 1);
+    let to = s.findIndex((x) => x.id === targetId);
+    if (to < 0) { s.splice(from, 0, moved); return; }
+    if (after) to += 1;
+    s.splice(to, 0, moved);
+    renderElemCoSteps();
+    updateElemCoInput();
+}
 
 // --- rendering: step list ---------------------------------------------------
 function elcStepBadge(step) {
@@ -379,9 +417,39 @@ function renderElemCoSteps() {
     }
     elemcoState.steps.forEach((step) => host.appendChild(renderStepCard(step)));
 }
+var elcDraggingStepId = null;
 function renderStepCard(step) {
     const card = elcEl('div', { class: 'elemco-step-card' });
+    card.dataset.stepId = step.id;
     const head = elcEl('div', { class: 'elemco-step-head' });
+
+    // Drag-to-reorder: only the grip starts a drag (so the select/inputs stay
+    // usable); the whole card is a drop target.
+    const grip = elcEl('span', { class: 'elemco-step-grip', title: 'Drag to reorder', draggable: 'true' }, '⠿');
+    grip.addEventListener('dragstart', (e) => {
+        elcDraggingStepId = step.id;
+        if (e.dataTransfer) { e.dataTransfer.setData('text/plain', step.id); e.dataTransfer.effectAllowed = 'move'; }
+        card.classList.add('elemco-dragging');
+    });
+    grip.addEventListener('dragend', () => { elcDraggingStepId = null; card.classList.remove('elemco-dragging'); });
+    card.addEventListener('dragover', (e) => {
+        if (!elcDraggingStepId || elcDraggingStepId === step.id) return;
+        e.preventDefault();
+        if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+        card.classList.add('elemco-drag-over');
+    });
+    card.addEventListener('dragleave', () => card.classList.remove('elemco-drag-over'));
+    card.addEventListener('drop', (e) => {
+        card.classList.remove('elemco-drag-over');
+        const draggedId = (e.dataTransfer && e.dataTransfer.getData('text/plain')) || elcDraggingStepId;
+        if (!draggedId) return;
+        e.preventDefault();
+        const rect = card.getBoundingClientRect();
+        const after = (e.clientY - rect.top) > rect.height / 2;
+        reorderElemCoStep(draggedId, step.id, after);
+    });
+    head.appendChild(grip);
+
     head.appendChild(elcEl('span', { class: 'elemco-badge' }, elcStepBadge(step)));
 
     if (step.kind === 'method') {
@@ -506,6 +574,15 @@ function renderGlobalChips() {
     const el = document.getElementById('elemco-global-chips');
     if (!el) return;
     renderBagChips(elemcoState.global, el, () => { if (elemcoGlobalOptsOpen) renderGlobalOptions(); });
+}
+// Fold/unfold the whole System & basis card.
+function toggleElemCoGlobalCard() {
+    const body = document.getElementById('elemco-global-body');
+    const caret = document.getElementById('elemco-global-caret');
+    if (!body) return;
+    const open = body.style.display === 'none';
+    body.style.display = open ? 'block' : 'none';
+    if (caret) caret.textContent = open ? '▾' : '▸';
 }
 
 // Function to generate meaningful comment line for XYZ files

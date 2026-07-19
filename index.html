@@ -184,7 +184,8 @@
         </div>
         <!-- Global "System & basis" card: options here apply to the whole run -->
         <div class="elemco-card" id="elemco-global-card">
-            <div class="elemco-card-title">System &amp; basis</div>
+            <button type="button" class="elemco-card-title elemco-fold-title" onclick="toggleElemCoGlobalCard()" title="Show or hide the system &amp; basis settings"><span class="elemco-caret" id="elemco-global-caret">▾</span>System &amp; basis</button>
+            <div id="elemco-global-body">
             <div class="elemco-input-group">
                 <label for="elemco-basis">AO Basis Set:</label>
                 <select id="elemco-basis">
@@ -232,6 +233,7 @@
             </div>
             <div class="elemco-chips" id="elemco-global-chips"></div>
             <div class="elemco-step-options" id="elemco-global-options" style="display:none;"></div>
+            </div><!-- /#elemco-global-body -->
         </div>
 
         <!-- Calculation steps (building blocks): reference, methods, export, ... -->

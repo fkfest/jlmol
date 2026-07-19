@@ -31,7 +31,7 @@ const ELEMCO_METHODS = {
     { id: 'ccsdt',        label: 'CCSDT',             macro: '@cc',    arg: 'ccsdt',         groups: ['cc'] },
     { id: 'dc-ccsdt',     label: 'DC-CCSDT',          macro: '@cc',    arg: 'dc-ccsdt',      groups: ['cc'] },
     { id: 'svd-dcsd',     label: 'SVD-DCSD (DF)',     macro: '@dfcc',  arg: 'svd-dcsd',      groups: ['cc'] },
-    { id: 'svd-dc-ccsdt', label: 'SVD-DC-CCSDT (DF)', macro: '@dfcc',  arg: 'svd-dc-ccsdt',  groups: ['cc'] },
+    { id: 'svd-dc-ccsdt', label: 'SVD-DC-CCSDT',      macro: '@cc',    arg: 'svd-dc-ccsdt',  groups: ['cc'] },
     { id: 'fci',          label: 'FCI',               macro: '@fci',   arg: null,            groups: ['fci', 'davidson'] },
     { id: 'ciphi',        label: 'CIPHI / SCI',       macro: '@ciphi', arg: null,            groups: ['ciphi'] },
   ],
