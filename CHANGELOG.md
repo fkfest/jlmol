@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- ElemCo.jl input builder rework: the ElemCo.jl panel is now a method-driven "building block" editor. A calculation is assembled from an ordered list of steps (Reference, Method, Export, Macro, Custom) that you can add, remove, reorder (with the up/down buttons or by dragging the grip), and collapse. Each step emits its ElemCo.jl macro, and only the options you change from their ElemCo.jl defaults are emitted, as a local `begin … end @set` block, keeping the generated script minimal.
+- Full options browser: every ElemCo.jl calculation option (all 13 groups, ~157 options) can be set through a searchable, grouped browser with typed inputs, each option pre-filled with its default and its description shown on hover, plus one-click reset per option and "chips" summarising the options changed for each step. The option catalogue is generated from ElemCo.jl's own `options.jl`, so it stays in sync with the library (`npm run update-elemco-options`).
+- Composable method selection: correlation methods are grouped (Møller–Plesset, coupled cluster, distinguishable cluster, quasi-variational, factorized SVD, excited states, full CI) with a separate spin selector (closed-shell / unrestricted `U` / restricted-open `R`) that composes the ElemCo.jl method string (e.g. `UCCSD`, `ΛCCSD(T)`, `EOM-UCCSD`), a live read-out of the emitted call, and a "Custom…" free-text method with a density-fitting toggle. Newly selectable methods include ΛCCSD(T), CCD, DCD, QV-CCD/QV-DCD, OQV-CCD/OQV-DCD, EOM-CCSD/EOM-DCSD, FCI and CIPHI.
+- FCIDUMP calculations: a Molecule / FCIDUMP switch in the "System & basis" card. In FCIDUMP mode the basis-set fields are replaced by a FCIDUMP file field and the generated input reads the integrals from that file (`fcidump = "…"`) instead of a geometry and basis, and no reference step is added. The mode is selected automatically when no molecule is loaded.
+- Generic "Macro" step: add any macro exported by ElemCo.jl as a building block, with its signature as an argument hint, its docstring shown on hover, and — for macros that accept one — a local options block. The macro list and docstrings are parsed from ElemCo.jl's source (`npm run update-elemco-macros`).
+- Julia syntax highlighting in the generated-input editor and the custom-code editor.
+- Separate default methods for molecule and FCIDUMP calculations in Settings → ElemCo.jl (defaults: CCSD(T) for molecule, ΛCCSD(T) for FCIDUMP). A molecule calculation adds a DF-HF reference automatically; an FCIDUMP calculation does not.
+
+### Changed
+
+- The ElemCo.jl panel opens wider, its "System & basis" card and each step are collapsible (click the badge or title), the fold indicators are larger, and the panel's fonts and sizes were made consistent.
+- "Insert Selected Atoms" now inserts the atom list at the cursor of whichever field you last edited (an option field, the custom-code editor, or the main input editor), not only the main editor.
+- Clicking or opening a floating panel now brings it to the front, so overlapping panels (e.g. ElemCo.jl over Preferences) can be reordered; panels always stay above the main window.
+- Preference descriptions are shown as hover help (an ⓘ icon next to the option) instead of inline text, so the settings rows stay compact.
+- Density fitting and the reference/correlation choice are now made per step (via the Reference and Method blocks), replacing the previous global "DF" checkbox and single default-method setting.
+
 ## [1.4.1] - 2026-07-18
 
 ### Added
