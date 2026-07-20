@@ -25,10 +25,9 @@ function refreshEditHighlightsIfVisible() {
 // ===== Selection halo color =====
 // The 3D halo has no color of its own, so Jmol falls back to each atom's CPK
 // element color — white for hydrogen, which is invisible on the default white
-// background. Derive an explicit halo color from the current background instead:
-// keep the background's hue/saturation but flip to the opposite lightness end so
-// the halo always contrasts (a neutral grey for a white/greyscale background),
-// staying visible without clashing.
+// background. Give the halo an explicit warm-gold color instead, with its
+// lightness flipped to the far end from the background luminance so it always
+// stays visible (a dark amber on light backgrounds, pale gold on dark ones).
 function elcHexToRgb(hex) {
     const m = /^#?([0-9a-f]{6})$/i.exec((hex || '').trim());
     if (!m) return null;
@@ -39,24 +38,6 @@ function elcHexToRgb(hex) {
 function elcRgbToHex(r, g, b) {
     const h = (v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0');
     return h(r) + h(g) + h(b);
-}
-
-function elcRgbToHsl(r, g, b) {
-    r /= 255; g /= 255; b /= 255;
-    const max = Math.max(r, g, b), min = Math.min(r, g, b);
-    const l = (max + min) / 2;
-    const d = max - min;
-    let h = 0, s = 0;
-    if (d !== 0) {
-        s = d / (1 - Math.abs(2 * l - 1));
-        switch (max) {
-            case r: h = (((g - b) / d) % 6 + 6) % 6; break;
-            case g: h = (b - r) / d + 2; break;
-            default: h = (r - g) / d + 4; break;
-        }
-        h *= 60;
-    }
-    return { h, s, l };
 }
 
 function elcHslToRgb(h, s, l) {
@@ -79,11 +60,13 @@ function haloColorForBackground(bgHex) {
     // WCAG relative luminance decides whether the background is light or dark.
     const lin = (c) => { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
     const Y = 0.2126 * lin(rgb.r) + 0.7152 * lin(rgb.g) + 0.0722 * lin(rgb.b);
-    const hsl = elcRgbToHsl(rgb.r, rgb.g, rgb.b);
-    // Flip to the far lightness end for a strong, guaranteed contrast; keep the
-    // background hue/saturation so the halo reads as a related, tasteful tone.
-    const l = Y > 0.5 ? 0.30 : 0.82;
-    const out = elcHslToRgb(hsl.h, hsl.s, l);
+    // Warm gold halo: a fixed amber hue so the selection always reads as gold,
+    // with the lightness flipped to the far end from the background so it stays
+    // clearly visible (dark amber on light backgrounds, pale gold on dark ones).
+    const HALO_HUE = 48;   // degrees — gold/amber (pure yellow is 60)
+    const HALO_SAT = 0.55;
+    const l = Y > 0.5 ? 0.32 : 0.82;
+    const out = elcHslToRgb(HALO_HUE, HALO_SAT, l);
     return '[x' + elcRgbToHex(out.r, out.g, out.b) + ']';
 }
 
