@@ -154,6 +154,16 @@ function escapeHtmlForHighlight(s) {
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+// Mirror the textarea's scroll onto the highlight layer with a transform. Setting
+// the backdrop's own scrollTop clamps to its scroll range, and a textarea's
+// scrollbars shrink its client area so it can scroll a hair further than the
+// scrollbar-less backdrop — at the very bottom/right the clamped band drifted
+// above its line. A transform is never clamped, so it tracks the textarea exactly.
+function syncXYZEditScroll(textarea, highlights) {
+    highlights.style.transform =
+        'translate(' + (-textarea.scrollLeft) + 'px, ' + (-textarea.scrollTop) + 'px)';
+}
+
 // Re-draw the edit-mode highlight overlay: tint the textarea lines that belong
 // to currently selected atoms. Atom i (0-based) lives on text line i + 2
 // (line 0 = atom count, line 1 = comment).
@@ -171,8 +181,7 @@ function renderXYZEditHighlights() {
     }).join('\n');
 
     // Keep the overlay scroll-aligned with the textarea.
-    backdrop.scrollTop = textarea.scrollTop;
-    backdrop.scrollLeft = textarea.scrollLeft;
+    syncXYZEditScroll(textarea, highlights);
 }
 
 // Attach the textarea listeners that keep the highlight overlay in sync. Runs
@@ -183,13 +192,10 @@ function initXYZEditHighlights() {
     if (!textarea || textarea.dataset.hlInit) return;
     textarea.dataset.hlInit = '1';
 
-    const backdrop = document.getElementById('xyz-edit-backdrop');
+    const highlights = document.getElementById('xyz-edit-highlights');
     textarea.addEventListener('input', renderXYZEditHighlights);
     textarea.addEventListener('scroll', function() {
-        if (backdrop) {
-            backdrop.scrollTop = textarea.scrollTop;
-            backdrop.scrollLeft = textarea.scrollLeft;
-        }
+        if (highlights) syncXYZEditScroll(textarea, highlights);
     });
 }
 

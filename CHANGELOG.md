@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.1] - 2026-07-20
+
+### Fixed
+
+- Julia syntax highlighting in the ElemCo.jl input and custom-code editors no longer drifts out of alignment with the text when scrolled to the very bottom or right. The highlight layer now tracks the textarea with a transform (which is never clamped) instead of a scroll position that clamped short of the textarea's own range at the extremes.
+- The XYZ text editor's selected-atom highlight band had the same drift at the scroll extremes and is fixed the same way.
+- Selected atoms are now clearly highlighted regardless of element. The 3D selection halo uses an explicit, high-contrast color derived from the viewer background (a warm gold) instead of inheriting each atom's element color — previously a selected hydrogen got a white halo that was invisible on the white background. The halo re-derives its color if the background is changed.
+
 ## [1.5.0] - 2026-07-19
 
 ### Added
