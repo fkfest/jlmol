@@ -60,11 +60,13 @@ function haloColorForBackground(bgHex) {
     // WCAG relative luminance decides whether the background is light or dark.
     const lin = (c) => { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
     const Y = 0.2126 * lin(rgb.r) + 0.7152 * lin(rgb.g) + 0.0722 * lin(rgb.b);
-    // Warm gold halo: a fixed amber hue so the selection always reads as gold,
-    // with the lightness flipped to the far end from the background so it stays
-    // clearly visible (dark amber on light backgrounds, pale gold on dark ones).
-    const HALO_HUE = 48;   // degrees — gold/amber (pure yellow is 60)
-    const HALO_SAT = 0.55;
+    // Warm gold halo, leaning toward the Solarized-light cream (#FDF6E3, hue ~44):
+    // a fixed, softly-saturated amber hue so the selection always reads as a warm
+    // gold, with the lightness flipped to the far end from the background so it
+    // stays clearly visible (a soft dark gold on light backgrounds, a pale cream
+    // on dark ones).
+    const HALO_HUE = 45;   // degrees — warm gold (pure yellow is 60; Solarized base3 ~44)
+    const HALO_SAT = 0.40;
     const l = Y > 0.5 ? 0.32 : 0.82;
     const out = elcHslToRgb(HALO_HUE, HALO_SAT, l);
     return '[x' + elcRgbToHex(out.r, out.g, out.b) + ']';
