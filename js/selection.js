@@ -22,6 +22,81 @@ function refreshEditHighlightsIfVisible() {
     }
 }
 
+// ===== Selection halo color =====
+// The 3D halo has no color of its own, so Jmol falls back to each atom's CPK
+// element color — white for hydrogen, which is invisible on the default white
+// background. Derive an explicit halo color from the current background instead:
+// keep the background's hue/saturation but flip to the opposite lightness end so
+// the halo always contrasts (a neutral grey for a white/greyscale background),
+// staying visible without clashing.
+function elcHexToRgb(hex) {
+    const m = /^#?([0-9a-f]{6})$/i.exec((hex || '').trim());
+    if (!m) return null;
+    const n = parseInt(m[1], 16);
+    return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+}
+
+function elcRgbToHex(r, g, b) {
+    const h = (v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0');
+    return h(r) + h(g) + h(b);
+}
+
+function elcRgbToHsl(r, g, b) {
+    r /= 255; g /= 255; b /= 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    const l = (max + min) / 2;
+    const d = max - min;
+    let h = 0, s = 0;
+    if (d !== 0) {
+        s = d / (1 - Math.abs(2 * l - 1));
+        switch (max) {
+            case r: h = (((g - b) / d) % 6 + 6) % 6; break;
+            case g: h = (b - r) / d + 2; break;
+            default: h = (r - g) / d + 4; break;
+        }
+        h *= 60;
+    }
+    return { h, s, l };
+}
+
+function elcHslToRgb(h, s, l) {
+    const c = (1 - Math.abs(2 * l - 1)) * s;
+    const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+    const m = l - c / 2;
+    let r = 0, g = 0, b = 0;
+    if (h < 60) { r = c; g = x; }
+    else if (h < 120) { r = x; g = c; }
+    else if (h < 180) { g = c; b = x; }
+    else if (h < 240) { g = x; b = c; }
+    else if (h < 300) { r = x; b = c; }
+    else { r = c; b = x; }
+    return { r: (r + m) * 255, g: (g + m) * 255, b: (b + m) * 255 };
+}
+
+// Jmol color literal ([xRRGGBB]) for the halo, given a background hex color.
+function haloColorForBackground(bgHex) {
+    const rgb = elcHexToRgb(bgHex) || { r: 255, g: 255, b: 255 };
+    // WCAG relative luminance decides whether the background is light or dark.
+    const lin = (c) => { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
+    const Y = 0.2126 * lin(rgb.r) + 0.7152 * lin(rgb.g) + 0.0722 * lin(rgb.b);
+    const hsl = elcRgbToHsl(rgb.r, rgb.g, rgb.b);
+    // Flip to the far lightness end for a strong, guaranteed contrast; keep the
+    // background hue/saturation so the halo reads as a related, tasteful tone.
+    const l = Y > 0.5 ? 0.30 : 0.82;
+    const out = elcHslToRgb(hsl.h, hsl.s, l);
+    return '[x' + elcRgbToHex(out.r, out.g, out.b) + ']';
+}
+
+// Current halo color, derived from the user's background-color preference.
+function currentHaloColor() {
+    let bg = '#FFFFFF';
+    try {
+        const prefs = (typeof getPreferences === 'function') ? getPreferences() : null;
+        if (prefs && prefs.bgColor) bg = prefs.bgColor;
+    } catch (e) { /* fall back to white */ }
+    return haloColorForBackground(bg);
+}
+
 // Turn the 3D halo on/off for a single atom (atomIndex is 0-based).
 // Always restores the full selection afterwards: halo flags persist
 // independently of the selection set, and leaving a partial selection
@@ -29,7 +104,11 @@ function refreshEditHighlightsIfVisible() {
 // (xtb, ElemCo), which only export the currently selected atoms.
 function applyHaloForAtom(atomIndex, on) {
     try {
-        Jmol.script(jmolApplet0, `select atomno=${atomIndex + 1}; halos ${on ? 'on' : 'off'}; select all`);
+        const sel = `select atomno=${atomIndex + 1};`;
+        const cmd = on
+            ? `${sel} color halos ${currentHaloColor()}; halos on; select all`
+            : `${sel} halos off; select all`;
+        Jmol.script(jmolApplet0, cmd);
     } catch (e) {
         console.error('Error updating halo for atom', atomIndex, e);
     }
@@ -80,12 +159,25 @@ function reapplySelectionToRows() {
     if (selectedAtoms.size > 0) {
         const list = Array.from(selectedAtoms).map(i => 'atomno=' + (i + 1)).join(' or ');
         try {
-            Jmol.script(jmolApplet0, `select ${list}; halos on; select all`);
+            Jmol.script(jmolApplet0, `select ${list}; color halos ${currentHaloColor()}; halos on; select all`);
         } catch (e) {
             console.error('Error re-applying halos:', e);
         }
     }
     updateSelectionUI();
+}
+
+// Re-tint the halos of the current selection — e.g. after the viewer background
+// color changed, so the derived halo color stays visible. No-op when nothing is
+// selected.
+function reapplyHaloColor() {
+    if (selectedAtoms.size === 0) return;
+    const list = Array.from(selectedAtoms).map(i => 'atomno=' + (i + 1)).join(' or ');
+    try {
+        Jmol.script(jmolApplet0, `select ${list}; color halos ${currentHaloColor()}; select all`);
+    } catch (e) {
+        console.error('Error recoloring halos:', e);
+    }
 }
 
 // Selected atom numbers as sorted 1-based indices (for ElemCo / external use).

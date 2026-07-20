@@ -95,9 +95,13 @@ function updateBackgroundColor(color) {
         const jsmolColor = '[x' + color.replace('#', '') + ']';
         Jmol.script(jmolApplet0, `background ${jsmolColor}`);
         console.log('Applied background color:', color, '->', jsmolColor);
-        
+
         // Update the preference
         updatePreference('bgColor', color);
+
+        // The selection halo color is derived from the background, so keep any
+        // active selection visible against the new background.
+        if (typeof reapplyHaloColor === 'function') reapplyHaloColor();
     }
 }
 
