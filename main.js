@@ -1,4 +1,15 @@
 const { app, BrowserWindow, shell } = require('electron')
+
+// --- smoke mode ------------------------------------------------------------
+// `electron . --smoke` boots the app, waits for the JSmol applet to reach
+// _ready (the same flag the app itself trusts, js/molecule-data.js), and
+// exits 0 (SMOKE OK) or 1 (SMOKE FAIL). Any renderer console line carrying an
+// error signature fails the run regardless of log level -- the criteria are
+// distilled from the 2026-08-22 electron-41 verification, which caught a real
+// regression (JSmol _evaluate TypeErrors) within a minute of Xvfb runtime.
+const SMOKE = process.argv.includes('--smoke');
+const SMOKE_TIMEOUT_MS = 30000;
+const SMOKE_ERROR_RE = /Uncaught|TypeError|ReferenceError|is not defined|FATAL/;
 const path = require('path')
 const fs = require('fs')
 const { version } = require('./package.json')
@@ -99,6 +110,40 @@ if (fileArg) {
     }
 }
 
+function runSmoke(win) {
+    const badLines = [];
+    // ('console-message', event, level, message, ...) through electron 41;
+    // newer majors move to a details object -- accept either shape, so the
+    // smoke test itself survives the bumps it exists to gate.
+    win.webContents.on('console-message', (e, levelOrDetails, maybeMsg) => {
+        const msg = typeof maybeMsg === 'string' ? maybeMsg
+            : (levelOrDetails && levelOrDetails.message)
+                || (e && e.message) || '';
+        if (SMOKE_ERROR_RE.test(msg)) badLines.push(msg);
+    });
+    const started = Date.now();
+    const finish = (code, why) => {
+        console.log(code === 0 ? 'SMOKE OK' : `SMOKE FAIL: ${why}`);
+        for (const line of badLines) console.log(`  renderer: ${line}`);
+        app.exit(code);
+    };
+    const poll = () => {
+        if (Date.now() - started > SMOKE_TIMEOUT_MS) {
+            return finish(1, 'timeout waiting for JSmol applet _ready');
+        }
+        win.webContents
+            .executeJavaScript(
+                "typeof jmolApplet0 !== 'undefined' && !!jmolApplet0._ready")
+            .then((ready) => {
+                if (badLines.length) return finish(1, 'renderer error lines');
+                if (ready) return finish(0, '');
+                setTimeout(poll, 500);
+            })
+            .catch(() => setTimeout(poll, 500));
+    };
+    win.webContents.once('did-finish-load', () => setTimeout(poll, 500));
+}
+
 function createWindow() {
     const win = new BrowserWindow({
         width: 1200,
@@ -136,6 +181,7 @@ function createWindow() {
     });
 
     win.loadFile('index.html');
+    if (SMOKE) runSmoke(win);
     win.setMenuBarVisibility(false);
     win.setAutoHideMenuBar(true);
 
