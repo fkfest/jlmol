@@ -282,11 +282,19 @@ function runSmoke(win) {
         if (SMOKE_ERROR_RE.test(msg) && !SMOKE_IGNORE_RE.test(msg)) badLines.push(msg);
     });
     const started = Date.now();
+    let finished = false;
     const finish = (code, why) => {
+        if (finished) return;
+        finished = true;
         console.log(code === 0 ? 'SMOKE OK' : `SMOKE FAIL: ${why}`);
         for (const line of badLines) console.log(`  renderer: ${line}`);
         app.exit(code);
     };
+    // Hard deadline on its own timer: if the renderer main thread is blocked
+    // (e.g. a deadlocked synchronous XHR), executeJavaScript never settles and
+    // a deadline embedded in its callbacks never fires. Observed 2026-08-22.
+    setTimeout(() => finish(1, 'hard deadline: renderer unresponsive or applet never ready'),
+               SMOKE_TIMEOUT_MS + 15000);
     const poll = () => {
         if (Date.now() - started > SMOKE_TIMEOUT_MS) {
             return finish(1, 'timeout waiting for JSmol applet _ready');
@@ -308,10 +316,14 @@ function runSmoke(win) {
         win.webContents
             .executeJavaScript(
                 `new Promise((res) => {
-                    Jmol.script(jmolApplet0, 'load "jsmol/data/caffeine.mol"');
+                    try {
+                        Jmol.script(jmolApplet0, 'load "jsmol/data/caffeine.mol"');
+                    } catch (e) { return res('script threw: ' + e.message); }
                     let tries = 0;
                     const check = () => {
-                        const n = Jmol.evaluateVar(jmolApplet0, '{*}.length');
+                        let n = 0;
+                        try { n = Jmol.evaluateVar(jmolApplet0, '{*}.length'); }
+                        catch (e) { return res('evaluate threw: ' + e.message); }
                         if (n > 0) return res(n);
                         if (++tries > 20) return res(0);
                         setTimeout(check, 500);
@@ -320,8 +332,8 @@ function runSmoke(win) {
                 })`)
             .then((atoms) => {
                 if (badLines.length) return finish(1, 'renderer error lines');
-                if (atoms > 0) return finish(0, '');
-                finish(1, 'sample molecule failed to load (0 atoms)');
+                if (typeof atoms === 'number' && atoms > 0) return finish(0, '');
+                finish(1, `sample molecule failed to load (${atoms})`);
             })
             .catch((err) => finish(1, `load check failed: ${err.message}`));
     };
@@ -370,6 +382,16 @@ function createWindow() {
         }
     });
 
+    // A load failure must never be a silently empty window: show the error
+    // in the window itself, so the screen IS the diagnostic.
+    win.webContents.on('did-fail-load', (_e, code, description, failedUrl) => {
+        log(`did-fail-load ${code} ${description} for ${failedUrl}`);
+        const msg = `jlmol failed to load its interface.\n\n`
+            + `Error ${code}: ${description}\nURL: ${failedUrl}\n`
+            + `App dir: ${__dirname}\nPlatform: ${process.platform}\n\n`
+            + `Please report this text.`;
+        win.loadURL('data:text/plain;charset=utf-8,' + encodeURIComponent(msg));
+    });
     if (process.env.JLMOL_FILE_MODE) {
         win.loadFile('index.html');           // diagnostic fallback
     } else {
@@ -462,12 +484,18 @@ function createWindow() {
 
 app.whenReady().then(() => {
     // app:// serves the bundle directory, path-normalized and confined to it.
+    // Implementation notes from the 2026-08-22 shakedown, so nobody retries
+    // the dead ends: (1) protocol.handle + a Buffer Response DEADLOCKS JSmol's
+    // synchronous XHR class loader (renderer main thread blocks); (2) the
+    // legacy registerFileProtocol breaks JSmol applet init differently
+    // (startHoverWatcher null). Routing through net.fetch(file://...) is the
+    // one variant that passes the full gate set including molecule load.
     protocol.handle('app', (request) => {
         const url = new URL(request.url);
         const rel = decodeURIComponent(url.pathname);
         const target = path.normalize(path.join(__dirname, rel));
         if (target !== __dirname
-        && !target.startsWith(path.normalize(__dirname + path.sep))) {
+            && !target.startsWith(path.normalize(__dirname + path.sep))) {
             return new Response('forbidden', { status: 403 });
         }
         return net.fetch(pathToFileURL(target).toString());

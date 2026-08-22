@@ -8,7 +8,7 @@
     "start-verbose": "electron . --verbose",
     "start:win": "node_modules/electron/dist/electron.exe .",
     "start-safe": "electron . --disable-hardware-acceleration",
-    "start-debug": "electron . --enable-logging --log-level=0",
+    "start-debug": "electron . --enable-logging=file --log-file=jlmol-debug.log --log-level=0",
     "start-safe-debug": "electron . --disable-hardware-acceleration --enable-logging --log-level=0",
     "debug-gpu": "electron debug-gpu.js",
     "build": "electron-builder -mwl",
@@ -18,7 +18,8 @@
     "check-version": "node build-version.js",
     "update-elemco-options": "node scripts/parse-elemco-options.js",
     "update-elemco-macros": "node scripts/parse-elemco-macros.js",
-    "smoke": "electron . --smoke --disable-gpu"
+    "smoke": "electron . --smoke --disable-gpu",
+    "start-debug:win": "node_modules/electron/dist/electron.exe . --enable-logging=file --log-file=jlmol-debug.log --log-level=0"
   },
   "build": {
     "appId": "com.jlmol.viewer",
