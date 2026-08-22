@@ -1,3 +1,13 @@
+// Status-line helper: always textContent, never markup. Every string that
+// is DERIVED (user input, file content, subprocess/error messages) must go
+// through here -- innerHTML on the status line was finding #1 of the
+// issue #45 audit. Static literals may keep innerHTML; new code should
+// prefer this helper regardless.
+function setStatusText(text) {
+    const el = document.getElementById('status');
+    if (el) el.textContent = text;
+}
+
 var jmolApplet0;
 var isSpinning = false;
 var displayMode = 'default'; // Track current display mode

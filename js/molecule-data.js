@@ -416,7 +416,7 @@ $(document).ready(function() {
         
     } catch (e) {
         console.error('Error during initialization:', e);
-        document.getElementById('status').innerHTML = 'Error during initialization: ' + e.message;
+        setStatusText('Error during initialization: ' + e.message);
     }
 });
 

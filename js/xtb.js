@@ -255,7 +255,7 @@ async function runXtbInElectron(xyzData, mode) {
                 flushOutput();
                 lastUpdateTime = now;
                 const elapsed = ((now - startTime) / 1000).toFixed(1);
-                document.getElementById('status').innerHTML = `xtb running... (${elapsed}s)`;
+                setStatusText(`xtb running... (${elapsed}s)`);
             }
         });
 
@@ -268,7 +268,7 @@ async function runXtbInElectron(xyzData, mode) {
             flushOutput();
             cleanup();
             outputTextarea.value += `\n=== PROCESS ERROR ===\n${error.message}`;
-            document.getElementById('status').innerHTML = `xtb process error: ${error.message}`;
+            setStatusText(`xtb process error: ${error.message}`);
         });
 
         proc.on('close', (exitCode) => {
@@ -289,7 +289,7 @@ async function runXtbInElectron(xyzData, mode) {
                     if (optXyz && parseInt(optXyz.split('\n')[0]) > 0) {
                         applyOptimizedGeometry(optXyz);
                         outputTextarea.value += `\n\n=== OPTIMIZATION COMPLETED (${elapsed}s) ===\nThe geometry in the viewer has been replaced with the optimized structure.`;
-                        document.getElementById('status').innerHTML = `Geometry optimized with g-xTB (${elapsed}s)`;
+                        setStatusText(`Geometry optimized with g-xTB (${elapsed}s)`);
                         cleanup();
                         return;
                     }
@@ -301,7 +301,7 @@ async function runXtbInElectron(xyzData, mode) {
                 if (match) {
                     const energy = match[1];
                     outputTextarea.value += `\n\n=== ENERGY CALCULATION COMPLETED (${elapsed}s) ===\nTotal energy: ${energy} Eh`;
-                    document.getElementById('status').innerHTML = `g-xTB total energy: ${energy} Eh (${elapsed}s)`;
+                    setStatusText(`g-xTB total energy: ${energy} Eh (${elapsed}s)`);
                 } else {
                     outputTextarea.value += `\n\n=== ENERGY CALCULATION FAILED ===\nNo total energy was found in the xtb output. See above.\nIf this mentions missing g-xTB parameters, make sure the xtb being run is the one from the g-xtb distribution (https://github.com/grimme-lab/g-xtb), which bundles the parameters.`;
                     document.getElementById('status').innerHTML = 'xtb energy calculation failed - see output';
