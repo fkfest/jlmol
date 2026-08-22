@@ -1,4 +1,4 @@
-const { app, BrowserWindow, shell } = require('electron')
+const { app, BrowserWindow, shell, ipcMain } = require('electron')
 
 // --- smoke mode ------------------------------------------------------------
 // `electron . --smoke` boots the app, waits for the JSmol applet to reach
@@ -8,8 +8,18 @@ const { app, BrowserWindow, shell } = require('electron')
 // distilled from the 2026-08-22 electron-41 verification, which caught a real
 // regression (JSmol _evaluate TypeErrors) within a minute of Xvfb runtime.
 const SMOKE = process.argv.includes('--smoke');
+// `electron . --bridge-probe` boots the app and exercises the preload bridge
+// end to end -- work-dir file roundtrip, path-escape rejection, spawn with
+// streamed output -- printing BRIDGE OK/FAIL. The CI runs it beside --smoke,
+// so a change to the preload surface or the IPC handlers cannot pass silently.
+const BRIDGE_PROBE = process.argv.includes('--bridge-probe');
 const SMOKE_TIMEOUT_MS = 30000;
 const SMOKE_ERROR_RE = /Uncaught|TypeError|ReferenceError|is not defined|FATAL/;
+// Network unavailability is not app ill-health: the update check may fail on
+// an offline or rate-limited runner, and its console line contains
+// "TypeError: Failed to fetch" -- the one observed flake in an otherwise
+// deterministic gate.
+const SMOKE_IGNORE_RE = /Failed to fetch|net::ERR|ERR_INTERNET|rate limit/i;
 const path = require('path')
 const fs = require('fs')
 const { version } = require('./package.json')
@@ -110,6 +120,130 @@ if (fileArg) {
     }
 }
 
+// --- IPC backend for the preload bridge (issue #45, item 3) ---------------
+// Work directories: created here, addressed by opaque tokens, every file
+// operation resolved against the registered directory and refused on any
+// path that escapes it. Processes: spawned here, streamed to the renderer,
+// killed on demand and reaped on quit.
+const fsNative = require('fs');
+const osNative = require('os');
+const crypto = require('crypto');
+const { spawn: spawnNative } = require('child_process');
+
+const workDirs = new Map();   // token -> absolute path under os.tmpdir()
+const procs = new Map();      // procId -> ChildProcess
+
+function resolveInWorkDir(dirToken, name) {
+    const dir = workDirs.get(dirToken);
+    if (!dir) throw new Error('unknown work directory');
+    const target = path.resolve(dir, String(name));
+    if (target !== dir && !target.startsWith(dir + path.sep)) {
+        throw new Error('path escapes the work directory');
+    }
+    return target;
+}
+
+ipcMain.handle('jlmol-open-external', (_e, url) => {
+    if (typeof url === 'string'
+        && (url.startsWith('https://') || url.startsWith('http://'))) {
+        return shell.openExternal(url);
+    }
+    throw new Error('only http(s) URLs may be opened externally');
+});
+
+ipcMain.handle('jlmol-mk-workdir', (_e, prefix) => {
+    const safe = String(prefix || 'jlmol_').replace(/[^A-Za-z0-9_-]/g, '_');
+    const dir = fsNative.mkdtempSync(path.join(osNative.tmpdir(), safe));
+    const token = crypto.randomUUID();
+    workDirs.set(token, dir);
+    return token;
+});
+ipcMain.handle('jlmol-workdir-path', (_e, token) => {
+    const dir = workDirs.get(token);
+    if (!dir) throw new Error('unknown work directory');
+    return dir;
+});
+ipcMain.handle('jlmol-write-file', (_e, token, name, content) => {
+    fsNative.writeFileSync(resolveInWorkDir(token, name), String(content));
+});
+ipcMain.handle('jlmol-read-file', (_e, token, name) => {
+    const target = resolveInWorkDir(token, name);
+    if (!fsNative.existsSync(target)) return null;
+    return fsNative.readFileSync(target, 'utf8');
+});
+ipcMain.handle('jlmol-rm-workdir', (_e, token) => {
+    const dir = workDirs.get(token);
+    if (!dir) return;
+    workDirs.delete(token);
+    try { fsNative.rmSync(dir, { recursive: true, force: true }); }
+    catch (err) { log(`Could not remove work dir ${dir}: ${err.message}`); }
+});
+
+ipcMain.handle('jlmol-spawn', (event, command, args, options) => {
+    // shell:false always -- the old renderer spawns used shell:true on
+    // non-WSL, which let shell metacharacters in user-entered extra flags
+    // reach a shell. Plain PATH lookup covers the legitimate cases.
+    const opts = { shell: false };
+    if (options && options.cwd) opts.cwd = workDirs.get(options.cwd) || undefined;
+    if (options && options.timeoutMs > 0) opts.timeout = Number(options.timeoutMs);
+    const child = spawnNative(String(command), (args || []).map(String), opts);
+    const procId = crypto.randomUUID();
+    procs.set(procId, child);
+    const wc = event.sender;
+    const send = (type, payload) => {
+        if (!wc.isDestroyed()) wc.send('jlmol-proc-event', procId, type, payload);
+    };
+    child.stdout && child.stdout.on('data', (d) => send('stdout', d.toString()));
+    child.stderr && child.stderr.on('data', (d) => send('stderr', d.toString()));
+    child.on('error', (err) => { procs.delete(procId); send('error', err.message); });
+    child.on('close', (code) => { procs.delete(procId); send('close', code); });
+    return procId;
+});
+ipcMain.handle('jlmol-kill', (_e, procId) => {
+    const child = procs.get(procId);
+    if (child) { try { child.kill(); } catch (_) { /* already gone */ } }
+});
+
+app.on('will-quit', () => {
+    for (const child of procs.values()) { try { child.kill(); } catch (_) {} }
+    for (const dir of workDirs.values()) {
+        try { fsNative.rmSync(dir, { recursive: true, force: true }); } catch (_) {}
+    }
+});
+
+function runBridgeProbe(win) {
+    win.webContents.once('did-finish-load', () => {
+        win.webContents.executeJavaScript(`(async () => {
+            const n = window.jlmolNative;
+            if (!n) return 'no bridge';
+            const dir = await n.mkWorkDir('jlmol_probe_');
+            await n.writeFile(dir, 'x.txt', 'roundtrip');
+            const back = await n.readFile(dir, 'x.txt');
+            let escape = 'not caught';
+            try { await n.readFile(dir, '../escape.txt'); } catch (e) { escape = 'caught'; }
+            await n.removeWorkDir(dir);
+            const spawnResult = await new Promise((res) => {
+                let text = '';
+                n.spawn('echo', ['bridge-echo'], {}, {
+                    data: (k, t) => { text += t; },
+                    close: (code) => res(code === 0 && text.includes('bridge-echo')
+                        ? 'spawn ok' : 'spawn failed ' + code + ' ' + text),
+                    error: (m) => res('spawn error ' + m),
+                });
+            });
+            return [back === 'roundtrip' ? 'file ok' : 'file bad',
+                    'escape ' + escape, spawnResult].join(' | ');
+        })()`).then((result) => {
+            const ok = result === 'file ok | escape caught | spawn ok';
+            console.log(ok ? 'BRIDGE OK' : `BRIDGE FAIL: ${result}`);
+            app.exit(ok ? 0 : 1);
+        }).catch((err) => {
+            console.log(`BRIDGE FAIL: ${err.message}`);
+            app.exit(1);
+        });
+    });
+}
+
 function runSmoke(win) {
     const badLines = [];
     // ('console-message', event, level, message, ...) through electron 41;
@@ -119,7 +253,7 @@ function runSmoke(win) {
         const msg = typeof maybeMsg === 'string' ? maybeMsg
             : (levelOrDetails && levelOrDetails.message)
                 || (e && e.message) || '';
-        if (SMOKE_ERROR_RE.test(msg)) badLines.push(msg);
+        if (SMOKE_ERROR_RE.test(msg) && !SMOKE_IGNORE_RE.test(msg)) badLines.push(msg);
     });
     const started = Date.now();
     const finish = (code, why) => {
@@ -151,8 +285,9 @@ function createWindow() {
         resizable: true,
         icon: path.join(__dirname, 'build', process.platform === 'win32' ? 'icon.ico' : process.platform === 'darwin' ? 'icon.icns' : 'icons/512x512.png'),
         webPreferences: {
-            nodeIntegration: true,
-            contextIsolation: false,
+            preload: path.join(__dirname, 'preload.js'),
+            nodeIntegration: false,
+            contextIsolation: true,
             // webSecurity was false for years; measured on 2026-08-22 it is
             // not needed: with same-origin enforcement ON, the app boots, the
             // JSmol applet loads local structures (327-atom 1crn.pdb probe,
@@ -187,6 +322,7 @@ function createWindow() {
 
     win.loadFile('index.html');
     if (SMOKE) runSmoke(win);
+    if (BRIDGE_PROBE) runBridgeProbe(win);
     win.setMenuBarVisibility(false);
     win.setAutoHideMenuBar(true);
 

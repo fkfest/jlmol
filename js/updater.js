@@ -29,12 +29,7 @@ let jlmolStartupCheckDone = false;
 // True only inside the packaged Electron app (where an install can actually
 // happen). In a normal browser tab this stays false and the feature is disabled.
 function isElectronApp() {
-    try {
-        return typeof process !== 'undefined'
-            && !!(process.versions && process.versions.electron);
-    } catch (e) {
-        return false;
-    }
+    return !!(window.jlmolNative && window.jlmolNative.isElectron);
 }
 
 // "v1.4.0" / "1.4.0-beta" -> [1, 4, 0]. Non-numeric suffixes on a component
@@ -76,12 +71,7 @@ function pickDownloadUrl(release) {
     const page = (release && release.html_url) || JLMOL_RELEASES_PAGE;
     const assets = (release && Array.isArray(release.assets)) ? release.assets : [];
 
-    let platform = '';
-    try {
-        platform = (typeof process !== 'undefined' && process.platform) || '';
-    } catch (e) {
-        platform = '';
-    }
+    const platform = (window.jlmolNative && window.jlmolNative.platform) || '';
 
     const findAsset = (suffix) => {
         const match = assets.find(a =>
@@ -99,23 +89,23 @@ function pickDownloadUrl(release) {
 }
 
 // Open an external URL in the user's default browser. Only https URLs are
-// allowed — nodeIntegration is on and webSecurity is off in this app, so we must
-// never hand an arbitrary scheme (file:, javascript:) to the shell.
+// allowed -- never hand an arbitrary scheme (file:, javascript:) onward.
+// The preload bridge validates the scheme again in the main process.
 function openExternalUrl(url) {
     if (typeof url !== 'string' || !url.startsWith('https://')) {
         console.warn('Refusing to open non-https update URL:', url);
         return;
     }
+    if (window.jlmolNative) {
+        window.jlmolNative.openExternal(url).catch((e) =>
+            console.error('Could not open update URL:', e));
+        return;
+    }
+    // Not in Electron -- fall back to a normal window.
     try {
-        const { shell } = require('electron');
-        shell.openExternal(url);
-    } catch (e) {
-        // Not in Electron, or shell unavailable — fall back to a normal window.
-        try {
-            window.open(url, '_blank', 'noopener');
-        } catch (e2) {
-            console.error('Could not open update URL:', e2);
-        }
+        window.open(url, '_blank', 'noopener');
+    } catch (e2) {
+        console.error('Could not open update URL:', e2);
     }
 }
 

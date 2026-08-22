@@ -1200,8 +1200,8 @@ async function runJuliaCalculation() {
     
     try {
         // Check if we're in Electron environment
-        if (typeof require !== 'undefined') {
-            // Electron environment - use child_process to run Julia
+        if (window.jlmolNative) {
+            // Electron environment - run Julia through the preload bridge
             await runJuliaInElectron(juliaCode);
         } else {
             // Browser environment - show instructions for manual execution
@@ -1216,37 +1216,24 @@ async function runJuliaCalculation() {
 
 // Function to run Julia in Electron environment
 async function runJuliaInElectron(juliaCode) {
-    const { spawn } = require('child_process');
-    const fs = require('fs');
-    const path = require('path');
-    const os = require('os');
-    
+    // All system access goes through the preload bridge (issue #45 item 3):
+    // the .jl file lives in a scoped work directory, the Julia process is
+    // spawned in the main process with streamed output. No require() here.
+    const native = window.jlmolNative;
     const outputTextarea = document.getElementById('julia-output');
-    
+
     // Get the configured Julia command from user preferences
     const prefs = getPreferences();
     const juliaCommand = prefs.juliaCommand || 'julia';
-    
-    let tempFile = null;
-    
-    // Cleanup function to be called in all exit scenarios
+
+    let workDir = null;
     function cleanupTempFile() {
-        if (tempFile) {
-            try {
-                fs.unlinkSync(tempFile);
-                console.log('Temporary file cleaned up:', tempFile);
-            } catch (e) {
-                console.warn('Could not delete temporary file:', tempFile, e);
-            }
-            tempFile = null;
+        if (workDir) {
+            native.removeWorkDir(workDir);   // main also reaps on quit
+            workDir = null;
         }
     }
-    
-    // Ensure cleanup happens even if process is terminated
-    process.on('exit', cleanupTempFile);
-    process.on('SIGINT', cleanupTempFile);
-    process.on('SIGTERM', cleanupTempFile);
-    
+
     try {
         // Parse Julia command to handle WSL and other complex commands with proper quote handling
         function parseCommand(cmd) {
@@ -1254,10 +1241,8 @@ async function runJuliaInElectron(juliaCode) {
             let current = '';
             let inQuotes = false;
             let quoteChar = '';
-            
             for (let i = 0; i < cmd.length; i++) {
                 const char = cmd[i];
-                
                 if ((char === '"' || char === "'") && !inQuotes) {
                     inQuotes = true;
                     quoteChar = char;
@@ -1273,46 +1258,38 @@ async function runJuliaInElectron(juliaCode) {
                     current += char;
                 }
             }
-            
-            if (current.trim()) {
-                parts.push(current.trim());
-            }
-            
+            if (current.trim()) parts.push(current.trim());
             return parts;
         }
-        
+
         const commandParts = parseCommand(juliaCommand.trim());
         const isWSL = commandParts[0].toLowerCase() === 'wsl';
-        
-        // Create temporary file for Julia code
-        const tempDir = os.tmpdir();
-        tempFile = path.join(tempDir, `jlmol_calculation_${Date.now()}.jl`);
-        fs.writeFileSync(tempFile, juliaCode);
-        
+
+        // Julia code goes into a scoped work directory
+        workDir = await native.mkWorkDir('jlmol_julia_');
+        const workDirPath = await native.workDirPath(workDir);
+        await native.writeFile(workDir, 'calculation.jl', juliaCode);
+        const sep = native.platform === 'win32' ? '\\' : '/';
+        const tempFile = workDirPath + sep + 'calculation.jl';
+
         // For WSL, convert Windows path to WSL path
         let filePathForCommand = tempFile;
         if (isWSL) {
-            // Convert Windows path to WSL path format
-            // Handle both uppercase and lowercase drive letters
-            // e.g., C:\Users\... or c:\Users\... -> /mnt/c/Users/...
             if (/^[A-Za-z]:/.test(tempFile)) {
                 const driveLetter = tempFile.charAt(0).toLowerCase();
                 filePathForCommand = tempFile.replace(/^[A-Za-z]:/, `/mnt/${driveLetter}`).replace(/\\/g, '/');
             } else {
-                // If path doesn't start with drive letter, assume it's already Unix-style
                 filePathForCommand = tempFile.replace(/\\/g, '/');
             }
         }
-        
+
         outputTextarea.value = `=== JLMol Julia Calculation ===\nTimestamp: ${new Date().toISOString()}\nJulia command: ${juliaCommand}\nTemporary file: ${tempFile}\n${isWSL ? `WSL path: ${filePathForCommand}\n` : ''}Full command: ${juliaCommand} "${filePathForCommand}"\n\n--- Starting calculation ---\n`;
-        document.getElementById('status').innerHTML = 'Starting Julia process...';
-        
+        setStatusText('Starting Julia process...');
+
         // Prepare command and arguments for version check
         let baseCommand, versionCheckArgs;
         if (isWSL) {
             baseCommand = 'wsl';
-            // The command is something like "wsl -d <distro> julia" or "wsl /path/to/julia"
-            // commandParts[0] is "wsl", the rest are arguments for wsl.
             versionCheckArgs = [...commandParts.slice(1), '--version'];
         } else if (commandParts.length > 1) {
             baseCommand = commandParts[0];
@@ -1321,51 +1298,43 @@ async function runJuliaInElectron(juliaCode) {
             baseCommand = juliaCommand;
             versionCheckArgs = ['--version'];
         }
-        
+
+        const showExecutionError = (message) => {
+            cleanupTempFile();
+            const wslTroubleshooting = isWSL ? `\n\nWSL-specific troubleshooting:\n- Ensure WSL is installed and configured\n- Verify Julia is installed in your WSL distribution\n- Try running 'wsl julia --version' in Command Prompt/PowerShell\n- Make sure the WSL distribution has access to the temp directory\n- Consider using the full path to Julia in WSL (e.g., 'wsl /usr/local/bin/julia')` : '';
+            outputTextarea.value = `=== EXECUTION ERROR ===\n${message}\n\nTroubleshooting:\n1. Install Julia from https://julialang.org/downloads/\n2. Add Julia to your system PATH or configure the correct path in Settings\n3. Current Julia command: "${prefs.juliaCommand}"\n4. Install ElemCo.jl package:\n   ${prefs.juliaCommand}> import Pkg; Pkg.add("ElemCo")\n5. Verify installation by running '${prefs.juliaCommand} --version' in terminal\n6. Ensure you have write permissions to temp directory${wslTroubleshooting}\n\nFor more help, see: https://docs.julialang.org/en/v1/manual/getting-started/`;
+            setStatusText('Julia execution failed - see output for troubleshooting');
+        };
+
         // Check if Julia is available first
-        const juliaCheck = spawn(baseCommand, versionCheckArgs, { 
-            stdio: ['pipe', 'pipe', 'pipe'],
-            shell: isWSL ? false : true
+        await native.spawn(baseCommand, versionCheckArgs, {}, {
+            error: (message) => showExecutionError(
+                `Julia not found at "${juliaCommand}": ${message}\n\nPlease check your Julia command in Settings or install Julia and ensure it's accessible from command line.`),
+            close: (code) => {
+                if (code !== 0) {
+                    showExecutionError(`Julia version check failed with code ${code} for command "${juliaCommand}"`);
+                    return;
+                }
+                runJuliaCalculation();
+            },
         });
-        
-        juliaCheck.on('error', (error) => {
-            throw new Error(`Julia not found at "${juliaCommand}": ${error.message}\n\nPlease check your Julia command in Settings or install Julia and ensure it's accessible from command line.`);
-        });
-        
-        juliaCheck.on('close', (code) => {
-            if (code !== 0) {
-                throw new Error(`Julia version check failed with code ${code} for command "${juliaCommand}"`);
-            }
-            
-            // Julia is available, proceed with calculation
-            document.getElementById('status').innerHTML = 'Julia found, executing calculation...';
-            
-            // Prepare arguments for actual execution
+
+        async function runJuliaCalculation() {
+            setStatusText('Julia found, executing calculation...');
+
             let execArgs;
             if (isWSL) {
-                // The command is something like "wsl -d <distro> julia" or "wsl julia"
-                // commandParts[0] is "wsl", the rest are arguments for wsl.
                 execArgs = [...commandParts.slice(1), filePathForCommand];
             } else if (commandParts.length > 1) {
                 execArgs = [...commandParts.slice(1), tempFile];
             } else {
                 execArgs = [tempFile];
             }
-            
-            const juliaProcess = spawn(baseCommand, execArgs, {
-                cwd: process.cwd(),
-                stdio: ['pipe', 'pipe', 'pipe'],
-                timeout: 300000, // 5 minute timeout
-                shell: isWSL ? false : true
-            });
-            
-            let output = '';
-            let errorOutput = '';
-            let startTime = Date.now();
+
             let outputBuffer = '';
+            const startTime = Date.now();
             let lastUpdateTime = Date.now();
-            
-            // Function to update UI with buffered output (throttled)
+
             function updateOutput() {
                 if (outputBuffer.length > 0) {
                     outputTextarea.value += outputBuffer;
@@ -1373,71 +1342,57 @@ async function runJuliaInElectron(juliaCode) {
                     outputTextarea.scrollTop = outputTextarea.scrollHeight;
                 }
             }
-            
-            juliaProcess.stdout.on('data', (data) => {
-                const text = data.toString();
-                output += text;
-                outputBuffer += text;
-                
-                // Update UI every 100ms to prevent freezing
-                const now = Date.now();
-                if (now - lastUpdateTime > 100) {
+
+            await native.spawn(baseCommand, execArgs, { cwd: workDir, timeoutMs: 300000 }, {
+                data: (kind, text) => {
+                    if (kind === 'stdout') {
+                        outputBuffer += text;
+                        const now = Date.now();
+                        if (now - lastUpdateTime > 100) {
+                            updateOutput();
+                            lastUpdateTime = now;
+                            const elapsed = ((now - startTime) / 1000).toFixed(1);
+                            setStatusText(`Calculation running... (${elapsed}s)`);
+                        }
+                    } else {
+                        // Only show actual errors in STDERR prominently, not warnings
+                        if (text.toLowerCase().includes('error') || text.toLowerCase().includes('exception')) {
+                            outputTextarea.value += `\n[ERROR] ${text}`;
+                        } else {
+                            outputTextarea.value += `[INFO] ${text}`;
+                        }
+                        outputTextarea.scrollTop = outputTextarea.scrollHeight;
+                    }
+                },
+                close: (code) => {
                     updateOutput();
-                    lastUpdateTime = now;
-                    
-                    // Update status with progress indication
-                    const elapsed = ((now - startTime) / 1000).toFixed(1);
-                    setStatusText(`Calculation running... (${elapsed}s)`);
-                }
+                    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+                    cleanupTempFile();
+                    outputTextarea.value += `\n--- Cleanup: Temporary file deleted ---\n`;
+                    if (code === 0) {
+                        outputTextarea.value += `\n=== CALCULATION COMPLETED SUCCESSFULLY ===\nElapsed time: ${elapsed} seconds\nExit code: ${code}`;
+                        setStatusText(`Julia calculation completed successfully (${elapsed}s)`);
+                    } else {
+                        outputTextarea.value += `\n=== CALCULATION FAILED ===\nElapsed time: ${elapsed} seconds\nExit code: ${code}\n\nCheck the output above for error details.`;
+                        setStatusText(`Julia calculation failed with exit code ${code}`);
+                    }
+                    outputTextarea.scrollTop = outputTextarea.scrollHeight;
+                },
+                error: (message) => {
+                    cleanupTempFile();
+                    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+                    outputTextarea.value += `\n=== PROCESS ERROR ===\nElapsed time: ${elapsed} seconds\nError: ${message}\n\nTroubleshooting:\n- Check if Julia is properly installed\n- Verify the Julia command path in Settings\n- Ensure Julia has necessary permissions`;
+                    setStatusText(`Julia process error: ${message}`);
+                    outputTextarea.scrollTop = outputTextarea.scrollHeight;
+                },
             });
-            
-            juliaProcess.stderr.on('data', (data) => {
-                const text = data.toString();
-                errorOutput += text;
-                
-                // Only show actual errors in STDERR, not just warnings
-                if (text.toLowerCase().includes('error') || text.toLowerCase().includes('exception')) {
-                    outputTextarea.value += `\n[ERROR] ${text}`;
-                } else {
-                    outputTextarea.value += `[INFO] ${text}`;
-                }
-                outputTextarea.scrollTop = outputTextarea.scrollHeight;
-            });
-            
-            juliaProcess.on('close', (code) => {
-                const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-                
-                // Clean up temporary file
-                cleanupTempFile();
-                outputTextarea.value += `\n--- Cleanup: Temporary file deleted ---\n`;
-                
-                if (code === 0) {
-                    outputTextarea.value += `\n=== CALCULATION COMPLETED SUCCESSFULLY ===\nElapsed time: ${elapsed} seconds\nExit code: ${code}`;
-                    setStatusText(`Julia calculation completed successfully (${elapsed}s)`);
-                } else {
-                    outputTextarea.value += `\n=== CALCULATION FAILED ===\nElapsed time: ${elapsed} seconds\nExit code: ${code}\n\nCheck the output above for error details.`;
-                    setStatusText(`Julia calculation failed with exit code ${code}`);
-                }
-                outputTextarea.scrollTop = outputTextarea.scrollHeight;
-            });
-            
-            juliaProcess.on('error', (error) => {
-                // Clean up temporary file on error
-                cleanupTempFile();
-                
-                const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-                outputTextarea.value += `\n=== PROCESS ERROR ===\nElapsed time: ${elapsed} seconds\nError: ${error.message}\n\nTroubleshooting:\n- Check if Julia is properly installed\n- Verify the Julia command path in Settings\n- Ensure Julia has necessary permissions`;
-                setStatusText(`Julia process error: ${error.message}`);
-                outputTextarea.scrollTop = outputTextarea.scrollHeight;
-            });
-        });
-        
+        }
     } catch (error) {
-        const isWSL = prefs.juliaCommand && prefs.juliaCommand.trim().toLowerCase().startsWith('wsl');
-        const wslTroubleshooting = isWSL ? `\n\nWSL-specific troubleshooting:\n- Ensure WSL is installed and configured\n- Verify Julia is installed in your WSL distribution\n- Try running 'wsl julia --version' in Command Prompt/PowerShell\n- Make sure the WSL distribution has access to the temp directory\n- Consider using the full path to Julia in WSL (e.g., 'wsl /usr/local/bin/julia')` : '';
-        
+        cleanupTempFile();
+        const isWSLerr = prefs.juliaCommand && prefs.juliaCommand.trim().toLowerCase().startsWith('wsl');
+        const wslTroubleshooting = isWSLerr ? `\n\nWSL-specific troubleshooting:\n- Ensure WSL is installed and configured\n- Verify Julia is installed in your WSL distribution\n- Try running 'wsl julia --version' in Command Prompt/PowerShell\n- Make sure the WSL distribution has access to the temp directory\n- Consider using the full path to Julia in WSL (e.g., 'wsl /usr/local/bin/julia')` : '';
         outputTextarea.value = `=== EXECUTION ERROR ===\n${error.message}\n\nTroubleshooting:\n1. Install Julia from https://julialang.org/downloads/\n2. Add Julia to your system PATH or configure the correct path in Settings\n3. Current Julia command: "${prefs.juliaCommand}"\n4. Install ElemCo.jl package:\n   ${prefs.juliaCommand}> import Pkg; Pkg.add("ElemCo")\n5. Verify installation by running '${prefs.juliaCommand} --version' in terminal\n6. Ensure you have write permissions to temp directory${wslTroubleshooting}\n\nFor more help, see: https://docs.julialang.org/en/v1/manual/getting-started/`;
-        document.getElementById('status').innerHTML = 'Julia execution failed - see output for troubleshooting';
+        setStatusText('Julia execution failed - see output for troubleshooting');
     }
 }
 
