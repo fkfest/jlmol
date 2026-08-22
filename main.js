@@ -384,8 +384,16 @@ function createWindow() {
 
     // A load failure must never be a silently empty window: show the error
     // in the window itself, so the screen IS the diagnostic.
-    win.webContents.on('did-fail-load', (_e, code, description, failedUrl) => {
-        log(`did-fail-load ${code} ${description} for ${failedUrl}`);
+    win.webContents.on('did-fail-load', (_e, code, description, failedUrl,
+                                          isMainFrame) => {
+        log(`did-fail-load ${code} ${description} for ${failedUrl}`
+            + (isMainFrame ? ' (main frame)' : ' (subframe)'));
+        // Only a MAIN-frame failure means the app did not come up. Subframe
+        // failures are routine (the blocked JSmol tracker fires one under
+        // app://) and replacing the app with the error page mid-initialization
+        // was itself the bug that broke the applet (startHoverWatcher null,
+        // 2026-08-22). ERR_ABORTED (-3) is navigation noise, not failure.
+        if (!isMainFrame || code === -3) return;
         const msg = `jlmol failed to load its interface.\n\n`
             + `Error ${code}: ${description}\nURL: ${failedUrl}\n`
             + `App dir: ${__dirname}\nPlatform: ${process.platform}\n\n`
@@ -484,12 +492,12 @@ function createWindow() {
 
 app.whenReady().then(() => {
     // app:// serves the bundle directory, path-normalized and confined to it.
-    // Implementation notes from the 2026-08-22 shakedown, so nobody retries
-    // the dead ends: (1) protocol.handle + a Buffer Response DEADLOCKS JSmol's
-    // synchronous XHR class loader (renderer main thread blocks); (2) the
-    // legacy registerFileProtocol breaks JSmol applet init differently
-    // (startHoverWatcher null). Routing through net.fetch(file://...) is the
-    // one variant that passes the full gate set including molecule load.
+    // Implementation note from the 2026-08-22 shakedown: protocol.handle with
+    // a Buffer Response DEADLOCKS JSmol's synchronous-XHR class loader (the
+    // renderer main thread blocks) -- serve via net.fetch, which streams.
+    // (A registerFileProtocol variant was also tried and appeared to break
+    // applet init, but that measurement was confounded by a since-fixed bug
+    // in the did-fail-load handler; it was not re-tested.)
     protocol.handle('app', (request) => {
         const url = new URL(request.url);
         const rel = decodeURIComponent(url.pathname);
