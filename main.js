@@ -1,4 +1,5 @@
-const { app, BrowserWindow, shell, ipcMain } = require('electron')
+const { app, BrowserWindow, shell, ipcMain, protocol, net } = require('electron')
+const { pathToFileURL } = require('url')
 
 // --- smoke mode ------------------------------------------------------------
 // `electron . --smoke` boots the app, waits for the JSmol applet to reach
@@ -38,6 +39,18 @@ const VERBOSE_LOGGING = process.argv.includes('--verbose')
 if (!VERBOSE_LOGGING && !process.argv.includes('--enable-logging')) {
     app.commandLine.appendSwitch('log-level', '3'); // 3 = fatal only
 }
+
+// The app is served over app:// instead of raw file:// (see createWindow).
+// file:// broke under webSecurity once the origin had a HOST in it: the
+// Windows binary launched from WSL loads the bundle from a UNC path
+// (file://wsl.localhost/...), and same-origin enforcement on hostful file
+// origins blocks the subresources -- a real window, entirely empty
+// (observed 2026-08-22). A standard privileged scheme gives every platform
+// the same origin and keeps webSecurity on.
+protocol.registerSchemesAsPrivileged([{
+    scheme: 'app',
+    privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true },
+}]);
 
 // Add command line switches for stability on Windows 11.
 // NOTE disable-gpu-sandbox must stay unconditional: gating it behind safe
@@ -283,10 +296,34 @@ function runSmoke(win) {
                 "typeof jmolApplet0 !== 'undefined' && !!jmolApplet0._ready")
             .then((ready) => {
                 if (badLines.length) return finish(1, 'renderer error lines');
-                if (ready) return finish(0, '');
+                if (ready) return smokeLoadCheck();
                 setTimeout(poll, 500);
             })
             .catch(() => setTimeout(poll, 500));
+    };
+    // Boot alone is not health: the 2026-08-22 empty-window regression (file://
+    // origin with a host under webSecurity) booted fine and rendered nothing.
+    // The gate therefore also loads a bundled sample and counts atoms.
+    const smokeLoadCheck = () => {
+        win.webContents
+            .executeJavaScript(
+                `new Promise((res) => {
+                    Jmol.script(jmolApplet0, 'load "jsmol/data/caffeine.mol"');
+                    let tries = 0;
+                    const check = () => {
+                        const n = Jmol.evaluateVar(jmolApplet0, '{*}.length');
+                        if (n > 0) return res(n);
+                        if (++tries > 20) return res(0);
+                        setTimeout(check, 500);
+                    };
+                    setTimeout(check, 500);
+                })`)
+            .then((atoms) => {
+                if (badLines.length) return finish(1, 'renderer error lines');
+                if (atoms > 0) return finish(0, '');
+                finish(1, 'sample molecule failed to load (0 atoms)');
+            })
+            .catch((err) => finish(1, `load check failed: ${err.message}`));
     };
     win.webContents.once('did-finish-load', () => setTimeout(poll, 500));
 }
@@ -333,7 +370,11 @@ function createWindow() {
         }
     });
 
-    win.loadFile('index.html');
+    if (process.env.JLMOL_FILE_MODE) {
+        win.loadFile('index.html');           // diagnostic fallback
+    } else {
+        win.loadURL('app://bundle/index.html');
+    }
     if (SMOKE) runSmoke(win);
     if (BRIDGE_PROBE) runBridgeProbe(win);
     win.setMenuBarVisibility(false);
@@ -419,7 +460,20 @@ function createWindow() {
     });
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+    // app:// serves the bundle directory, path-normalized and confined to it.
+    protocol.handle('app', (request) => {
+        const url = new URL(request.url);
+        const rel = decodeURIComponent(url.pathname);
+        const target = path.normalize(path.join(__dirname, rel));
+        if (target !== __dirname
+        && !target.startsWith(path.normalize(__dirname + path.sep))) {
+            return new Response('forbidden', { status: 403 });
+        }
+        return net.fetch(pathToFileURL(target).toString());
+    });
+    createWindow();
+});
 
 // Add periodic memory monitoring with cleanup
 let memoryMonitorInterval = setInterval(() => {
