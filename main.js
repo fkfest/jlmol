@@ -1,4 +1,4 @@
-const { app, BrowserWindow, shell, ipcMain } = require('electron')
+const { app, BrowserWindow, shell, ipcMain, protocol } = require('electron')
 
 // --- smoke mode ------------------------------------------------------------
 // `electron . --smoke` boots the app, waits for the JSmol applet to reach
@@ -38,6 +38,18 @@ const VERBOSE_LOGGING = process.argv.includes('--verbose')
 if (!VERBOSE_LOGGING && !process.argv.includes('--enable-logging')) {
     app.commandLine.appendSwitch('log-level', '3'); // 3 = fatal only
 }
+
+// The app is served over app:// instead of raw file:// (see createWindow):
+// a standard privileged scheme gives every platform the same origin, keeps
+// webSecurity meaningful, and removes file-URL semantics (incl. hostful UNC
+// origins) from the picture entirely. NB the CONFIRMED root cause of the
+// 2026-08-22 empty-window-from-WSL episode was the renderer SANDBOX being
+// unable to read a UNC bundle path (see webPreferences.sandbox below); a
+// hostful-file-origin webSecurity effect was theorized but never confirmed.
+protocol.registerSchemesAsPrivileged([{
+    scheme: 'app',
+    privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true },
+}]);
 
 // Add command line switches for stability on Windows 11.
 // NOTE disable-gpu-sandbox must stay unconditional: gating it behind safe
@@ -269,11 +281,19 @@ function runSmoke(win) {
         if (SMOKE_ERROR_RE.test(msg) && !SMOKE_IGNORE_RE.test(msg)) badLines.push(msg);
     });
     const started = Date.now();
+    let finished = false;
     const finish = (code, why) => {
+        if (finished) return;
+        finished = true;
         console.log(code === 0 ? 'SMOKE OK' : `SMOKE FAIL: ${why}`);
         for (const line of badLines) console.log(`  renderer: ${line}`);
         app.exit(code);
     };
+    // Hard deadline on its own timer: if the renderer main thread is blocked
+    // (e.g. a deadlocked synchronous XHR), executeJavaScript never settles and
+    // a deadline embedded in its callbacks never fires. Observed 2026-08-22.
+    setTimeout(() => finish(1, 'hard deadline: renderer unresponsive or applet never ready'),
+               SMOKE_TIMEOUT_MS + 15000);
     const poll = () => {
         if (Date.now() - started > SMOKE_TIMEOUT_MS) {
             return finish(1, 'timeout waiting for JSmol applet _ready');
@@ -283,10 +303,39 @@ function runSmoke(win) {
                 "typeof jmolApplet0 !== 'undefined' && !!jmolApplet0._ready")
             .then((ready) => {
                 if (badLines.length) return finish(1, 'renderer error lines');
-                if (ready) return finish(0, '');
+                if (ready) return smokeLoadCheck();
                 setTimeout(poll, 500);
             })
             .catch(() => setTimeout(poll, 500));
+    };
+    // Boot alone is not health: the 2026-08-22 empty-window regression (the
+    // sandboxed renderer could not read the UNC bundle path) booted fine at
+    // the main-process level and rendered nothing. The gate therefore also
+    // loads a bundled sample and counts atoms.
+    const smokeLoadCheck = () => {
+        win.webContents
+            .executeJavaScript(
+                `new Promise((res) => {
+                    try {
+                        Jmol.script(jmolApplet0, 'load "jsmol/data/caffeine.mol"');
+                    } catch (e) { return res('script threw: ' + e.message); }
+                    let tries = 0;
+                    const check = () => {
+                        let n = 0;
+                        try { n = Jmol.evaluateVar(jmolApplet0, '{*}.length'); }
+                        catch (e) { return res('evaluate threw: ' + e.message); }
+                        if (n > 0) return res(n);
+                        if (++tries > 20) return res(0);
+                        setTimeout(check, 500);
+                    };
+                    setTimeout(check, 500);
+                })`)
+            .then((atoms) => {
+                if (badLines.length) return finish(1, 'renderer error lines');
+                if (typeof atoms === 'number' && atoms > 0) return finish(0, '');
+                finish(1, `sample molecule failed to load (${atoms})`);
+            })
+            .catch((err) => finish(1, `load check failed: ${err.message}`));
     };
     win.webContents.once('did-finish-load', () => setTimeout(poll, 500));
 }
@@ -301,6 +350,14 @@ function createWindow() {
             preload: path.join(__dirname, 'preload.js'),
             nodeIntegration: false,
             contextIsolation: true,
+            // The renderer sandbox (default once nodeIntegration is off)
+            // cannot read the app bundle over a UNC path on Windows -- the
+            // Windows binary launched from WSL (\\wsl.localhost\...) gets a
+            // renderer that dies before requesting a single resource: blank
+            // window, empty logs (2026-08-22). The pre-#49 app was implicitly
+            // unsandboxed via nodeIntegration; contextIsolation and the
+            // preload bridge remain the isolation boundary.
+            sandbox: false,
             // webSecurity was false for years; measured on 2026-08-22 it is
             // not needed: with same-origin enforcement ON, the app boots, the
             // JSmol applet loads local structures (327-atom 1crn.pdb probe,
@@ -333,7 +390,41 @@ function createWindow() {
         }
     });
 
-    win.loadFile('index.html');
+    // Renderer lifecycle on the record: a dead or dying renderer produces no
+    // console and no did-fail-load, which cost a whole evening of guessing.
+    win.webContents.on('render-process-gone', (_e, details) => {
+        log(`render-process-gone: ${details.reason} (exitCode ${details.exitCode})`);
+    });
+    win.webContents.on('did-start-load', () => log('did-start-load'));
+    win.webContents.on('did-finish-load', () => log('did-finish-load'));
+    win.webContents.on('preload-error', (_e, preloadPath, error) => {
+        log(`preload-error ${preloadPath}: ${error.message}`);
+    });
+    log(`preload exists: ${fs.existsSync(path.join(__dirname, 'preload.js'))}`);
+
+    // A load failure must never be a silently empty window: show the error
+    // in the window itself, so the screen IS the diagnostic.
+    win.webContents.on('did-fail-load', (_e, code, description, failedUrl,
+                                          isMainFrame) => {
+        log(`did-fail-load ${code} ${description} for ${failedUrl}`
+            + (isMainFrame ? ' (main frame)' : ' (subframe)'));
+        // Only a MAIN-frame failure means the app did not come up. Subframe
+        // failures are routine (the blocked JSmol tracker fires one under
+        // app://) and replacing the app with the error page mid-initialization
+        // was itself the bug that broke the applet (startHoverWatcher null,
+        // 2026-08-22). ERR_ABORTED (-3) is navigation noise, not failure.
+        if (!isMainFrame || code === -3) return;
+        const msg = `jlmol failed to load its interface.\n\n`
+            + `Error ${code}: ${description}\nURL: ${failedUrl}\n`
+            + `App dir: ${__dirname}\nPlatform: ${process.platform}\n\n`
+            + `Please report this text.`;
+        win.loadURL('data:text/plain;charset=utf-8,' + encodeURIComponent(msg));
+    });
+    if (process.env.JLMOL_FILE_MODE) {
+        win.loadFile('index.html');           // diagnostic fallback
+    } else {
+        win.loadURL('app://bundle/index.html');
+    }
     if (SMOKE) runSmoke(win);
     if (BRIDGE_PROBE) runBridgeProbe(win);
     win.setMenuBarVisibility(false);
@@ -419,7 +510,48 @@ function createWindow() {
     });
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+    // app:// serves the bundle directory, path-normalized and confined to it.
+    // Served from fs STREAMS -- both constraints learned on 2026-08-22 the
+    // hard way: (a) no file:// URLs anywhere (net.fetch of a hostful UNC file
+    // URL -- Windows binary run from WSL -- hangs the load: empty window, no
+    // did-fail-load, empty logs), and (b) streaming bodies, because a
+    // buffered Response deadlocks JSmol's synchronous-XHR class loader.
+    const MIME = {
+        '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css',
+        '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg',
+        '.gif': 'image/gif', '.svg': 'image/svg+xml', '.ico': 'image/x-icon',
+        '.woff': 'font/woff', '.woff2': 'font/woff2', '.wasm': 'application/wasm',
+    };
+    const { Readable } = require('stream');
+    protocol.handle('app', async (request) => {
+        try {
+            const url = new URL(request.url);
+            const rel = decodeURIComponent(url.pathname).replace(/^\/+/, '');
+            const target = path.normalize(path.join(__dirname, rel || 'index.html'));
+            if (target !== __dirname
+                && !target.startsWith(path.normalize(__dirname + path.sep))) {
+                log(`app:// forbidden: ${request.url}`);
+                return new Response('forbidden', { status: 403 });
+            }
+            const stream = fsNative.createReadStream(target);
+            await new Promise((resolve, reject) => {
+                stream.once('open', resolve);
+                stream.once('error', reject);
+            });
+            const mime = MIME[path.extname(target).toLowerCase()]
+                || 'application/octet-stream';
+            if (rel.endsWith('.html')) log(`app:// serving ${rel}`);
+            return new Response(Readable.toWeb(stream),
+                                { headers: { 'content-type': mime } });
+        } catch (err) {
+            log(`app:// ${request.url}: ${err.message}`);
+            return new Response('not found', { status: 404 });
+        }
+    });
+    log(`app:// handler registered; bundle dir: ${__dirname}`);
+    createWindow();
+});
 
 // Add periodic memory monitoring with cleanup
 let memoryMonitorInterval = setInterval(() => {
