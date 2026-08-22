@@ -1,5 +1,4 @@
-const { app, BrowserWindow, shell, ipcMain, protocol, net } = require('electron')
-const { pathToFileURL } = require('url')
+const { app, BrowserWindow, shell, ipcMain, protocol } = require('electron')
 
 // --- smoke mode ------------------------------------------------------------
 // `electron . --smoke` boots the app, waits for the JSmol applet to reach
@@ -40,13 +39,13 @@ if (!VERBOSE_LOGGING && !process.argv.includes('--enable-logging')) {
     app.commandLine.appendSwitch('log-level', '3'); // 3 = fatal only
 }
 
-// The app is served over app:// instead of raw file:// (see createWindow).
-// file:// broke under webSecurity once the origin had a HOST in it: the
-// Windows binary launched from WSL loads the bundle from a UNC path
-// (file://wsl.localhost/...), and same-origin enforcement on hostful file
-// origins blocks the subresources -- a real window, entirely empty
-// (observed 2026-08-22). A standard privileged scheme gives every platform
-// the same origin and keeps webSecurity on.
+// The app is served over app:// instead of raw file:// (see createWindow):
+// a standard privileged scheme gives every platform the same origin, keeps
+// webSecurity meaningful, and removes file-URL semantics (incl. hostful UNC
+// origins) from the picture entirely. NB the CONFIRMED root cause of the
+// 2026-08-22 empty-window-from-WSL episode was the renderer SANDBOX being
+// unable to read a UNC bundle path (see webPreferences.sandbox below); a
+// hostful-file-origin webSecurity effect was theorized but never confirmed.
 protocol.registerSchemesAsPrivileged([{
     scheme: 'app',
     privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true },
@@ -309,9 +308,10 @@ function runSmoke(win) {
             })
             .catch(() => setTimeout(poll, 500));
     };
-    // Boot alone is not health: the 2026-08-22 empty-window regression (file://
-    // origin with a host under webSecurity) booted fine and rendered nothing.
-    // The gate therefore also loads a bundled sample and counts atoms.
+    // Boot alone is not health: the 2026-08-22 empty-window regression (the
+    // sandboxed renderer could not read the UNC bundle path) booted fine at
+    // the main-process level and rendered nothing. The gate therefore also
+    // loads a bundled sample and counts atoms.
     const smokeLoadCheck = () => {
         win.webContents
             .executeJavaScript(
