@@ -492,22 +492,43 @@ function createWindow() {
 
 app.whenReady().then(() => {
     // app:// serves the bundle directory, path-normalized and confined to it.
-    // Implementation note from the 2026-08-22 shakedown: protocol.handle with
-    // a Buffer Response DEADLOCKS JSmol's synchronous-XHR class loader (the
-    // renderer main thread blocks) -- serve via net.fetch, which streams.
-    // (A registerFileProtocol variant was also tried and appeared to break
-    // applet init, but that measurement was confounded by a since-fixed bug
-    // in the did-fail-load handler; it was not re-tested.)
-    protocol.handle('app', (request) => {
-        const url = new URL(request.url);
-        const rel = decodeURIComponent(url.pathname);
-        const target = path.normalize(path.join(__dirname, rel));
-        if (target !== __dirname
-            && !target.startsWith(path.normalize(__dirname + path.sep))) {
-            return new Response('forbidden', { status: 403 });
+    // Served from fs STREAMS -- both constraints learned on 2026-08-22 the
+    // hard way: (a) no file:// URLs anywhere (net.fetch of a hostful UNC file
+    // URL -- Windows binary run from WSL -- hangs the load: empty window, no
+    // did-fail-load, empty logs), and (b) streaming bodies, because a
+    // buffered Response deadlocks JSmol's synchronous-XHR class loader.
+    const MIME = {
+        '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css',
+        '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg',
+        '.gif': 'image/gif', '.svg': 'image/svg+xml', '.ico': 'image/x-icon',
+        '.woff': 'font/woff', '.woff2': 'font/woff2', '.wasm': 'application/wasm',
+    };
+    const { Readable } = require('stream');
+    protocol.handle('app', async (request) => {
+        try {
+            const url = new URL(request.url);
+            const rel = decodeURIComponent(url.pathname).replace(/^\/+/, '');
+            const target = path.normalize(path.join(__dirname, rel || 'index.html'));
+            if (target !== __dirname
+                && !target.startsWith(path.normalize(__dirname + path.sep))) {
+                log(`app:// forbidden: ${request.url}`);
+                return new Response('forbidden', { status: 403 });
+            }
+            const stream = fsNative.createReadStream(target);
+            await new Promise((resolve, reject) => {
+                stream.once('open', resolve);
+                stream.once('error', reject);
+            });
+            const mime = MIME[path.extname(target).toLowerCase()]
+                || 'application/octet-stream';
+            return new Response(Readable.toWeb(stream),
+                                { headers: { 'content-type': mime } });
+        } catch (err) {
+            log(`app:// ${request.url}: ${err.message}`);
+            return new Response('not found', { status: 404 });
         }
-        return net.fetch(pathToFileURL(target).toString());
     });
+    log(`app:// handler registered; bundle dir: ${__dirname}`);
     createWindow();
 });
 
