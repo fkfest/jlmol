@@ -269,7 +269,7 @@ document.addEventListener('wheel', function(e) {
         document.getElementById('controls').style.transform = `scale(${controlsZoom / 100})`;
         
         // Update status to show current zoom level
-        document.getElementById('status').innerHTML = `Controls zoom: ${controlsZoom}%`;
+        setStatusText(`Controls zoom: ${controlsZoom}%`);
     }
 }, { passive: false });  // Required for preventDefault to work
 

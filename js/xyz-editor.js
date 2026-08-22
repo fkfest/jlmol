@@ -85,12 +85,17 @@ function showXYZEditor() {
             const atomData = atomsData[i];
             const row = document.createElement('div');
             row.className = 'xyz-row';
-            row.innerHTML = `
-                        <div class="xyz-cell atom-symbol">${atomData.name}</div>
-                        <div class="xyz-cell coordinate">${atomData.x}</div>
-                        <div class="xyz-cell coordinate">${atomData.y}</div>
-                        <div class="xyz-cell coordinate">${atomData.z}</div>
-                    `;
+            // Cell-by-cell with textContent: atom names come from loaded
+            // molecule files and must never be parsed as markup (issue #45).
+            for (const [cls, value] of [['atom-symbol', atomData.name],
+                                        ['coordinate', atomData.x],
+                                        ['coordinate', atomData.y],
+                                        ['coordinate', atomData.z]]) {
+                const cell = document.createElement('div');
+                cell.className = 'xyz-cell ' + cls;
+                cell.textContent = value;
+                row.appendChild(cell);
+            }
             row.dataset.atomIndex = i;
             row.onclick = function() {
                 toggleAtomSelection(this);
@@ -122,7 +127,7 @@ function showXYZEditor() {
         }
         
     } catch (err) {
-        document.getElementById('status').innerHTML = 'Error getting structure data: ' + err.message;
+        setStatusText('Error getting structure data: ' + err.message);
     }
 }
 
@@ -289,7 +294,7 @@ function updateStructure() {
         
         showXYZEditor(); // Refresh the selection view with updated data
     } catch (err) {
-        document.getElementById('status').innerHTML = 'Error updating structure: ' + err.message;
+        setStatusText('Error updating structure: ' + err.message);
     }
 }
 
@@ -303,7 +308,7 @@ function optimizeStructure() {
             document.getElementById('status').innerHTML = 'Structure optimization completed';
         }, 1000);
     } catch (err) {
-        document.getElementById('status').innerHTML = 'Error optimizing structure: ' + err.message;
+        setStatusText('Error optimizing structure: ' + err.message);
     }
 }
 

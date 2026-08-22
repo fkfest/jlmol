@@ -39,7 +39,7 @@ function exportImage() {
         }
         
     } catch (err) {
-        document.getElementById('status').innerHTML = 'Error exporting image: ' + err.message;
+        setStatusText('Error exporting image: ' + err.message);
         console.error('Export error:', err);
     }
 }
@@ -99,6 +99,6 @@ function downloadImage(imageData, filename, format, transparent) {
     }, 100);
     
     const transparencyNote = (format === 'png' && transparent) ? ' with transparent background' : '';
-    document.getElementById('status').innerHTML = `${format.toUpperCase()} image exported successfully${transparencyNote}`;
+    setStatusText(`${format.toUpperCase()} image exported successfully${transparencyNote}`);
 }
 

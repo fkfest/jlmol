@@ -30,3 +30,4 @@ resources/app.asar
 
 # Local xtb / g-xTB test binaries (not shipped)
 xtb/
+.claude/

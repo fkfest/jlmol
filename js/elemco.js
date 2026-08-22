@@ -108,8 +108,8 @@ function insertSelectedAtomsIntoElemCo() {
     field.focus();
     // Let any state-backed field (option inputs, custom step) react to the edit.
     field.dispatchEvent(new Event('input', { bubbles: true }));
-    document.getElementById('status').innerHTML =
-        `Inserted ${nums.length} selected atom${nums.length === 1 ? '' : 's'}: ${listText}`;
+    setStatusText(
+        `Inserted ${nums.length} selected atom${nums.length === 1 ? '' : 's'}: ${listText}`);
 }
 
 function copyElemCoInput() {
@@ -293,7 +293,6 @@ function elcEl(tag, props, children) {
         for (const k in props) {
             const v = props[k];
             if (k === 'class') e.className = v;
-            else if (k === 'html') e.innerHTML = v;
             else if (k in e) { try { e[k] = v; } catch (_) { e.setAttribute(k, v); } }
             else e.setAttribute(k, v);
         }
@@ -1388,7 +1387,7 @@ async function runJuliaInElectron(juliaCode) {
                     
                     // Update status with progress indication
                     const elapsed = ((now - startTime) / 1000).toFixed(1);
-                    document.getElementById('status').innerHTML = `Calculation running... (${elapsed}s)`;
+                    setStatusText(`Calculation running... (${elapsed}s)`);
                 }
             });
             
@@ -1414,10 +1413,10 @@ async function runJuliaInElectron(juliaCode) {
                 
                 if (code === 0) {
                     outputTextarea.value += `\n=== CALCULATION COMPLETED SUCCESSFULLY ===\nElapsed time: ${elapsed} seconds\nExit code: ${code}`;
-                    document.getElementById('status').innerHTML = `Julia calculation completed successfully (${elapsed}s)`;
+                    setStatusText(`Julia calculation completed successfully (${elapsed}s)`);
                 } else {
                     outputTextarea.value += `\n=== CALCULATION FAILED ===\nElapsed time: ${elapsed} seconds\nExit code: ${code}\n\nCheck the output above for error details.`;
-                    document.getElementById('status').innerHTML = `Julia calculation failed with exit code ${code}`;
+                    setStatusText(`Julia calculation failed with exit code ${code}`);
                 }
                 outputTextarea.scrollTop = outputTextarea.scrollHeight;
             });
@@ -1428,7 +1427,7 @@ async function runJuliaInElectron(juliaCode) {
                 
                 const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
                 outputTextarea.value += `\n=== PROCESS ERROR ===\nElapsed time: ${elapsed} seconds\nError: ${error.message}\n\nTroubleshooting:\n- Check if Julia is properly installed\n- Verify the Julia command path in Settings\n- Ensure Julia has necessary permissions`;
-                document.getElementById('status').innerHTML = `Julia process error: ${error.message}`;
+                setStatusText(`Julia process error: ${error.message}`);
                 outputTextarea.scrollTop = outputTextarea.scrollHeight;
             });
         });

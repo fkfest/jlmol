@@ -153,7 +153,12 @@ function createWindow() {
         webPreferences: {
             nodeIntegration: true,
             contextIsolation: false,
-            webSecurity: false,
+            // webSecurity was false for years; measured on 2026-08-22 it is
+            // not needed: with same-origin enforcement ON, the app boots, the
+            // JSmol applet loads local structures (327-atom 1crn.pdb probe,
+            // identical to webSecurity:false), and the PubChem fetch passes
+            // CORS from the file:// origin. Guarded by the CI smoke gate.
+            webSecurity: true,
             // Disable hardware acceleration to prevent GPU conflicts on Windows 11
             hardwareAcceleration: false
         }

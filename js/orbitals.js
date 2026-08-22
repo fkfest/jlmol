@@ -113,10 +113,12 @@ function getOrbitalInfo() {
         
         let orbitalInfo = document.createElement('div');
         orbitalInfo.id = 'orbitalInfoDisplay';
-        orbitalInfo.innerHTML = `
-                    <p>Total Orbitals: ${numOrbitals}</p>
-                    <p>HOMO: ${homoOrbital}, LUMO: ${lumoOrbital}</p>
-                `;
+        // Values come from Jmol.evaluateVar on the loaded file: textContent.
+        const totalP = document.createElement('p');
+        totalP.textContent = `Total Orbitals: ${numOrbitals}`;
+        const homoP = document.createElement('p');
+        homoP.textContent = `HOMO: ${homoOrbital}, LUMO: ${lumoOrbital}`;
+        orbitalInfo.append(totalP, homoP);
         document.getElementById('orbitalControls').insertBefore(
             orbitalInfo,
             document.getElementById('orbitalList')

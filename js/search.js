@@ -57,7 +57,7 @@ function handleFileSelect(evt) {
                 }, 300);
                 
             } catch (err) {
-                document.getElementById('status').innerHTML = 'Error loading file: ' + err.message;
+                setStatusText('Error loading file: ' + err.message);
             }
         };
         reader.readAsText(file);
@@ -107,7 +107,7 @@ function loadSample(filename) {
         }, 200);
         
     } catch (err) {
-        document.getElementById('status').innerHTML = 'Error loading sample: ' + err.message;
+        setStatusText('Error loading sample: ' + err.message);
     }
 }
 
@@ -142,7 +142,7 @@ async function loadFromDatabase(identifier) {
             
             // Two-step process for formula searches:
             // Step 1: Get CIDs for the formula
-            document.getElementById('status').innerHTML = `Step 1: Finding compounds with formula "${formula}"...`;
+            setStatusText(`Step 1: Finding compounds with formula "${formula}"...`);
             
             try {
                 const cidUrl = `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/fastformula/${encodeURIComponent(formula)}/cids/TXT`;
@@ -165,7 +165,7 @@ async function loadFromDatabase(identifier) {
                 dbMetadata.cid = firstCid;
                 
                 // Step 2: Get SDF for the first CID (try 3D first, fallback to 2D)
-                document.getElementById('status').innerHTML = `Step 2: Loading structure for CID ${firstCid}...`;
+                setStatusText(`Step 2: Loading structure for CID ${firstCid}...`);
                 
                 // Try 3D first
                 let sdfUrl = `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/${firstCid}/SDF?record_type=3d`;
@@ -187,7 +187,7 @@ async function loadFromDatabase(identifier) {
                 
             } catch (formulaError) {
                 console.error('Formula search error:', formulaError);
-                document.getElementById('status').innerHTML = `Error: ${formulaError.message}`;
+                setStatusText(`Error: ${formulaError.message}`);
                 return;
             }
         } else if (identifier.startsWith(':')) {
@@ -204,7 +204,7 @@ async function loadFromDatabase(identifier) {
             }
         }
         
-        document.getElementById('status').innerHTML = statusMessage;
+        setStatusText(statusMessage);
         
         // Save current display mode
         const currentDisplayMode = displayMode || 'default';
@@ -249,7 +249,7 @@ async function loadFromDatabase(identifier) {
         
     } catch (err) {
         console.error('loadFromDatabase error:', err);
-        document.getElementById('status').innerHTML = 'Error loading from PubChem: ' + err.message;
+        setStatusText('Error loading from PubChem: ' + err.message);
     }
 }
 
