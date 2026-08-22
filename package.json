@@ -17,7 +17,8 @@
     "build:linux": "electron-builder --linux",
     "check-version": "node build-version.js",
     "update-elemco-options": "node scripts/parse-elemco-options.js",
-    "update-elemco-macros": "node scripts/parse-elemco-macros.js"
+    "update-elemco-macros": "node scripts/parse-elemco-macros.js",
+    "smoke": "electron . --smoke --disable-gpu"
   },
   "build": {
     "appId": "com.jlmol.viewer",
