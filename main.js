@@ -1,4 +1,4 @@
-const { app, BrowserWindow } = require('electron')
+const { app, BrowserWindow, shell } = require('electron')
 const path = require('path')
 const fs = require('fs')
 const { version } = require('./package.json')
@@ -18,7 +18,11 @@ if (!VERBOSE_LOGGING && !process.argv.includes('--enable-logging')) {
     app.commandLine.appendSwitch('log-level', '3'); // 3 = fatal only
 }
 
-// Add command line switches for stability on Windows 11
+// Add command line switches for stability on Windows 11.
+// NOTE disable-gpu-sandbox must stay unconditional: gating it behind safe
+// mode was tried (2026-08-22) and broke JSmol applet initialization on
+// GPU-less environments (_evaluate TypeErrors) -- it is load-bearing for
+// JSmol, not only a Windows 11 workaround.
 app.commandLine.appendSwitch('disable-gpu-sandbox');
 app.commandLine.appendSwitch('disable-software-rasterizer');
 app.commandLine.appendSwitch('disable-background-timer-throttling');
@@ -107,6 +111,27 @@ function createWindow() {
             webSecurity: false,
             // Disable hardware acceleration to prevent GPU conflicts on Windows 11
             hardwareAcceleration: false
+        }
+    });
+
+    // Window-open and navigation guards: the renderer can never spawn a new
+    // Electron window; external links go to the system browser, and the
+    // window cannot navigate away from the bundled index.html. This is the
+    // bug class of CVE-2026-70608 (popup restrictions bypassed via an OpenURL
+    // navigation path) closed at the application level, independent of the
+    // Electron version.
+    win.webContents.setWindowOpenHandler(({ url }) => {
+        if (url.startsWith('https://') || url.startsWith('http://')) {
+            shell.openExternal(url);
+        }
+        return { action: 'deny' };
+    });
+    win.webContents.on('will-navigate', (event, url) => {
+        if (url !== win.webContents.getURL()) {
+            event.preventDefault();
+            if (url.startsWith('https://') || url.startsWith('http://')) {
+                shell.openExternal(url);
+            }
         }
     });
 
