@@ -22,3 +22,6 @@ jobs:
       - name: smoke test
         run: xvfb-run -a npx electron . --smoke --disable-gpu --no-sandbox
         timeout-minutes: 3
+      - name: bridge probe
+        run: xvfb-run -a npx electron . --bridge-probe --disable-gpu --no-sandbox
+        timeout-minutes: 3

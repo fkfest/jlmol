@@ -92,7 +92,7 @@ async function runXtb(mode) {
     document.getElementById('status').innerHTML = 'Preparing xtb calculation...';
 
     try {
-        if (typeof require !== 'undefined') {
+        if (window.jlmolNative) {
             await runXtbInElectron(xyzData, mode);
         } else {
             showXtbBrowserMessage();
@@ -122,11 +122,10 @@ Settings -> xtb). It bundles the parameters, so no separate download is needed.`
 
 // Run xtb in the Electron environment
 async function runXtbInElectron(xyzData, mode) {
-    const { spawn } = require('child_process');
-    const fs = require('fs');
-    const path = require('path');
-    const os = require('os');
-
+    // All system access goes through the preload bridge (issue #45 item 3):
+    // scoped work directory, file writes/reads confined to it, spawn with
+    // streamed output. No require() in the renderer.
+    const native = window.jlmolNative;
     const outputTextarea = document.getElementById('xtb-output');
     const prefs = getPreferences();
     const xtbCommand = (prefs.xtbCommand || 'xtb').trim();
@@ -146,8 +145,9 @@ async function runXtbInElectron(xyzData, mode) {
     const cmdPrefixArgs = commandParts.slice(1); // e.g. ['xtb'] for "wsl xtb", or [] for "xtb"
 
     // Dedicated working directory (xtb writes several output files into CWD)
-    const workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'jlmol_xtb_'));
-    fs.writeFileSync(path.join(workDir, 'coord.xyz'), xyzData);
+    const workDir = await native.mkWorkDir('jlmol_xtb_');
+    const workDirPath = await native.workDirPath(workDir);
+    await native.writeFile(workDir, 'coord.xyz', xyzData);
 
     // Optionally freeze the non-selected atoms during optimization by writing
     // an xtb xcontrol file with a $fix block (passed via --input). The atoms
@@ -171,7 +171,7 @@ async function runXtbInElectron(xyzData, mode) {
             } else {
                 const ranges = formatAtomRanges(fixed);
                 const xcontrol = `$fix\n   atoms: ${ranges}\n$end\n`;
-                fs.writeFileSync(path.join(workDir, 'xtb.inp'), xcontrol);
+                await native.writeFile(workDir, 'xtb.inp', xcontrol);
                 inputFileArgs = ['--input', 'xtb.inp'];
                 freezeSummary = `Relaxing ${selectedAtoms.size} selected atom(s); freezing ${fixed.length} atom(s) via xtb.inp:\n${xcontrol}`;
             }
@@ -182,14 +182,8 @@ async function runXtbInElectron(xyzData, mode) {
     function cleanup() {
         if (cleanedUp) return;
         cleanedUp = true;
-        try {
-            fs.rmSync(workDir, { recursive: true, force: true });
-            console.log('xtb working directory cleaned up:', workDir);
-        } catch (e) {
-            console.warn('Could not remove xtb working directory:', workDir, e);
-        }
+        native.removeWorkDir(workDir);   // main also reaps all work dirs on quit
     }
-    process.once('exit', cleanup);
 
     // Build arguments. The geometry file is passed as a relative name; cwd is workDir.
     const calcArgs = [...cmdPrefixArgs, 'coord.xyz', ...inputFileArgs, '--gxtb', '--chrg', String(charge), '--uhf', String(uhf)];
@@ -197,41 +191,32 @@ async function runXtbInElectron(xyzData, mode) {
     if (extraFlags) calcArgs.push(...parseXtbCommand(extraFlags));
 
     const fullCmd = `${xtbCommand} coord.xyz${inputFileArgs.length ? ' --input xtb.inp' : ''} --gxtb${mode === 'opt' ? ' --opt' : ''} --chrg ${charge} --uhf ${uhf}${extraFlags ? ' ' + extraFlags : ''}`;
-    outputTextarea.value = `=== jlmol xtb (g-xTB) Calculation ===\nTimestamp: ${new Date().toISOString()}\nMode: ${mode === 'opt' ? 'Geometry optimization' : 'Single-point energy'}\nxtb command: ${xtbCommand}\nWorking directory: ${workDir}\nFull command: ${fullCmd}\n${freezeSummary ? '\n' + freezeSummary : ''}\n--- Checking xtb availability ---\n`;
-    document.getElementById('status').innerHTML = 'Checking xtb...';
+    outputTextarea.value = `=== jlmol xtb (g-xTB) Calculation ===\nTimestamp: ${new Date().toISOString()}\nMode: ${mode === 'opt' ? 'Geometry optimization' : 'Single-point energy'}\nxtb command: ${xtbCommand}\nWorking directory: ${workDirPath}\nFull command: ${fullCmd}\n${freezeSummary ? '\n' + freezeSummary : ''}\n--- Checking xtb availability ---\n`;
+    setStatusText('Checking xtb...');
 
     // Availability check first
     const versionArgs = [...cmdPrefixArgs, '--version'];
-    const check = spawn(baseCommand, versionArgs, {
-        cwd: workDir,
-        stdio: ['pipe', 'pipe', 'pipe'],
-        shell: isWSL ? false : true
-    });
-
-    check.on('error', (error) => {
-        cleanup();
-        const wslTip = isWSL ? `\n\nWSL tips:\n- Ensure WSL is installed and xtb exists inside your distribution\n- Try 'wsl xtb --version' in a terminal` : '';
-        outputTextarea.value += `\n=== xtb NOT FOUND ===\nCould not run "${xtbCommand}": ${error.message}\n\nPlease check the xtb command in Settings -> xtb, or install xtb (with g-xTB support) from https://github.com/grimme-lab/g-xtb and make sure it is on your PATH.${wslTip}`;
-        document.getElementById('status').innerHTML = 'xtb not found - see output';
-    });
-
-    check.on('close', (code) => {
-        if (code !== 0) {
+    await native.spawn(baseCommand, versionArgs, { cwd: workDir }, {
+        error: (message) => {
             cleanup();
-            outputTextarea.value += `\nxtb version check failed (exit code ${code}) for command "${xtbCommand}".\nPlease verify the command in Settings -> xtb.`;
-            document.getElementById('status').innerHTML = 'xtb not available - see output';
-            return;
-        }
+            const wslTip = isWSL ? `\n\nWSL tips:\n- Ensure WSL is installed and xtb exists inside your distribution\n- Try 'wsl xtb --version' in a terminal` : '';
+            outputTextarea.value += `\n=== xtb NOT FOUND ===\nCould not run "${xtbCommand}": ${message}\n\nPlease check the xtb command in Settings -> xtb, or install xtb (with g-xTB support) from https://github.com/grimme-lab/g-xtb and make sure it is on your PATH.${wslTip}`;
+            setStatusText('xtb not found - see output');
+        },
+        close: (code) => {
+            if (code !== 0) {
+                cleanup();
+                outputTextarea.value += `\nxtb version check failed (exit code ${code}) for command "${xtbCommand}".\nPlease verify the command in Settings -> xtb.`;
+                setStatusText('xtb not available - see output');
+                return;
+            }
+            runXtbCalculation();
+        },
+    });
 
+    async function runXtbCalculation() {
         outputTextarea.value += `xtb found.\n\n--- Starting calculation ---\n`;
-        document.getElementById('status').innerHTML = mode === 'opt' ? 'Optimizing geometry with xtb...' : 'Calculating energy with xtb...';
-
-        const proc = spawn(baseCommand, calcArgs, {
-            cwd: workDir,
-            stdio: ['pipe', 'pipe', 'pipe'],
-            timeout: timeoutMs,
-            shell: isWSL ? false : true
-        });
+        setStatusText(mode === 'opt' ? 'Optimizing geometry with xtb...' : 'Calculating energy with xtb...');
 
         let stdout = '';
         let outputBuffer = '';
@@ -246,46 +231,37 @@ async function runXtbInElectron(xyzData, mode) {
             }
         }
 
-        proc.stdout.on('data', (data) => {
-            const text = data.toString();
-            stdout += text;
-            outputBuffer += text;
-            const now = Date.now();
-            if (now - lastUpdateTime > 100) {
-                flushOutput();
-                lastUpdateTime = now;
-                const elapsed = ((now - startTime) / 1000).toFixed(1);
-                setStatusText(`xtb running... (${elapsed}s)`);
-            }
-        });
-
-        proc.stderr.on('data', (data) => {
-            outputTextarea.value += data.toString();
-            outputTextarea.scrollTop = outputTextarea.scrollHeight;
-        });
-
-        proc.on('error', (error) => {
-            flushOutput();
-            cleanup();
-            outputTextarea.value += `\n=== PROCESS ERROR ===\n${error.message}`;
-            setStatusText(`xtb process error: ${error.message}`);
-        });
-
-        proc.on('close', (exitCode) => {
-            flushOutput();
-            const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-
-            // NOTE: xtb returns exit code 0 even on failure (e.g. missing g-xTB
-            // parameters), so success is detected from the produced output, not the code.
-            if (mode === 'opt') {
-                const optFile = path.join(workDir, 'xtbopt.xyz');
-                if (fs.existsSync(optFile)) {
-                    let optXyz = '';
-                    try {
-                        optXyz = fs.readFileSync(optFile, 'utf8');
-                    } catch (e) {
-                        optXyz = '';
+        await native.spawn(baseCommand, calcArgs, { cwd: workDir, timeoutMs }, {
+            data: (kind, text) => {
+                if (kind === 'stdout') {
+                    stdout += text;
+                    outputBuffer += text;
+                    const now = Date.now();
+                    if (now - lastUpdateTime > 100) {
+                        flushOutput();
+                        lastUpdateTime = now;
+                        const elapsed = ((now - startTime) / 1000).toFixed(1);
+                        setStatusText(`xtb running... (${elapsed}s)`);
                     }
+                } else {
+                    outputTextarea.value += text;
+                    outputTextarea.scrollTop = outputTextarea.scrollHeight;
+                }
+            },
+            error: (message) => {
+                flushOutput();
+                cleanup();
+                outputTextarea.value += `\n=== PROCESS ERROR ===\n${message}`;
+                setStatusText(`xtb process error: ${message}`);
+            },
+            close: async (exitCode) => {
+                flushOutput();
+                const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+
+                // NOTE: xtb returns exit code 0 even on failure (e.g. missing g-xTB
+                // parameters), so success is detected from the produced output, not the code.
+                if (mode === 'opt') {
+                    const optXyz = await native.readFile(workDir, 'xtbopt.xyz');
                     if (optXyz && parseInt(optXyz.split('\n')[0]) > 0) {
                         applyOptimizedGeometry(optXyz);
                         outputTextarea.value += `\n\n=== OPTIMIZATION COMPLETED (${elapsed}s) ===\nThe geometry in the viewer has been replaced with the optimized structure.`;
@@ -293,23 +269,23 @@ async function runXtbInElectron(xyzData, mode) {
                         cleanup();
                         return;
                     }
-                }
-                outputTextarea.value += `\n\n=== OPTIMIZATION FAILED ===\nNo optimized geometry (xtbopt.xyz) was produced. See the output above.\nIf this mentions missing g-xTB parameters, make sure the xtb being run is the one from the g-xtb distribution (https://github.com/grimme-lab/g-xtb), which bundles the parameters.`;
-                document.getElementById('status').innerHTML = 'xtb optimization failed - see output';
-            } else {
-                const match = stdout.match(/TOTAL ENERGY\s+(-?\d+\.\d+)/);
-                if (match) {
-                    const energy = match[1];
-                    outputTextarea.value += `\n\n=== ENERGY CALCULATION COMPLETED (${elapsed}s) ===\nTotal energy: ${energy} Eh`;
-                    setStatusText(`g-xTB total energy: ${energy} Eh (${elapsed}s)`);
+                    outputTextarea.value += `\n\n=== OPTIMIZATION FAILED ===\nNo optimized geometry (xtbopt.xyz) was produced. See the output above.\nIf this mentions missing g-xTB parameters, make sure the xtb being run is the one from the g-xtb distribution (https://github.com/grimme-lab/g-xtb), which bundles the parameters.`;
+                    setStatusText('xtb optimization failed - see output');
                 } else {
-                    outputTextarea.value += `\n\n=== ENERGY CALCULATION FAILED ===\nNo total energy was found in the xtb output. See above.\nIf this mentions missing g-xTB parameters, make sure the xtb being run is the one from the g-xtb distribution (https://github.com/grimme-lab/g-xtb), which bundles the parameters.`;
-                    document.getElementById('status').innerHTML = 'xtb energy calculation failed - see output';
+                    const match = stdout.match(/TOTAL ENERGY\s+(-?\d+\.\d+)/);
+                    if (match) {
+                        const energy = match[1];
+                        outputTextarea.value += `\n\n=== ENERGY CALCULATION COMPLETED (${elapsed}s) ===\nTotal energy: ${energy} Eh`;
+                        setStatusText(`g-xTB total energy: ${energy} Eh (${elapsed}s)`);
+                    } else {
+                        outputTextarea.value += `\n\n=== ENERGY CALCULATION FAILED ===\nNo total energy was found in the xtb output. See above.\nIf this mentions missing g-xTB parameters, make sure the xtb being run is the one from the g-xtb distribution (https://github.com/grimme-lab/g-xtb), which bundles the parameters.`;
+                        setStatusText('xtb energy calculation failed - see output');
+                    }
                 }
-            }
-            cleanup();
+                cleanup();
+            },
         });
-    });
+    }
 }
 
 // Replace the current geometry in the viewer with the optimized structure
