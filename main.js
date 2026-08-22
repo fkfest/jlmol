@@ -350,6 +350,14 @@ function createWindow() {
             preload: path.join(__dirname, 'preload.js'),
             nodeIntegration: false,
             contextIsolation: true,
+            // The renderer sandbox (default once nodeIntegration is off)
+            // cannot read the app bundle over a UNC path on Windows -- the
+            // Windows binary launched from WSL (\\wsl.localhost\...) gets a
+            // renderer that dies before requesting a single resource: blank
+            // window, empty logs (2026-08-22). The pre-#49 app was implicitly
+            // unsandboxed via nodeIntegration; contextIsolation and the
+            // preload bridge remain the isolation boundary.
+            sandbox: false,
             // webSecurity was false for years; measured on 2026-08-22 it is
             // not needed: with same-origin enforcement ON, the app boots, the
             // JSmol applet loads local structures (327-atom 1crn.pdb probe,
@@ -381,6 +389,18 @@ function createWindow() {
             }
         }
     });
+
+    // Renderer lifecycle on the record: a dead or dying renderer produces no
+    // console and no did-fail-load, which cost a whole evening of guessing.
+    win.webContents.on('render-process-gone', (_e, details) => {
+        log(`render-process-gone: ${details.reason} (exitCode ${details.exitCode})`);
+    });
+    win.webContents.on('did-start-load', () => log('did-start-load'));
+    win.webContents.on('did-finish-load', () => log('did-finish-load'));
+    win.webContents.on('preload-error', (_e, preloadPath, error) => {
+        log(`preload-error ${preloadPath}: ${error.message}`);
+    });
+    log(`preload exists: ${fs.existsSync(path.join(__dirname, 'preload.js'))}`);
 
     // A load failure must never be a silently empty window: show the error
     // in the window itself, so the screen IS the diagnostic.
@@ -521,6 +541,7 @@ app.whenReady().then(() => {
             });
             const mime = MIME[path.extname(target).toLowerCase()]
                 || 'application/octet-stream';
+            if (rel.endsWith('.html')) log(`app:// serving ${rel}`);
             return new Response(Readable.toWeb(stream),
                                 { headers: { 'content-type': mime } });
         } catch (err) {
