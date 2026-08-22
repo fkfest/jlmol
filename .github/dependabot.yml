@@ -1,0 +1,9 @@
+# Weekly dependency PRs: future electron (and transitive) patches arrive as
+# pull requests instead of security-alert emails.
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
