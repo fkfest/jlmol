@@ -92,7 +92,7 @@ async function runXtb(mode) {
     document.getElementById('status').innerHTML = 'Preparing xtb calculation...';
 
     try {
-        if (typeof require !== 'undefined') {
+        if (window.jlmolNative) {
             await runXtbInElectron(xyzData, mode);
         } else {
             showXtbBrowserMessage();

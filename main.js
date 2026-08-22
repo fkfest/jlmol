@@ -184,7 +184,14 @@ ipcMain.handle('jlmol-spawn', (event, command, args, options) => {
     // non-WSL, which let shell metacharacters in user-entered extra flags
     // reach a shell. Plain PATH lookup covers the legitimate cases.
     const opts = { shell: false };
-    if (options && options.cwd) opts.cwd = workDirs.get(options.cwd) || undefined;
+    if (options && options.cwd) {
+        const dir = workDirs.get(options.cwd);
+        if (!dir) throw new Error('unknown work directory for spawn cwd');
+        opts.cwd = dir;
+    }
+    // child_process.spawn DOES enforce `timeout` (Node >= 15.13; measured:
+    // sleep 30 with timeout 800 is SIGTERMed after ~808 ms). On timeout the
+    // close event carries code null + the signal, surfaced as a notice below.
     if (options && options.timeoutMs > 0) opts.timeout = Number(options.timeoutMs);
     const child = spawnNative(String(command), (args || []).map(String), opts);
     const procId = crypto.randomUUID();
@@ -196,7 +203,13 @@ ipcMain.handle('jlmol-spawn', (event, command, args, options) => {
     child.stdout && child.stdout.on('data', (d) => send('stdout', d.toString()));
     child.stderr && child.stderr.on('data', (d) => send('stderr', d.toString()));
     child.on('error', (err) => { procs.delete(procId); send('error', err.message); });
-    child.on('close', (code) => { procs.delete(procId); send('close', code); });
+    child.on('close', (code, signal) => {
+        procs.delete(procId);
+        if (code === null && signal) {
+            send('stderr', `[process terminated by ${signal} (timeout or kill)]\n`);
+        }
+        send('close', code);
+    });
     return procId;
 });
 ipcMain.handle('jlmol-kill', (_e, procId) => {
