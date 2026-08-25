@@ -1,11 +1,11 @@
 // AUTO-GENERATED — do not edit by hand.
-// Source: ElemCo.jl src/ElemCo.jl @ main
+// Source: ElemCo.jl src/ElemCo.jl @ file:/home/kats/projects/ElemCo.jl-devel/src/ElemCo.jl
 // Regenerate: node scripts/parse-elemco-macros.js [--ref <tag>]
 window.ELEMCO_MACROS = {
   "sourceRepo": "fkfest/ElemCo.jl",
-  "sourceRef": "main",
-  "sourceUrl": "https://raw.githubusercontent.com/fkfest/ElemCo.jl/main/src/ElemCo.jl",
-  "generated": "2026-07-19",
+  "sourceRef": "file:/home/kats/projects/ElemCo.jl-devel/src/ElemCo.jl",
+  "sourceUrl": "/home/kats/projects/ElemCo.jl-devel/src/ElemCo.jl",
+  "generated": "2026-08-25",
   "macros": [
     {
       "name": "bohf",
@@ -75,9 +75,9 @@ window.ELEMCO_MACROS = {
     },
     {
       "name": "dfints",
-      "signature": "@dfints()",
-      "acceptsOptions": false,
-      "doc": "Generate 2 and 4-idx MO integrals using density fitting.\n The MO coefficients are read from WfOptions.dump."
+      "signature": "@dfints(opts_block=nothing)",
+      "acceptsOptions": true,
+      "doc": "Generate 2 and 4-idx MO integrals using density fitting.\n The MO coefficients are read from WfOptions.dump.\n\n These integrals PERSIST for the rest of the session and are yours to manage: because they are built\n from a particular set of orbitals, they become stale if the orbitals change (a re-run @dfhf,\n @localize, an orbital-optimized method), and re-running @dfints is what refreshes them. A\n correlated driver (@cc, @fci, ...) that finds no integrals creates its own from the current\n orbitals and deletes them again when it finishes, so it can never use a stale set — use @dfints\n when you deliberately want ONE generation to serve several driver calls on the same orbitals.\n\n Optionally, a begin...end block can be provided to set local options for this call.\n The options are reset after the call completes."
     },
     {
       "name": "dfmcscf",
@@ -122,10 +122,22 @@ window.ELEMCO_MACROS = {
       "doc": "Freeze orbitals in the integrals according to an array or range \n freeze_orbs.\n\n Alternatively, the orbitals can be specified as a String with the +/- or :/; syntax, e.g.,\n \"1-5+7-8\", or \"1:5;7-8\"."
     },
     {
+      "name": "hf",
+      "signature": "@hf(opts_block=nothing)",
+      "acceptsOptions": true,
+      "doc": "Run closed-shell Hartree-Fock from exact (non-DF) AO integrals. If the AO integral\n files are not on file yet, they are generated first (equivalent to calling\n @ints). The orbitals are stored to WfOptions.dump.\n\n Note: if EC.fd holds (MO/FCIDUMP) integrals they are discarded (with a warning) —\n @hf runs on exact AO integrals, and a leftover MO dump would shadow the AO flow in\n subsequent correlated calculations. To run HF on existing FCIDUMP integrals, use\n @bohf instead.\n\n Optionally, a begin...end block can be provided to set local options for this call.\n The options are reset after the call completes."
+    },
+    {
       "name": "import_matrix",
       "signature": "@import_matrix(filename)",
       "acceptsOptions": false,
       "doc": "Import matrix from file file.\n\n The type of the matrix is determined automatically."
+    },
+    {
+      "name": "ints",
+      "signature": "@ints(opts_block=nothing)",
+      "acceptsOptions": true,
+      "doc": "Generate exact (non-density-fitted) AO integrals and store them as scratch files\n (overlap S_AA, core Hamiltonian h_AA, and the memory-mapped 4-index ⟨μν|ρσ⟩\n ao_int2). EC.fd is not used — it holds MO integrals only; MO dumps are derived\n from the AO files on demand. This is the non-DF AO counterpart of @dfints.\n\n Optionally, a begin...end block can be provided to set local options for this call.\n The options are reset after the call completes."
     },
     {
       "name": "loadfile",
@@ -138,6 +150,18 @@ window.ELEMCO_MACROS = {
       "signature": "@loadwf(args...)",
       "acceptsOptions": false,
       "doc": "Load wavefunction data from the trexio dump file.\n\n The arguments what can be a vector of strings, a string variable or a list of arguments \n specifying what to load.\n Possible values are: \n\n - all: load everything available (overrides other options)\n - orbital_energies: molecular orbital energies\n - orbital_occupations: molecular orbital occupations\n - amplitudes: restricted CC amplitudes (T1, T2)\n - unrestricted_amplitudes: unrestricted CC amplitudes (T1a, T1b, T2a, T2b, T2ab)\n - determinants: selected CI determinants and coefficients\n\n The loaded data are returned as a dictionary with keys corresponding to the requested data.\n basis, orbitals and orbital_type are always included in the output."
+    },
+    {
+      "name": "localize",
+      "signature": "@localize(opts_block=nothing)",
+      "acceptsOptions": true,
+      "doc": "Localize the current orbitals using IBO/Pipek-Mezey/Boys (occupied) and optionally OPAO (virtual).\n \n The orbitals are read from WfOptions.start and stored\n to WfOptions.store.\n If start or store is not specified, the orbitals are read from and/or stored back to \n WfOptions.dump.\n\n Optionally, a begin...end block can be provided to set local options for this call.\n The options are reset after the call completes."
+    },
+    {
+      "name": "moints",
+      "signature": "@moints(opts_block=nothing)",
+      "acceptsOptions": true,
+      "doc": "Generate 2 and 4-idx MO integrals from exact (non-density-fitted) AO integrals.\n If the AO integral files are not on file yet, they are generated first (equivalent to\n calling @ints). The MO coefficients are read from\n WfOptions.dump. This is the non-DF counterpart of @dfints.\n\n As in @dfints, the dump covers the active space: the frozen core is folded into the\n one-electron integrals and the core energy, and deleted/frozen virtuals are left out\n (wf.freeze_nocc=0 keeps the core in the dump).\n\n These integrals PERSIST for the rest of the session and are yours to manage: because they are\n built from a particular set of orbitals, they become stale if the orbitals change (a re-run @hf,\n @localize, an orbital-optimized method), and re-running @moints is what refreshes them. Use it\n when the MO integrals themselves are the point — to write them out with\n @write_ints, or to have ONE generation serve several driver calls on the same orbitals:"
     },
     {
       "name": "molpro_input",
@@ -156,6 +180,12 @@ window.ELEMCO_MACROS = {
       "signature": "@opt(opt, kwargs...)",
       "acceptsOptions": false,
       "doc": "Alias for @set. Set options for EC::ECInfo. \n \n The first argument opt is the name of the option (e.g., scf, cc, cholesky), see ECInfos.Options.\n The keyword arguments are the options to be set (e.g., thr=1.e-14, maxit=10).\n The current state of the options can be stored in a variable, e.g., opt_cc = @set cc.\n The state can then be restored by @set cc opt_cc.\n If EC is not already initialized, it will be done."
+    },
+    {
+      "name": "region",
+      "signature": "@region(args...)",
+      "acceptsOptions": true,
+      "doc": "Build a region-tagged orbital dump from localized occupied orbitals and fragment OPAOs.\n\ncenters is an optional list of atom indices or center labels. When omitted, the\nrequested centers are taken from region.inclusive_centers and region.exclusive_centers.\nThe macro reads orbitals from\nWfOptions.start when provided, otherwise from\nWfOptions.dump, and writes the tagged result to\nWfOptions.store if set, otherwise back to the main dump.\n\nOptionally, a begin...end block can be provided to set local region or loc\noptions for this call."
     },
     {
       "name": "reset",
@@ -200,6 +230,12 @@ window.ELEMCO_MACROS = {
       "doc": "Set options for EC::ECInfo. \n \n The first argument opt is the name of the option (e.g., scf, cc, cholesky), see ECInfos.Options.\n The keyword arguments are the options to be set (e.g., thr=1.e-14, maxit=10).\n The current state of the options can be stored in a variable, e.g., opt_cc = @set cc.\n The state can then be restored by @set cc opt_cc.\n If EC is not already initialized, it will be done."
     },
     {
+      "name": "set_default_eltype",
+      "signature": "@set_default_eltype(T)",
+      "acceptsOptions": false,
+      "doc": "Set the default element type for new ECInfo objects."
+    },
+    {
       "name": "show_orbs",
       "signature": "@show_orbs(range=nothing)",
       "acceptsOptions": false,
@@ -212,10 +248,22 @@ window.ELEMCO_MACROS = {
       "doc": "Rotate FCIDump integrals using rotations from WfOptions.dump \n as transformation matrices.\n\n The orbital rotations are read from WfOptions.dump.\n If type of the rotations contains the word biorthogonal, \n the bi-orthogonal orbitals are used."
     },
     {
+      "name": "uhf",
+      "signature": "@uhf(opts_block=nothing)",
+      "acceptsOptions": true,
+      "doc": "Run unrestricted Hartree-Fock from exact (non-DF) AO integrals. If the AO integral\n files are not on file yet, they are generated first (equivalent to calling\n @ints). The orbitals are stored to WfOptions.dump.\n\n Note: if EC.fd holds (MO/FCIDUMP) integrals they are discarded (with a warning) —\n @uhf runs on exact AO integrals, and a leftover MO dump would shadow the AO flow in\n subsequent correlated calculations. To run UHF on existing FCIDUMP integrals, use\n @bouhf instead.\n\n Optionally, a begin...end block can be provided to set local options for this call.\n The options are reset after the call completes."
+    },
+    {
+      "name": "usewf",
+      "signature": "@usewf(args...)",
+      "acceptsOptions": false,
+      "doc": "Copy wavefunction data to the current trexio dump file from another dump file, i.e., it does the opposite of @copywf.\n\n If from_file is not provided, the wavefunction is copied from EC.options.wf.store file.\n Note: This does not check the contents of the files."
+    },
+    {
       "name": "write_ints",
       "signature": "@write_ints(file=\"FCIDUMP\", kwargs...)",
       "acceptsOptions": false,
-      "doc": "Write FCIDump integrals to file file."
+      "doc": "Write FCIDump integrals to file file, which can be a string literal or a variable holding one.\n\n The integrals must persist in EC.fd: create them explicitly with @dfints or\n @moints, or read an FCIDUMP — the integrals a correlated driver creates for itself\n are deleted again when it finishes.\n\n The written file is self-contained: its NELEC (and MS2) describe the system as currently\n set up, i.e. with WfOptions.charge applied. Reading such a file\n back therefore needs no charge — and setting one would ionize it *further*, since wf.charge\n is always relative to the electron count of the integral source."
     }
   ]
 };

@@ -1,11 +1,11 @@
 // AUTO-GENERATED — do not edit by hand.
-// Source: ElemCo.jl src/infos/options.jl @ main
+// Source: ElemCo.jl src/infos/options.jl @ file:/home/kats/projects/ElemCo.jl-devel/src/infos/options.jl
 // Regenerate: node scripts/parse-elemco-options.js [--ref <tag>]
 window.ELEMCO_OPTIONS = {
   "sourceRepo": "fkfest/ElemCo.jl",
-  "sourceRef": "main",
-  "sourceUrl": "https://raw.githubusercontent.com/fkfest/ElemCo.jl/main/src/infos/options.jl",
-  "generated": "2026-07-18",
+  "sourceRef": "file:/home/kats/projects/ElemCo.jl-devel/src/infos/options.jl",
+  "sourceUrl": "/home/kats/projects/ElemCo.jl-devel/src/infos/options.jl",
+  "generated": "2026-08-25",
   "groupOrder": [
     "wf",
     "scf",
@@ -19,7 +19,10 @@ window.ELEMCO_OPTIONS = {
     "laplace",
     "diis",
     "davidson",
-    "print"
+    "print",
+    "loc",
+    "region",
+    "mem"
   ],
   "groups": {
     "wf": {
@@ -73,6 +76,15 @@ window.ELEMCO_OPTIONS = {
           "defaultDoc": "\"\"",
           "desc": "filename to store the output wavefunction dump (stored in TREXIO format). If empty, dump will be used."
         },
+        "natorb": {
+          "name": "natorb",
+          "type": "String",
+          "widget": "string",
+          "default": "",
+          "defaultLiteral": "\"\"",
+          "defaultDoc": "\"\"",
+          "desc": "filename to store correlated natural orbitals and occupations (stored in TREXIO format). If non-empty, the correlated 1-RDM is still written to the usual dump/store file."
+        },
         "start": {
           "name": "start",
           "type": "String",
@@ -81,6 +93,15 @@ window.ELEMCO_OPTIONS = {
           "defaultLiteral": "\"\"",
           "defaultDoc": "\"\"",
           "desc": "filename to read starting amplitudes from (TREXIO format). If empty, amplitudes are read from dump. If provided, amplitudes (and MOs/basis) are read from this file and projected to the current MO basis."
+        },
+        "dump4core_only": {
+          "name": "dump4core_only",
+          "type": "Bool",
+          "widget": "bool",
+          "default": false,
+          "defaultLiteral": "false",
+          "defaultDoc": "false",
+          "desc": "in a geometry-change restart of orbital-optimized methods, use the dump file for the *frozen-core orbitals only* and take the correlating orbitals from start. The reused orbitals in start carry the frozen core from the *previous* geometry; with dump4core_only=true the frozen core is instead taken from dump — a fresh HF at the *current* geometry — while the correlating orbitals come from start (projected and orthogonalized against the new core). Typical use: run @dfhf at the new geometry (writes dump), then @set wf start=\"cc.h5\" dump4core_only=true (no need to set dump=\"\")."
         },
         "npositron": {
           "name": "npositron",
@@ -95,11 +116,12 @@ window.ELEMCO_OPTIONS = {
           "name": "core",
           "type": "Symbol",
           "widget": "symbol",
-          "default": "large",
-          "defaultLiteral": ":large",
-          "defaultDoc": ":large",
-          "desc": "core type for frozen-core approximation: - :none no frozen-core approximation, - :small semi-core orbitals correlated, - :large semi-core orbitals frozen.",
+          "default": "auto",
+          "defaultLiteral": ":auto",
+          "defaultDoc": ":auto",
+          "desc": "core type for frozen-core approximation: - :auto freeze the orbitals tagged Core in the wf dump if present, otherwise fall back to :large, - :none no frozen-core approximation, - :small semi-core orbitals correlated, - :large semi-core orbitals frozen. Setting core to anything other than :auto (or setting freeze_nocc) overrides the dump-derived core.",
           "choices": [
+            "auto",
             "large",
             "none",
             "small"
@@ -118,10 +140,19 @@ window.ELEMCO_OPTIONS = {
           "name": "freeze_nvirt",
           "type": "Int",
           "widget": "int",
+          "default": -1,
+          "defaultLiteral": "-1",
+          "defaultDoc": "-1",
+          "desc": "number of virtual (highest) orbitals to freeze. -1 (auto) drops the orbitals tagged Deleted in the wf dump (e.g. from @region); a value ≥ 0 overrides this and freezes exactly that many highest virtuals."
+        },
+        "freeze_nvirt_pos": {
+          "name": "freeze_nvirt_pos",
+          "type": "Int",
+          "widget": "int",
           "default": 0,
           "defaultLiteral": "0",
           "defaultDoc": "0",
-          "desc": "number of virtual (highest) orbitals to freeze."
+          "desc": "number of virtual (highest) positron orbitals to freeze."
         },
         "occa": {
           "name": "occa",
@@ -130,7 +161,7 @@ window.ELEMCO_OPTIONS = {
           "default": "-",
           "defaultLiteral": "\"-\"",
           "defaultDoc": "\"-\"",
-          "desc": "occupied α (or closed-shell) orbitals. The occupation strings can be given as a + separated list, e.g. occa = 1+2+3 or equivalently 1-3. Additionally, the spatial symmetry of the orbitals can be specified with the syntax orb.sym, e.g. occa = \"-5.1+-2.2+-4.3\"."
+          "desc": "occupied α (or closed-shell) orbitals. The occupation strings can be given as a + separated list, e.g. occa = 1+2+3 or equivalently 1-3. Additionally, the spatial symmetry of the orbitals can be specified with the syntax orb.sym, e.g. occa = \"-5.1+-2.2+-4.3\". Orbital indices always refer to the **full MO space** (including frozen core): for ElemCo-generated dumps with frozen core/deleted virtuals the list is automatically translated to the active space. (Externally-read FCIDUMP files have no frozen-orbital information, so their indices are taken as-is.)"
         },
         "occb": {
           "name": "occb",
@@ -139,7 +170,7 @@ window.ELEMCO_OPTIONS = {
           "default": "-",
           "defaultLiteral": "\"-\"",
           "defaultDoc": "\"-\"",
-          "desc": "occupied β orbitals. If occb::String is empty, the occupied β orbitals are the same as the occupied α orbitals (closed-shell case)."
+          "desc": "occupied β orbitals. If occb::String is empty, the occupied β orbitals are the same as the occupied α orbitals (closed-shell case). Like occa, indices refer to the full MO space."
         },
         "active": {
           "name": "active",
@@ -148,7 +179,7 @@ window.ELEMCO_OPTIONS = {
           "default": "-",
           "defaultLiteral": "\"-\"",
           "defaultDoc": "\"-\"",
-          "desc": "active space. The active space is defined by the occupation string (cf. occa) or in the (#elec, #orb) format."
+          "desc": "active space. The active space is defined by the occupation string (cf. occa) or in the (#elec, #orb) format. As for occa, an orbital-list string refers to the full MO space and is translated to the active space; the (#elec, #orb) format is relative to the current (post-freeze) space."
         },
         "ignore_error": {
           "name": "ignore_error",
@@ -220,6 +251,15 @@ window.ELEMCO_OPTIONS = {
           "defaultLiteral": "1.e-8",
           "defaultDoc": "1.e-8",
           "desc": "tolerance for imaginary part of MO coefs (for biorthogonal)."
+        },
+        "redthr": {
+          "name": "redthr",
+          "type": "Float64",
+          "widget": "float",
+          "default": 1e-8,
+          "defaultLiteral": "1.e-8",
+          "defaultDoc": "1.e-8",
+          "desc": "threshold for removing linearly-dependent (redundant) orbitals. Eigenvectors of the AO overlap matrix with eigenvalues below this threshold are discarded via canonical orthogonalization. This makes HF robust for redundant basis sets (e.g. Cartesian basis sets with 6 instead of 5 d functions)."
         },
         "direct": {
           "name": "direct",
@@ -410,6 +450,15 @@ window.ELEMCO_OPTIONS = {
           "defaultLiteral": "false",
           "defaultDoc": "false",
           "desc": "Generate pseudo-canonical basis instead of solving the SCF problem, i.e., build and block-diagonalize the Fock matrix without changing the Fermi level. At the moment, it works only for BO-HF."
+        },
+        "minao": {
+          "name": "minao",
+          "type": "String",
+          "widget": "string",
+          "default": "",
+          "defaultLiteral": "\"\"",
+          "defaultDoc": "\"\"",
+          "desc": "Minimal basis set for SAD guess. If empty, use \"minao\" type from basis Dict, or \"minao\" basis as fallback."
         }
       }
     },
@@ -427,6 +476,15 @@ window.ELEMCO_OPTIONS = {
           "defaultLiteral": "true",
           "defaultDoc": "true",
           "desc": "use density-fitted integrals."
+        },
+        "ao_direct": {
+          "name": "ao_direct",
+          "type": "Bool",
+          "widget": "bool",
+          "default": true,
+          "defaultLiteral": "true",
+          "defaultDoc": "true",
+          "desc": "for exact (non-DF) AO integrals: run closed-shell CCSD/DCSD **AO-direct** (contract the AO integrals on the fly, no MO integral dump; frozen core is folded into an effective 1-electron Hamiltonian). Set to false to instead derive a transient MO integral dump from the AO integrals (as for CCSDT/FCI). No effect on DF integrals."
         },
         "fcidump": {
           "name": "fcidump",
@@ -454,6 +512,15 @@ window.ELEMCO_OPTIONS = {
           "defaultLiteral": "1000",
           "defaultDoc": "1000",
           "desc": "target batch length for the integral transformation."
+        },
+        "screen": {
+          "name": "screen",
+          "type": "Float64",
+          "widget": "float",
+          "default": 1e-12,
+          "defaultLiteral": "1.e-12",
+          "defaultDoc": "1e-12",
+          "desc": "Cauchy–Schwarz prescreening threshold for the exact AO integrals: a shell quartet whose bound sqrt((pr|pr))·sqrt((qs|qs)) stays below this is skipped (and stored as zero). Set to 0 to disable screening and compute every quartet."
         },
         "use_fallback_basis": {
           "name": "use_fallback_basis",
@@ -543,6 +610,15 @@ window.ELEMCO_OPTIONS = {
           "defaultLiteral": "0.2",
           "defaultDoc": "0.2",
           "desc": "level shift for triples."
+        },
+        "orbdamp": {
+          "name": "orbdamp",
+          "type": "Float64",
+          "widget": "float",
+          "default": 1,
+          "defaultLiteral": "1.0",
+          "defaultDoc": "1.0",
+          "desc": "damping factor for the orbital-rotation step in orbital-optimized QV methods (OQV-CCD/DCD). The orbital update is scaled by orbdamp; 1.0 is the undamped step. Values < 1 (e.g. 0.15) stabilise the coupled orbital+amplitude iteration near strong correlation / instabilities (stretched bonds), at the cost of slower orbital convergence. Does not bias the solution: the fixed point (gradient = 0) is unchanged by the damping."
         },
         "properties": {
           "name": "properties",
@@ -679,6 +755,15 @@ window.ELEMCO_OPTIONS = {
           "defaultDoc": "false",
           "desc": "calculated V_{aX}^{iL} in SVD-DC-CCSDT using a projection to the X space as V_{XZ}^{L} U^{iZ}_{a}. This is an additional approximation, which reduces the scaling of the most expensive steps and is useful for large systems."
         },
+        "use_dense_decomposition": {
+          "name": "use_dense_decomposition",
+          "type": "Bool",
+          "widget": "bool",
+          "default": false,
+          "defaultLiteral": "false",
+          "defaultDoc": "false",
+          "desc": "use dense SVD for the amplitude decomposition in SVD-DC-CCSDT instead of LLAMA low-rank approximation. This is useful for small systems, but becomes unfeasible for large systems."
+        },
         "space4voXL": {
           "name": "space4voXL",
           "type": "Symbol",
@@ -738,6 +823,15 @@ window.ELEMCO_OPTIONS = {
           "defaultLiteral": "2",
           "defaultDoc": "2",
           "desc": "what to project in v_{ak}^{ci} T^{kj}_{cb} in SVD-DCSD: 0: both, 1: amplitudes, 2: residual, 3: robust fit."
+        },
+        "decompose_using_mp2": {
+          "name": "decompose_using_mp2",
+          "type": "Bool",
+          "widget": "bool",
+          "default": false,
+          "defaultLiteral": "false",
+          "defaultDoc": "false",
+          "desc": "use MP2 amplitudes for decomposition in SVD-DCSD. If false, one iteration of SVD-DCD is used for decomposition instead."
         },
         "decompose_full_doubles": {
           "name": "decompose_full_doubles",
@@ -892,14 +986,36 @@ window.ELEMCO_OPTIONS = {
           "defaultDoc": "false",
           "desc": "ignore various errors in sanity checks."
         },
-        "keepOQVorbitals": {
-          "name": "keepOQVorbitals",
+        "ampsvd_pivotol_mode": {
+          "name": "ampsvd_pivotol_mode",
+          "type": "Symbol",
+          "widget": "symbol",
+          "default": "maxdim",
+          "defaultLiteral": ":maxdim",
+          "defaultDoc": ":maxdim",
+          "desc": "pivot tolerance mode for LLAMA decomposition: - :adaptive use LLAMA's internal adaptive tol/sqrt(m_eff) pivot tolerance - :maxdim use tol/sqrt(max(m,n)) as pivot tolerance (more robust for difficult cases, e.g., ghost atoms) If ampsvd_pivotol > 0, use that explicit value instead (overrides mode).",
+          "choices": [
+            "maxdim",
+            "adaptive"
+          ]
+        },
+        "ampsvd_pivotol": {
+          "name": "ampsvd_pivotol",
+          "type": "Float64",
+          "widget": "float",
+          "default": 0,
+          "defaultLiteral": "0.0",
+          "defaultDoc": "0.0",
+          "desc": "explicit pivot tolerance for LLAMA. If > 0, overrides ampsvd_pivotol_mode."
+        },
+        "localize": {
+          "name": "localize",
           "type": "Bool",
           "widget": "bool",
-          "default": false,
-          "defaultLiteral": "false",
-          "defaultDoc": "false",
-          "desc": "keep the orbitals after rotations over iterations of orbital optimizations in the OQV-CCD/DCD."
+          "default": true,
+          "defaultLiteral": "true",
+          "defaultDoc": "true",
+          "desc": "localize orbitals (IBO for occupied, orthogonal PAOs for virtual) before amplitude decomposition in SVD-DC methods. The localization rotation is applied only to the matrices entering svd_decompose, and the resulting U vectors are transformed back to the canonical basis."
         }
       }
     },
@@ -1024,6 +1140,15 @@ window.ELEMCO_OPTIONS = {
           "defaultLiteral": "1e-6",
           "defaultDoc": "1e-6",
           "desc": "Convergence tolerance for residual norm"
+        },
+        "properties": {
+          "name": "properties",
+          "type": "Bool",
+          "widget": "bool",
+          "default": false,
+          "defaultLiteral": "false",
+          "defaultDoc": "false",
+          "desc": "calculate properties such as dipole moments."
         },
         "nstates": {
           "name": "nstates",
@@ -1218,6 +1343,15 @@ window.ELEMCO_OPTIONS = {
           "defaultLiteral": "1e-6",
           "defaultDoc": "1e-6",
           "desc": "Convergence tolerance for residual norm"
+        },
+        "properties": {
+          "name": "properties",
+          "type": "Bool",
+          "widget": "bool",
+          "default": false,
+          "defaultLiteral": "false",
+          "defaultDoc": "false",
+          "desc": "calculate properties such as dipole moments."
         },
         "max_iter": {
           "name": "max_iter",
@@ -1457,10 +1591,28 @@ window.ELEMCO_OPTIONS = {
           "name": "thr",
           "type": "Float64",
           "widget": "float",
-          "default": 0.0001,
-          "defaultLiteral": "1.e-4",
-          "defaultDoc": "1.e-4",
+          "default": 0.00001,
+          "defaultLiteral": "1.e-5",
+          "defaultDoc": "1.e-5",
           "desc": "threshold for integral decomposition."
+        },
+        "sigma": {
+          "name": "sigma",
+          "type": "Float64",
+          "widget": "float",
+          "default": 0.01,
+          "defaultLiteral": "0.01",
+          "defaultDoc": "0.01",
+          "desc": "span factor for two-step Cholesky batch qualification."
+        },
+        "usesvd": {
+          "name": "usesvd",
+          "type": "Bool",
+          "widget": "bool",
+          "default": false,
+          "defaultLiteral": "false",
+          "defaultDoc": "false",
+          "desc": "use SVD (real) / Takagi (complex) instead of Cholesky for the J matrix in step II."
         }
       }
     },
@@ -1587,6 +1739,229 @@ window.ELEMCO_OPTIONS = {
           "defaultLiteral": "2",
           "defaultDoc": "2",
           "desc": "verbosity level for printing memory usage."
+        },
+        "ncoeff": {
+          "name": "ncoeff",
+          "type": "Int",
+          "widget": "int",
+          "default": 10,
+          "defaultLiteral": "10",
+          "defaultDoc": "10",
+          "desc": "maximum number of coefficients to print."
+        }
+      }
+    },
+    "loc": {
+      "key": "loc",
+      "struct": "LocOptions",
+      "label": "Orbital localization",
+      "summary": "Localization options (LocOptions).",
+      "fields": {
+        "virtual": {
+          "name": "virtual",
+          "type": "Bool",
+          "widget": "bool",
+          "default": true,
+          "defaultLiteral": "true",
+          "defaultDoc": "true",
+          "desc": "localize virtual orbitals using orthogonal PAOs (OPAO) in addition to occupied."
+        },
+        "exponent": {
+          "name": "exponent",
+          "type": "Int",
+          "widget": "int",
+          "default": 0,
+          "defaultLiteral": "0",
+          "defaultDoc": "0",
+          "desc": "Localization exponent: 0 for automatic (4 for IBO, 2 for PM), or set explicitly."
+        },
+        "method": {
+          "name": "method",
+          "type": "String",
+          "widget": "string",
+          "default": "ibo",
+          "defaultLiteral": "\"ibo\"",
+          "defaultDoc": "\"ibo\"",
+          "desc": "Localization method: \"ibo\" (Intrinsic Bond Orbitals), \"pm\" (Pipek-Mezey with Mulliken charges), or \"boys\" (Foster-Boys)."
+        },
+        "opaofac": {
+          "name": "opaofac",
+          "type": "Float64",
+          "widget": "float",
+          "default": 3,
+          "defaultLiteral": "3.0",
+          "defaultDoc": "3",
+          "desc": "Factor multiplying the AO basis redundancy threshold scf.redthr to form the relative eigenvalue threshold for detecting redundant PAOs in the orthogonalized-PAO (OPAO) construction (@localize, @region). Eigenvectors of the PAO overlap with eigenvalue below opaofac * scf.redthr * λmax are treated as redundant and the corresponding (least independent) PAO is dropped. Larger values prune more aggressively."
+        },
+        "minao": {
+          "name": "minao",
+          "type": "String",
+          "widget": "string",
+          "default": "",
+          "defaultLiteral": "\"\"",
+          "defaultDoc": "\"\"",
+          "desc": "Minimal basis set for IAO construction. If empty, use \"minao\" type from basis Dict, or \"minao\" basis as fallback."
+        },
+        "localize_core": {
+          "name": "localize_core",
+          "type": "Bool",
+          "widget": "bool",
+          "default": false,
+          "defaultLiteral": "false",
+          "defaultDoc": "false",
+          "desc": "Localize core orbitals among themselves (separately from valence)."
+        }
+      }
+    },
+    "region": {
+      "key": "region",
+      "struct": "RegionOptions",
+      "label": "Region-fragment orbital selection",
+      "summary": "Region selection options (RegionOptions).",
+      "fields": {
+        "mode": {
+          "name": "mode",
+          "type": "Symbol",
+          "widget": "symbol",
+          "default": "inclusive",
+          "defaultLiteral": ":inclusive",
+          "defaultDoc": ":inclusive",
+          "desc": "occupied-selection mode for centers passed directly to @region. - :inclusive: treat @region(centers) as additional inclusive centers - :exclusive: treat @region(centers) as additional exclusive centers",
+          "choices": [
+            "inclusive",
+            "exclusive"
+          ]
+        },
+        "inclusive_centers": {
+          "name": "inclusive_centers",
+          "type": "Vector{Int}",
+          "widget": "vector-int",
+          "defaultLiteral": "Int[]",
+          "defaultDoc": "Int[]",
+          "desc": "additional atom indices selected with the inclusive occupied-orbital rule, e.g. [1]. The orbitals with significant contributions from these centers are added to the fragment."
+        },
+        "exclusive_centers": {
+          "name": "exclusive_centers",
+          "type": "Vector{Int}",
+          "widget": "vector-int",
+          "defaultLiteral": "Int[]",
+          "defaultDoc": "Int[]",
+          "desc": "additional atom indices selected with the exclusive occupied-orbital rule, e.g. [1, 2]. The orbitals with significant contributions exclusively from these centers are added to the fragment."
+        },
+        "pi": {
+          "name": "pi",
+          "type": "Symbol",
+          "widget": "symbol",
+          "default": "none",
+          "defaultLiteral": ":none",
+          "defaultDoc": ":none",
+          "desc": "π-space selection mode. - :none: use the default IBO/PAO region selection - :occupied: select occupied π orbitals and keep PAO-defined virtuals - :both: select both occupied and virtual π orbitals",
+          "choices": [
+            "none",
+            "occupied",
+            "both"
+          ]
+        },
+        "pi_electrons": {
+          "name": "pi_electrons",
+          "type": "Int",
+          "widget": "int",
+          "default": -1,
+          "defaultLiteral": "-1",
+          "defaultDoc": "-1",
+          "desc": "override for the total number of π electrons used by the PiOS counting model. Use -1 to keep the automatic chemistry-based count."
+        },
+        "pi_occupied": {
+          "name": "pi_occupied",
+          "type": "Int",
+          "widget": "int",
+          "default": -1,
+          "defaultLiteral": "-1",
+          "defaultDoc": "-1",
+          "desc": "override for the number of occupied π orbitals to keep in restricted PiOS runs. Use -1 to keep the full automatically determined occupied π space."
+        },
+        "pi_virtual": {
+          "name": "pi_virtual",
+          "type": "Int",
+          "widget": "int",
+          "default": -1,
+          "defaultLiteral": "-1",
+          "defaultDoc": "-1",
+          "desc": "override for the number of virtual π orbitals to keep in restricted region.pi=:both runs. Use -1 to keep the full automatically determined virtual π space."
+        },
+        "virtual": {
+          "name": "virtual",
+          "type": "Symbol",
+          "widget": "symbol",
+          "default": "complement",
+          "defaultLiteral": ":complement",
+          "defaultDoc": ":complement",
+          "desc": "fragment virtual-space construction mode. - :complement: build antibonding-like virtual targets by projecting fragment IAOs into the virtual space, then augment them with support-atom OPAOs selected from accumulated fragment charge - :support_opao: use the support-atom OPAO construction directly",
+          "choices": [
+            "complement",
+            "support_opao"
+          ]
+        },
+        "occ_charge_thr": {
+          "name": "occ_charge_thr",
+          "type": "Float64",
+          "widget": "float",
+          "default": 0.2,
+          "defaultLiteral": "0.2",
+          "defaultDoc": "0.2",
+          "desc": "threshold for selecting localized occupied orbitals from the requested centers."
+        },
+        "atom_charge_thr": {
+          "name": "atom_charge_thr",
+          "type": "Float64",
+          "widget": "float",
+          "default": 0.2,
+          "defaultLiteral": "0.2",
+          "defaultDoc": "0.2",
+          "desc": "threshold for adding atoms to the PAO support of the selected fragment."
+        },
+        "pao_centers": {
+          "name": "pao_centers",
+          "type": "Vector{Int}",
+          "widget": "vector-int",
+          "defaultLiteral": "Int[]",
+          "defaultDoc": "Int[]",
+          "desc": "additional atom indices whose PAOs are added to the fragment virtual space, e.g. [3]. These centers extend the automatically determined PAO support and are always included regardless of atom_charge_thr."
+        },
+        "pseudo": {
+          "name": "pseudo",
+          "type": "Bool",
+          "widget": "bool",
+          "default": false,
+          "defaultLiteral": "false",
+          "defaultDoc": "false",
+          "desc": "pseudo-canonicalize the selected fragment occupied and virtual subspaces."
+        }
+      }
+    },
+    "mem": {
+      "key": "mem",
+      "struct": "MemoryOptions",
+      "label": "MemoryOptions Options for memory management (used to size blocked/streaming scratch allocations so they adapt to the machine and honor an explicit user budget)",
+      "summary": "Memory-management options (MemoryOptions).",
+      "fields": {
+        "budget": {
+          "name": "budget",
+          "type": "Float64",
+          "widget": "float",
+          "default": -1,
+          "defaultLiteral": "-1.0",
+          "defaultDoc": "-1.0",
+          "desc": "memory budget in GB for large scratch allocations (e.g. the 4-index integral transformation). -1.0 (default) estimates the budget automatically from the node's free memory. Set explicitly (e.g. on fat nodes) to allow larger blocks and fewer passes over the integrals."
+        },
+        "fraction": {
+          "name": "fraction",
+          "type": "Float64",
+          "widget": "float",
+          "default": 0.8,
+          "defaultLiteral": "0.8",
+          "defaultDoc": "0.8",
+          "desc": "fraction of the currently available memory (node free memory, capped by any cgroup / SLURM limit) to use when the budget is estimated automatically (budget ≤ 0)."
         }
       }
     }
