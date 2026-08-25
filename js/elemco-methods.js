@@ -16,6 +16,8 @@ const ELEMCO_METHODS = {
   reference: [
     { id: 'dfhf',    label: 'DF-HF (RHF)',      macro: '@dfhf',    groups: ['scf', 'int'] },
     { id: 'dfuhf',   label: 'DF-UHF',           macro: '@dfuhf',   groups: ['scf', 'int'] },
+    { id: 'hf',      label: 'HF',               macro: '@hf',      groups: ['scf', 'int'] },
+    { id: 'uhf',     label: 'UHF',              macro: '@uhf',     groups: ['scf', 'int'] },
     { id: 'dfmcscf', label: 'DF-MCSCF',         macro: '@dfmcscf', groups: ['scf', 'wf'] },
     { id: 'bohf',    label: 'BO-HF (FCIDUMP)',  macro: '@bohf',    groups: ['scf'], advanced: true },
     { id: 'bouhf',   label: 'BO-UHF (FCIDUMP)', macro: '@bouhf',   groups: ['scf'], advanced: true },

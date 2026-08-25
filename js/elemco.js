@@ -311,8 +311,8 @@ function makeMethodStep(category, methodId) {
     return step;
 }
 // Default step list for a mode, from preferences. Molecule mode always starts
-// with a DF-HF reference; FCIDUMP mode adds no reference when a correlated method
-// is chosen. A method value of 'HF' means reference-only (no correlation step).
+// with the preferred reference; FCIDUMP mode adds no reference when a correlated
+// method is chosen. A method value of 'HF' means reference-only (no correlation step).
 function elcBuildDefaultSteps(mode) {
     const prefs = (typeof getPreferences === 'function') ? getPreferences() : {};
     if (mode === 'fcidump') {
@@ -321,9 +321,17 @@ function elcBuildDefaultSteps(mode) {
         return [makeMethodStep('correlation', m)];
     }
     const m = prefs.defaultMethodMolecule || 'ccsd_t';
-    const steps = [makeMethodStep('reference', 'dfhf')];
+    const steps = [makeMethodStep('reference', elcDefaultReference())];
     if (m && m !== 'HF') steps.push(makeMethodStep('correlation', m));
     return steps;
+}
+// The reference chosen in the preferences (default: exact-AO HF), validated
+// against the registry so a stale stored id cannot break the step.
+function elcDefaultReference() {
+    const prefs = (typeof getPreferences === 'function') ? getPreferences() : {};
+    const id = prefs.defaultReference || 'hf';
+    const known = ((typeof window !== 'undefined' && window.ELEMCO_METHODS) || {}).reference || [];
+    return known.some((r) => r.id === id) ? id : 'hf';
 }
 // Are the current steps still the untouched defaults for `mode`? (structural
 // comparison, ignoring ids). Used to decide whether a mode change may rebuild.
@@ -419,7 +427,7 @@ function syncElemCoBasisFromPrefs() {
 function addElemCoStep(type) {
     initElemCoState();
     let step;
-    if (type === 'reference') step = makeMethodStep('reference', 'dfhf');
+    if (type === 'reference') step = makeMethodStep('reference', elcDefaultReference());
     else if (type === 'correlation') step = makeMethodStep('correlation', 'dcsd');
     else if (type === 'export') step = { id: 's' + (elcStepSeq++), kind: 'export', filename: 'orbitals.molden' };
     else if (type === 'macro') step = { id: 's' + (elcStepSeq++), kind: 'macro', macro: 'export_molden', args: '', options: {}, _optsOpen: false };
@@ -505,7 +513,7 @@ function renderElemCoSteps() {
         const b = elcEl('button', { type: 'button' }, 'Add reference');
         b.addEventListener('click', () => {
             initElemCoState();
-            elemcoState.steps.unshift(makeMethodStep('reference', 'dfhf'));
+            elemcoState.steps.unshift(makeMethodStep('reference', elcDefaultReference()));
             renderElemCoSteps();
             updateElemCoInput();
         });
