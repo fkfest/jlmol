@@ -299,7 +299,12 @@ function parseOptions(text) {
 // "Options for wavefunction/orbitals." -> "Wavefunction/orbitals"
 function cleanLabel(structDoc) {
   let s = (structDoc || '').split(/[.\n]/)[0].trim();
+  // Some docstrings arrive with the signature line glued on ("MemoryOptions
+  // Options for …") and a long parenthetical before the first period. The
+  // label is a group header; both go — the full text stays in `summary`.
+  s = s.replace(/^[A-Z][A-Za-z0-9]*Options\s+/, '');
   s = s.replace(/^Options?\s+for\s+/i, '').replace(/^Option\s+for\s+/i, '');
+  s = s.replace(/\s*\([^()]*\)$/, '');
   if (!s) return structDoc;
   return s.charAt(0).toUpperCase() + s.slice(1);
 }

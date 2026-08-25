@@ -1,10 +1,10 @@
 // AUTO-GENERATED — do not edit by hand.
-// Source: ElemCo.jl src/infos/options.jl @ file:/home/kats/projects/ElemCo.jl-devel/src/infos/options.jl
+// Source: ElemCo.jl src/infos/options.jl @ v0.16.0
 // Regenerate: node scripts/parse-elemco-options.js [--ref <tag>]
 window.ELEMCO_OPTIONS = {
   "sourceRepo": "fkfest/ElemCo.jl",
-  "sourceRef": "file:/home/kats/projects/ElemCo.jl-devel/src/infos/options.jl",
-  "sourceUrl": "/home/kats/projects/ElemCo.jl-devel/src/infos/options.jl",
+  "sourceRef": "v0.16.0",
+  "sourceUrl": "https://raw.githubusercontent.com/fkfest/ElemCo.jl/v0.16.0/src/infos/options.jl",
   "generated": "2026-08-25",
   "groupOrder": [
     "wf",
@@ -1942,7 +1942,7 @@ window.ELEMCO_OPTIONS = {
     "mem": {
       "key": "mem",
       "struct": "MemoryOptions",
-      "label": "MemoryOptions Options for memory management (used to size blocked/streaming scratch allocations so they adapt to the machine and honor an explicit user budget)",
+      "label": "Memory management",
       "summary": "Memory-management options (MemoryOptions).",
       "fields": {
         "budget": {

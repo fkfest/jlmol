@@ -1,10 +1,10 @@
 // AUTO-GENERATED — do not edit by hand.
-// Source: ElemCo.jl src/ElemCo.jl @ file:/home/kats/projects/ElemCo.jl-devel/src/ElemCo.jl
+// Source: ElemCo.jl src/ElemCo.jl @ v0.16.0
 // Regenerate: node scripts/parse-elemco-macros.js [--ref <tag>]
 window.ELEMCO_MACROS = {
   "sourceRepo": "fkfest/ElemCo.jl",
-  "sourceRef": "file:/home/kats/projects/ElemCo.jl-devel/src/ElemCo.jl",
-  "sourceUrl": "/home/kats/projects/ElemCo.jl-devel/src/ElemCo.jl",
+  "sourceRef": "v0.16.0",
+  "sourceUrl": "https://raw.githubusercontent.com/fkfest/ElemCo.jl/v0.16.0/src/ElemCo.jl",
   "generated": "2026-08-25",
   "macros": [
     {
