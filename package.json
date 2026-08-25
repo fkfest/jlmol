@@ -1,6 +1,6 @@
 {
   "name": "jlmol",
-  "version": "1.5.2",
+  "version": "1.5.3",
   "description": "jlmol - A Molecular Viewer Desktop App",
   "main": "main.js",
   "scripts": {
