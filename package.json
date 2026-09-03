@@ -16,8 +16,9 @@
     "build:mac": "electron-builder --mac",
     "build:linux": "electron-builder --linux",
     "check-version": "node build-version.js",
-    "update-elemco-options": "node scripts/parse-elemco-options.js",
-    "update-elemco-macros": "node scripts/parse-elemco-macros.js",
+    "update-elemco-options": "node scripts/parse-elemco-options.js && node scripts/check-elemco-sync.js",
+    "update-elemco-macros": "node scripts/parse-elemco-macros.js && node scripts/check-elemco-sync.js",
+    "check-elemco-sync": "node scripts/check-elemco-sync.js",
     "smoke": "electron . --smoke --disable-gpu",
     "start-debug:win": "node_modules/electron/dist/electron.exe . --enable-logging=file --log-file=jlmol-debug.log --log-level=0"
   },
