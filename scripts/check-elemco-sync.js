@@ -29,18 +29,19 @@
 
 const fs = require('fs');
 const path = require('path');
+const vm = require('vm');
 
 const JS_DIR = path.join(__dirname, '..', 'js');
 
 // The catalog files assign to `window.*`; elemco-methods.js declares consts and
-// copies them onto `window` when present. Evaluate all three against one shared
-// fake window and read everything back from it.
-global.window = {};
+// copies them onto `window` when present. Run all three in one sandboxed
+// context whose only global is a fake `window`, and read everything back from
+// it -- nothing here needs this process's globals, so nothing gets them.
+const context = vm.createContext({ window: {} });
 for (const f of ['elemco-macros.js', 'elemco-options.js', 'elemco-methods.js']) {
-  // eslint-disable-next-line no-eval
-  eval(fs.readFileSync(path.join(JS_DIR, f), 'utf8'));
+  vm.runInContext(fs.readFileSync(path.join(JS_DIR, f), 'utf8'), context, { filename: f });
 }
-const w = global.window;
+const w = context.window;
 
 const errors = [];
 const warnings = [];
@@ -80,7 +81,8 @@ for (const e of registryEntries) (e.groups || []).forEach((gid) => checkGroup(e.
 (w.ELEMCO_GLOBAL_GROUPS || []).forEach((gid) => checkGroup('ELEMCO_GLOBAL_GROUPS', gid));
 for (const [gid, fields] of Object.entries(w.ELEMCO_GLOBAL_EXCLUDE || {})) {
   checkGroup('ELEMCO_GLOBAL_EXCLUDE', gid);
-  const known = catalogGroups[gid] ? catalogGroups[gid].options : null;
+  // Catalog groups keep their options under `fields` (see parse-elemco-options.js).
+  const known = catalogGroups[gid] ? catalogGroups[gid].fields : null;
   for (const f of fields) {
     if (known && !known[f]) {
       errors.push(`ELEMCO_GLOBAL_EXCLUDE: field '${gid}.${f}' not in elemco-options.js (${w.ELEMCO_OPTIONS.sourceRef})`);
