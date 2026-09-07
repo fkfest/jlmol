@@ -102,22 +102,31 @@ log('Args: ' + JSON.stringify(process.argv));
 let fileContent = null;
 
 function getFileFromArgs() {
-    const args = process.argv;
-    for (let i = 0; i < args.length; i++) {
-        const arg = args[i];
-        if (!arg.includes('electron') && !arg.endsWith('.exe')) {
-            log('Found potential file arg: ' + arg);
-            
-            // For installed version, just use the current working directory
-            const filePath = path.resolve(process.cwd(), arg);
-            log('Trying path: ' + filePath);
-            
-            if (fs.existsSync(filePath)) {
-                log('Found file at: ' + filePath);
-                return filePath;
-            }
-            log('File not found: ' + filePath);
+    // argv[0] is the executable and, when run as `electron .` (process.defaultApp),
+    // argv[1] is the app path; neither is a molecule file. Scanning argv[0] used to
+    // make the packaged Linux/macOS app read its own 200 MB binary as a molecule
+    // on every launch (Windows escaped only because its executable ends in .exe).
+    // Chromium/Electron switches start with "--".
+    const args = process.argv.slice(process.defaultApp ? 2 : 1);
+    for (const arg of args) {
+        if (arg.startsWith('--')) continue;
+        log('Found potential file arg: ' + arg);
+
+        // For installed version, just use the current working directory
+        const filePath = path.resolve(process.cwd(), arg);
+        log('Trying path: ' + filePath);
+
+        let isFile = false;
+        try {
+            isFile = fs.statSync(filePath).isFile();
+        } catch (e) {
+            // does not exist
         }
+        if (isFile) {
+            log('Found file at: ' + filePath);
+            return filePath;
+        }
+        log('File not found: ' + filePath);
     }
     return null;
 }

@@ -33,6 +33,7 @@
       "main.js",
       "index.html",
       "renderer.js",
+      "preload.js",
       "css/**/*",
       "js/**/*",
       "jsmol/**/*",

@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- The packaged desktop app (installers for 1.5.2 through 1.5.4) did not include `preload.js`, so the renderer never got its native bridge and the app silently behaved like the browser build: "Check for updates" answered "Update checks are only available in the desktop app", and ElemCo.jl and xtb calculations showed the manual instructions instead of running. The file is now packaged.
+- On Linux (and macOS) the packaged app treated its own executable as a molecule file on every launch, reading the whole binary into memory and handing it to JSmol. The command-line scan now skips the executable and the `--` switches.
+- Removed a stale `<script>` reference to `jsmol/JSmolJME.js` that failed with a 404 on every start (the file lives in `jsmol/js/` and nothing uses it).
+
+### Changed
+
+- The smoke-test CI now also packages the app and runs the smoke test and the bridge probe against the packaged binary, so packaging regressions cannot pass silently.
+
 ## [1.5.4] - 2026-09-07
 
 ### Changed

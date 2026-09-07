@@ -25,3 +25,16 @@ jobs:
       - name: bridge probe
         run: xvfb-run -a npx electron . --bridge-probe --disable-gpu --no-sandbox
         timeout-minutes: 3
+      # The same two gates against a packaged build. The source-tree runs above
+      # cannot see packaging mistakes: v1.5.2-v1.5.4 shipped without preload.js
+      # (the whole native bridge silently fell back to browser mode) and the
+      # packaged Linux app loaded its own executable as a molecule at startup.
+      - name: package (linux dir)
+        run: npx electron-builder --linux dir --publish never
+        timeout-minutes: 10
+      - name: packaged smoke test
+        run: xvfb-run -a dist/linux-unpacked/jlmol --smoke --disable-gpu --no-sandbox
+        timeout-minutes: 3
+      - name: packaged bridge probe
+        run: xvfb-run -a dist/linux-unpacked/jlmol --bridge-probe --disable-gpu --no-sandbox
+        timeout-minutes: 3
