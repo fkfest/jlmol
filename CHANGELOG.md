@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.4] - 2026-09-07
+
 ### Changed
 
 - Upgraded Electron from 41.10.6 to 44.2.0 (Chromium 152, Node.js 24.18). Electron 41 reached end of support on 2026-08-25. Electron 44 requires macOS 13 or newer and no longer provides 32-bit Windows builds (jlmol only ships 64-bit builds). Since Electron 42 the npm package downloads its binary on first run instead of in a postinstall script.
