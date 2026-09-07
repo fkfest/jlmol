@@ -8,6 +8,12 @@ function setStatusText(text) {
     if (el) el.textContent = text;
 }
 
+// JSmol pings chemapps.stolaf.edu/jmol/JmolTracker.php via a hidden iframe once
+// the applet is ready, unless the page origin is file:// or http://localhost.
+// Neither app.jlmol.com nor the Electron app:// scheme qualifies, and there is
+// no Info option for it. Clearing the URL disables the ping.
+if (window.Jmol) Jmol._tracker = null;
+
 var jmolApplet0;
 var isSpinning = false;
 var displayMode = 'default'; // Track current display mode
