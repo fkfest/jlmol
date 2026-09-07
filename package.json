@@ -84,5 +84,9 @@
     "electron": "^44.2.0",
     "electron-builder": "^26.7.0"
   },
-  "keywords": []
+  "keywords": [],
+  "allowScripts": {
+    "electron": true,
+    "electron-winstaller": true
+  }
 }
