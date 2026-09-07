@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Upgraded Electron from 41.10.6 to 44.2.0 (Chromium 152, Node.js 24.18). Electron 41 reached end of support on 2026-08-25. Electron 44 requires macOS 13 or newer and no longer provides 32-bit Windows builds (jlmol only ships 64-bit builds). Since Electron 42 the npm package downloads its binary on first run instead of in a postinstall script.
+
 ### Fixed
 
 - Image export now writes a real PNG. The exported "PNG" used to be JSmol's JPEG drawn onto a canvas and re-encoded, so it carried JPEG artefacts and was never transparent. The exporter now asks JSmol for a PNG directly (lossless), and the "transparent background" option produces a genuinely transparent PNG (JSmol's PNGT, which keys out the background colour). The key is chosen as the colour nearest to the viewer background that does not occur in the rendered picture, so white hydrogens on the default white background are not punched through. The viewer background is also restored correctly after an export; previously it was left white after JPEG and opaque-PNG exports.
