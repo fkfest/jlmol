@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.5] - 2026-09-07
+
 ### Fixed
 
 - The packaged desktop app (installers for 1.5.2 through 1.5.4) did not include `preload.js`, so the renderer never got its native bridge and the app silently behaved like the browser build: "Check for updates" answered "Update checks are only available in the desktop app", and ElemCo.jl and xtb calculations showed the manual instructions instead of running. The file is now packaged.
