@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Image export now writes a real PNG. The exported "PNG" used to be JSmol's JPEG drawn onto a canvas and re-encoded, so it carried JPEG artefacts and was never transparent. The exporter now asks JSmol for a PNG directly (lossless), and the "transparent background" option produces a genuinely transparent PNG (JSmol's PNGT, which keys out the background colour). The key is chosen as the colour nearest to the viewer background that does not occur in the rendered picture, so white hydrogens on the default white background are not punched through. The viewer background is also restored correctly after an export; previously it was left white after JPEG and opaque-PNG exports.
+- jlmol no longer pings JSmol's usage tracker at chemapps.stolaf.edu (a hidden iframe reporting the JSmol version and page URL once the viewer was ready).
+
 ## [1.5.1] - 2026-07-20
 
 ### Fixed
