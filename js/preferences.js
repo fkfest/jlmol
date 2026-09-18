@@ -124,7 +124,11 @@ function loadPreferencesIntoUI() {
     if (confirmOverwriteCheckbox) confirmOverwriteCheckbox.checked = prefs.confirmOverwrite !== false;
     
     const exportFormatSelect = document.getElementById('pref-export-format');
-    if (exportFormatSelect) exportFormatSelect.value = prefs.exportFormat || 'png';
+    if (exportFormatSelect) {
+        // Older versions allowed xyz/mol here; fall back to png for those
+        const fmt = prefs.exportFormat;
+        exportFormatSelect.value = (fmt === 'png' || fmt === 'jpg') ? fmt : 'png';
+    }
     
     const exportTransparentCheckbox = document.getElementById('pref-export-transparent');
     if (exportTransparentCheckbox) exportTransparentCheckbox.checked = prefs.exportTransparentBackground !== false;
