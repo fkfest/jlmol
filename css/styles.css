@@ -461,6 +461,26 @@
             margin-bottom: 8px;  /* Add space below the file input */
             display: block;  /* Ensure it's on its own line */
         }
+        #structureFile[hidden] {
+            display: none;  /* the id rule above would beat the hidden attribute */
+        }
+        /* Desktop app: replaces the file input (see js/search.js) */
+        #structureFileNative {
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        #structureFileNative[hidden] {
+            display: none;
+        }
+        #structureFileName {
+            font-size: 12px;
+            color: #666;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
         .sample-buttons {
             margin-top: 4px;  /* Add space above the sample buttons */
         }

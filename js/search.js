@@ -1,15 +1,22 @@
-// Desktop app: "Choose File" goes through a native open dialog that starts
+// Desktop app: "Open File" goes through a native open dialog that starts
 // in the launch directory, matching the export dialog. The browser's own
-// file picker cannot be pointed at a directory, so the input's click is
-// replaced; the input stays for the browser build and for its label.
+// file picker cannot be pointed at a directory, and its "No file chosen"
+// label never learns about files opened this way, so the input is swapped
+// for a button plus a name label; the browser build keeps the input.
 document.addEventListener('DOMContentLoaded', () => {
     const input = document.getElementById('structureFile');
+    const box = document.getElementById('structureFileNative');
     const native = window.jlmolNative;
-    if (!input || !native || !native.openStructureFile) return;
-    input.addEventListener('click', (evt) => {
-        evt.preventDefault();
+    if (!input || !box || !native || !native.openStructureFile) return;
+    input.hidden = true;
+    box.hidden = false;
+    document.getElementById('structureFileButton').addEventListener('click', () => {
         native.openStructureFile().then((file) => {
-            if (file) loadStructureContent(file.name, file.content);
+            if (!file) return;
+            const label = document.getElementById('structureFileName');
+            label.textContent = file.name;
+            label.title = file.name;
+            loadStructureContent(file.name, file.content);
         }).catch((err) => setStatusText('Error opening file: ' + err.message));
     });
 });
