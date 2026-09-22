@@ -594,6 +594,7 @@ function downloadDefaultPath(filename) {
 function setupDownloads() {
     session.defaultSession.on('will-download', (_event, item, wc) => {
         const defaultPath = downloadDefaultPath(item.getFilename());
+        log(`Download dialog default: ${defaultPath}`);
         if (BRIDGE_PROBE) item.setSavePath(defaultPath);
         else item.setSaveDialogOptions({ defaultPath });
         item.once('done', (_e, state) => {
