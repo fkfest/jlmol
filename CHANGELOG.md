@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.6] - 2026-09-22
+
 ### Added
 
 - Molden files are checked before loading. The g-xTB binary's molden writer (tblite) puts the valence electron count in the atomic-number column of `[Atoms]`, and JSmol trusts that column over the element label, so such files showed up as boron/beryllium/carbon with garbled bonds. A dialog now reports the problem and offers "Fix and load", "Fix, load and save…" (writes a `<name>-fixed.molden` copy through the save dialog) or "Load as is". The check also reports, without fixing, an MO coefficient count that does not match the basis size (the usual sign of a missing `[5D]` flag). Files given on the command line go through the same check.
