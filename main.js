@@ -1,4 +1,4 @@
-const { app, BrowserWindow, shell, ipcMain, protocol } = require('electron')
+const { app, BrowserWindow, shell, ipcMain, protocol, session } = require('electron')
 
 // --- smoke mode ------------------------------------------------------------
 // `electron . --smoke` boots the app, waits for the JSmol applet to reach
@@ -290,6 +290,22 @@ function runBridgeProbe(win) {
                 await n.removeWorkDir(launch.token);
                 launchCheck = (await n.workDirPath(launch.token)) === launch.path
                     ? 'launch kept' : 'launch lost';
+                // A browser download must default to the launch dir, and the
+                // renderer must be told the final path.
+                const saved = new Promise((res) =>
+                    n.onDownloadDone((state, p) => res(state === 'completed' ? p : null)));
+                const a = document.createElement('a');
+                a.href = 'data:text/plain,probe-download';
+                a.download = 'jlmol_probe_download.txt';
+                document.body.appendChild(a); a.click(); a.remove();
+                const savedPath = await Promise.race([saved,
+                    new Promise((res) => setTimeout(() => res(null), 5000))]);
+                const body = await n.readFile(launch.token, 'jlmol_probe_download.txt');
+                await n.removeFile(launch.token, 'jlmol_probe_download.txt');
+                if (body !== 'probe-download' || !savedPath
+                    || !savedPath.endsWith('jlmol_probe_download.txt')) {
+                    launchCheck = 'launch download bad ' + savedPath + ' ' + body;
+                }
             }
             const spawnResult = await new Promise((res) => {
                 let text = '';
@@ -554,7 +570,32 @@ function createWindow() {
     });
 }
 
+// Browser-style downloads (image export, XYZ export) ask where to save,
+// defaulting to the launch directory when started from a terminal and to the
+// download folder otherwise. In --bridge-probe mode the file is written to the
+// default without a dialog (a native dialog cannot be driven headless), so the
+// probe still checks the redirection and the saved-path message.
+function downloadDefaultPath(filename) {
+    return path.join(launchDir || app.getPath('downloads'), filename);
+}
+
+function setupDownloads() {
+    session.defaultSession.on('will-download', (_event, item, wc) => {
+        const defaultPath = downloadDefaultPath(item.getFilename());
+        if (BRIDGE_PROBE) item.setSavePath(defaultPath);
+        else item.setSaveDialogOptions({ defaultPath });
+        item.once('done', (_e, state) => {
+            const target = item.getSavePath();
+            log(`Download ${state}: ${target}`);
+            if (wc && !wc.isDestroyed()) {
+                wc.send('jlmol-download-done', state, target);
+            }
+        });
+    });
+}
+
 app.whenReady().then(() => {
+    setupDownloads();
     // app:// serves the bundle directory, path-normalized and confined to it.
     // Served from fs STREAMS -- both constraints learned on 2026-08-22 the
     // hard way: (a) no file:// URLs anywhere (net.fetch of a hostful UNC file

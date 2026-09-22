@@ -57,6 +57,11 @@ contextBridge.exposeInMainWorld('jlmolNative', {
     // {token, path} of the directory jlmol was started from (terminal starts
     // only), or null. Calculations run there so their output files persist.
     launchDir: () => ipcRenderer.invoke('jlmol-launch-dir'),
+    // Fired when a browser download (image/XYZ export) ends: state is
+    // 'completed', 'cancelled' or 'interrupted'; path is where it was saved.
+    onDownloadDone: (cb) =>
+        ipcRenderer.on('jlmol-download-done', (_event, state, savedPath) => cb(state, savedPath)),
+
     // --- processes --------------------------------------------------------
     // handlers: { data(kind, text), close(code), error(message) }
     spawn: async (command, args, options, handlers) => {

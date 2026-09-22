@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - ElemCo.jl and xtb calculations started from a terminal now run in the directory jlmol was started from, so exported files (`orbitals.molden` from an Export step, `xtbopt.xyz`, `xtbopt.log`, ...) and the generated `calculation.jl` / `coord.xyz` stay there. Previously every run used a temporary directory under the OS temp dir that was deleted when the run finished, so exports silently vanished. Launches without a terminal (desktop launcher, Finder, Start menu) keep the temporary directory. The output panel now prints which directory is used and whether it is deleted.
+- Image export and XYZ export in the desktop app now open a save dialog instead of dropping the file silently into the download folder. The dialog defaults to the launch directory when started from a terminal and to the download folder otherwise; the status line shows where the file was saved, or that the export was cancelled.
 
 ## [1.5.5] - 2026-09-07
 

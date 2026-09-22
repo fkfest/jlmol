@@ -341,7 +341,7 @@ jlmol now includes an integrated calculation runner that can execute ElemCo.jl c
 3. **Run Calculation**: Click "Run Calculation" to execute the calculation
 4. **View Results**: Monitor progress and view calculation output in real-time
 
-When jlmol is started from a terminal, the calculation runs in the directory it was started from: `calculation.jl` and every file the calculation writes (e.g. `orbitals.molden` from an Export step) stay there. Started from a desktop launcher, it runs in a temporary directory that is deleted after the run. The output panel prints which one is used.
+When jlmol is started from a terminal, the calculation runs in the directory it was started from: `calculation.jl` and every file the calculation writes (e.g. `orbitals.molden` from an Export step) stay there. Started from a desktop launcher, it runs in a temporary directory that is deleted after the run. The output panel prints which one is used. Image and XYZ exports open a save dialog; its default folder is the launch directory from a terminal and the download folder otherwise, and the status line shows where the file was saved.
 
 #### WSL (Windows Subsystem for Linux) Support
 
