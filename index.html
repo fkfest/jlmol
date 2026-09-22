@@ -37,6 +37,7 @@
     <script type="text/javascript" src="js/image-export.js"></script>
     <script type="text/javascript" src="js/molecule-data.js"></script>
     <script type="text/javascript" src="js/viewer-controls.js"></script>
+    <script type="text/javascript" src="js/molden-check.js"></script>
     <script type="text/javascript" src="js/search.js"></script>
     <script type="text/javascript" src="js/orbitals.js"></script>
     <script type="text/javascript" src="js/xyz-editor.js"></script>
@@ -62,6 +63,10 @@
             <div id="version-display" style="font-size: 12px; color: #666; margin-bottom: 16px; padding: 4px 8px; background: #f5f5f5; border-radius: 4px; text-align: center;">jlmol v<span id="version-number">loading...</span></div>
             <h3>Load Structure</h3>
             <input type="file" id="structureFile" accept=".xyz,.pdb,.mol,.cif,.molden" onChange="handleFileSelect(event)" title="Select a molecular structure file">
+            <div id="structureFileNative" hidden>
+                <button id="structureFileButton" title="Select a molecular structure file">Open File…</button>
+                <span id="structureFileName"></span>
+            </div>
             <div class="sample-buttons">
                 <button onclick="loadSample('caffeine.mol')" title="Load a caffeine molecule structure">Caffeine</button>
                 <button onclick="loadSample('buckyball.mol')" title="Load a buckminsterfullerene (C60) structure">Buckyball</button>

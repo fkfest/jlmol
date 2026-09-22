@@ -4,9 +4,9 @@
   "description": "jlmol - A Molecular Viewer Desktop App",
   "main": "main.js",
   "scripts": {
-    "start": "electron .",
-    "start-verbose": "electron . --verbose",
-    "start:win": "node_modules/electron/dist/electron.exe .",
+    "start": "electron . --workdir=\"$INIT_CWD\" --wsl-distro=\"$WSL_DISTRO_NAME\"",
+    "start-verbose": "electron . --verbose --workdir=\"$INIT_CWD\" --wsl-distro=\"$WSL_DISTRO_NAME\"",
+    "start:win": "node_modules/electron/dist/electron.exe . --workdir=\"%INIT_CWD%\"",
     "start-safe": "electron . --disable-hardware-acceleration",
     "start-debug": "electron . --enable-logging=file --log-file=jlmol-debug.log --log-level=0",
     "start-safe-debug": "electron . --disable-hardware-acceleration --enable-logging --log-level=0",
@@ -31,6 +31,7 @@
     ],
     "files": [
       "main.js",
+      "launchdir.js",
       "index.html",
       "renderer.js",
       "preload.js",

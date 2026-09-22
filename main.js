@@ -1,4 +1,4 @@
-const { app, BrowserWindow, shell, ipcMain, protocol } = require('electron')
+const { app, BrowserWindow, shell, ipcMain, protocol, session, dialog } = require('electron')
 
 // --- smoke mode ------------------------------------------------------------
 // `electron . --smoke` boots the app, waits for the JSmol applet to reach
@@ -154,6 +154,35 @@ const { spawn: spawnNative } = require('child_process');
 const workDirs = new Map();   // token -> absolute path under os.tmpdir()
 const procs = new Map();      // procId -> ChildProcess
 
+// The directory jlmol was started from, for command-line starts (see
+// launchdir.js for the sources: --workdir from the npm start scripts, or a
+// terminal on a standard stream). ElemCo.jl and xtb runs use it as their
+// working directory, so exported files (orbitals.molden, xtbopt.xyz, ...)
+// land where the user is instead of in a temp dir that is deleted after the
+// run, and the export save dialog defaults to it. Desktop-launcher starts
+// have none and keep the temp dirs. The launch dir is registered as a
+// work-dir token like the temp dirs (same path confinement for reads and
+// writes) but is never removed.
+const LAUNCH_DIR_TOKEN = 'launch-dir';
+function startedFromTerminal() {
+    // Any of the three standard streams on a terminal counts. The
+    // process.std* getters may throw for exotic handles (seen on Windows GUI
+    // starts without a console); that is a "no terminal" answer, not a crash.
+    for (const name of ['stdin', 'stdout', 'stderr']) {
+        try { if (process[name].isTTY) return true; } catch (_) { /* no terminal */ }
+    }
+    return false;
+}
+const launchDirInfo = require('./launchdir').findLaunchDir({
+    argv: process.argv, env: process.env, platform: process.platform,
+    isTTY: startedFromTerminal,
+    isDir: (d) => { try { return fs.statSync(d).isDirectory(); } catch (_) { return false; } },
+    cwd: () => process.cwd(),
+});
+const launchDir = launchDirInfo.dir;
+if (launchDir) workDirs.set(LAUNCH_DIR_TOKEN, launchDir);
+log(`Launch directory: ${launchDir || '(none)'} [${launchDirInfo.source}]`);
+
 function resolveInWorkDir(dirToken, name) {
     const dir = workDirs.get(dirToken);
     if (!dir) throw new Error('unknown work directory');
@@ -184,6 +213,29 @@ ipcMain.handle('jlmol-workdir-path', (_e, token) => {
     if (!dir) throw new Error('unknown work directory');
     return dir;
 });
+ipcMain.handle('jlmol-launch-dir', () =>
+    launchDir ? { token: LAUNCH_DIR_TOKEN, path: launchDir } : null);
+
+// "Choose File" in the desktop app: a native open dialog that starts in the
+// launch directory (like the export dialog); without one the OS picks its
+// usual folder. The chosen file is read here, so the renderer never sees a
+// path, only {name, content}. Returns null when cancelled.
+ipcMain.handle('jlmol-open-structure', async (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    const options = {
+        properties: ['openFile'],
+        filters: [
+            { name: 'Structure files', extensions: ['xyz', 'pdb', 'mol', 'cif', 'molden'] },
+            { name: 'All files', extensions: ['*'] },
+        ],
+    };
+    if (launchDir) options.defaultPath = launchDir;
+    const { canceled, filePaths } = await dialog.showOpenDialog(win, options);
+    if (canceled || filePaths.length === 0) return null;
+    const file = filePaths[0];
+    log(`Open dialog: ${file}`);
+    return { name: path.basename(file), content: fsNative.readFileSync(file, 'utf8') };
+});
 ipcMain.handle('jlmol-write-file', (_e, token, name, content) => {
     fsNative.writeFileSync(resolveInWorkDir(token, name), String(content));
 });
@@ -192,7 +244,11 @@ ipcMain.handle('jlmol-read-file', (_e, token, name) => {
     if (!fsNative.existsSync(target)) return null;
     return fsNative.readFileSync(target, 'utf8');
 });
+ipcMain.handle('jlmol-rm-file', (_e, token, name) => {
+    fsNative.rmSync(resolveInWorkDir(token, name), { force: true });
+});
 ipcMain.handle('jlmol-rm-workdir', (_e, token) => {
+    if (token === LAUNCH_DIR_TOKEN) return;
     const dir = workDirs.get(token);
     if (!dir) return;
     workDirs.delete(token);
@@ -240,7 +296,8 @@ ipcMain.handle('jlmol-kill', (_e, procId) => {
 
 app.on('will-quit', () => {
     for (const child of procs.values()) { try { child.kill(); } catch (_) {} }
-    for (const dir of workDirs.values()) {
+    for (const [token, dir] of workDirs) {
+        if (token === LAUNCH_DIR_TOKEN) continue;
         try { fsNative.rmSync(dir, { recursive: true, force: true }); } catch (_) {}
     }
 });
@@ -255,7 +312,34 @@ function runBridgeProbe(win) {
             const back = await n.readFile(dir, 'x.txt');
             let escape = 'not caught';
             try { await n.readFile(dir, '../escape.txt'); } catch (e) { escape = 'caught'; }
+            await n.removeFile(dir, 'x.txt');
+            const gone = (await n.readFile(dir, 'x.txt')) === null ? 'rm ok' : 'rm bad';
             await n.removeWorkDir(dir);
+            // With a launch dir (terminal start) removeWorkDir must be a no-op
+            // on it; without one the bridge must answer null, not throw.
+            const launch = await n.launchDir();
+            let launchCheck = 'launch none';
+            if (launch) {
+                await n.removeWorkDir(launch.token);
+                launchCheck = (await n.workDirPath(launch.token)) === launch.path
+                    ? 'launch kept' : 'launch lost';
+                // A browser download must default to the launch dir, and the
+                // renderer must be told the final path.
+                const saved = new Promise((res) =>
+                    n.onDownloadDone((state, p) => res(state === 'completed' ? p : null)));
+                const a = document.createElement('a');
+                a.href = 'data:text/plain,probe-download';
+                a.download = 'jlmol_probe_download.txt';
+                document.body.appendChild(a); a.click(); a.remove();
+                const savedPath = await Promise.race([saved,
+                    new Promise((res) => setTimeout(() => res(null), 5000))]);
+                const body = await n.readFile(launch.token, 'jlmol_probe_download.txt');
+                await n.removeFile(launch.token, 'jlmol_probe_download.txt');
+                if (body !== 'probe-download' || !savedPath
+                    || !savedPath.endsWith('jlmol_probe_download.txt')) {
+                    launchCheck = 'launch download bad ' + savedPath + ' ' + body;
+                }
+            }
             const spawnResult = await new Promise((res) => {
                 let text = '';
                 n.spawn('echo', ['bridge-echo'], {}, {
@@ -266,9 +350,9 @@ function runBridgeProbe(win) {
                 });
             });
             return [back === 'roundtrip' ? 'file ok' : 'file bad',
-                    'escape ' + escape, spawnResult].join(' | ');
+                    'escape ' + escape, gone, launchCheck, spawnResult].join(' | ');
         })()`).then((result) => {
-            const ok = result === 'file ok | escape caught | spawn ok';
+            const ok = /^file ok \| escape caught \| rm ok \| launch (none|kept) \| spawn ok$/.test(result);
             console.log(ok ? 'BRIDGE OK' : `BRIDGE FAIL: ${result}`);
             app.exit(ok ? 0 : 1);
         }).catch((err) => {
@@ -487,6 +571,11 @@ function createWindow() {
                                 console.log('JSmol ready, loading molecule...');
                                 try {
                                     const content = \`${fileContent.replace(/\\/g, '\\\\').replace(/\$/g, '\\$').replace(/\`/g, '\\\`')}\`;
+                                    // Same path as Open File (molden check, XYZ loader, refresh).
+                                    if (typeof loadStructureContent === 'function') {
+                                        loadStructureContent(${JSON.stringify(path.basename(fileArg))}, content);
+                                        return;
+                                    }
                                     Jmol.script(jmolApplet0, 'set echo top left; echo "Loading molecule...";');
                                     setTimeout(() => {
                                         Jmol.script(jmolApplet0, 'load inline "' + content + '" filter "NOSORT";');
@@ -519,7 +608,33 @@ function createWindow() {
     });
 }
 
+// Browser-style downloads (image export, XYZ export) ask where to save,
+// defaulting to the launch directory when started from a terminal and to the
+// download folder otherwise. In --bridge-probe mode the file is written to the
+// default without a dialog (a native dialog cannot be driven headless), so the
+// probe still checks the redirection and the saved-path message.
+function downloadDefaultPath(filename) {
+    return path.join(launchDir || app.getPath('downloads'), filename);
+}
+
+function setupDownloads() {
+    session.defaultSession.on('will-download', (_event, item, wc) => {
+        const defaultPath = downloadDefaultPath(item.getFilename());
+        log(`Download dialog default: ${defaultPath}`);
+        if (BRIDGE_PROBE) item.setSavePath(defaultPath);
+        else item.setSaveDialogOptions({ defaultPath });
+        item.once('done', (_e, state) => {
+            const target = item.getSavePath();
+            log(`Download ${state}: ${target}`);
+            if (wc && !wc.isDestroyed()) {
+                wc.send('jlmol-download-done', state, target);
+            }
+        });
+    });
+}
+
 app.whenReady().then(() => {
+    setupDownloads();
     // app:// serves the bundle directory, path-normalized and confined to it.
     // Served from fs STREAMS -- both constraints learned on 2026-08-22 the
     // hard way: (a) no file:// URLs anywhere (net.fetch of a hostful UNC file

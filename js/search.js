@@ -1,66 +1,112 @@
+// Desktop app: "Open File" goes through a native open dialog that starts
+// in the launch directory, matching the export dialog. The browser's own
+// file picker cannot be pointed at a directory, and its "No file chosen"
+// label never learns about files opened this way, so the input is swapped
+// for a button plus a name label; the browser build keeps the input.
+document.addEventListener('DOMContentLoaded', () => {
+    const input = document.getElementById('structureFile');
+    const box = document.getElementById('structureFileNative');
+    const native = window.jlmolNative;
+    if (!input || !box || !native || !native.openStructureFile) return;
+    input.hidden = true;
+    box.hidden = false;
+    document.getElementById('structureFileButton').addEventListener('click', () => {
+        native.openStructureFile().then((file) => {
+            if (!file) return;
+            const label = document.getElementById('structureFileName');
+            label.textContent = file.name;
+            label.title = file.name;
+            loadStructureContent(file.name, file.content);
+        }).catch((err) => setStatusText('Error opening file: ' + err.message));
+    });
+});
+
 function handleFileSelect(evt) {
     var files = evt.target.files;
     if (files.length > 0) {
         var file = files[0];
         var reader = new FileReader();
         reader.onload = function(e) {
-            try {
-                // Save current display mode
-                const currentDisplayMode = displayMode || 'default';
-                
-                const fileContent = e.target.result;
-                const fileName = file.name.toLowerCase();
-                
-                // Check if it's an XYZ file and use custom loader
-                if (fileName.endsWith('.xyz')) {
-                    // Don't automatically set shouldUseNumberedAtoms to true
-                    // Instead, let loadXYZWithNumberedAtoms detect if numbered atoms are present
-                    loadXYZWithNumberedAtoms(fileContent);
-                } else {
-                    // Clear numbered atom names for non-XYZ files
-                    clearOriginalAtomNames();
-                    originalXYZContent = null;
-                    shouldUseNumberedAtoms = false; // Non-XYZ files should not use numbered atoms
-                    
-                    // Clear database metadata since this is not a database load
-                    window.databaseMetadata = null;
-                    
-                    // Use normal loading for other file types
-                    Jmol.script(jmolApplet0, 'load inline "' + fileContent + '" filter "NOSORT"');
-                    document.getElementById('status').innerHTML = 'File loaded successfully';
-                    
-                    // Refresh atom names to remove any numbered indices for non-XYZ files
-                    setTimeout(() => {
-                        refreshAtomNames();
-                        console.log('handleFileSelect: Atom names refreshed for non-XYZ file');
-                        
-                        // Update MOL file data for JSME integration after file loading
-                        try {
-                            lastMolFile = Jmol.evaluateVar(jmolApplet0, 'write("mol")').trim();
-                            debugLog('File', 'Updated lastMolFile after loading non-XYZ file');
-                        } catch (molError) {
-                            console.error('Error updating MOL file data in handleFileSelect:', molError);
-                        }
-                    }, 100);
-                }
-                
-                // Restore display mode after loading with a delay
-                setTimeout(() => {
-                    console.log('handleFileSelect: Restoring display mode:', currentDisplayMode);
-                    setDisplayMode(currentDisplayMode);
-                    
-                    // Apply all JSmol preferences after loading
-                    if (typeof applyJSmolPreferences === 'function') {
-                        applyJSmolPreferences();
-                        console.log('handleFileSelect: Applied JSmol preferences');
-                    }
-                }, 300);
-                
-            } catch (err) {
-                setStatusText('Error loading file: ' + err.message);
-            }
+            loadStructureContent(file.name, e.target.result);
         };
         reader.readAsText(file);
+    }
+}
+
+// Load a structure file's text into the viewer; the name picks the loader.
+// Molden files are checked first (see js/molden-check.js); when something is
+// wrong the user chooses between the corrected text and the original.
+function loadStructureContent(name, fileContent) {
+    if (!/\.molden$/i.test(name) || typeof checkMoldenFile !== 'function') {
+        loadStructureNow(name, fileContent);
+        return;
+    }
+    const result = checkMoldenFile(fileContent);
+    if (result.issues.length === 0) {
+        loadStructureNow(name, fileContent);
+        return;
+    }
+    showMoldenCheckDialog(name, result).then((choice) => {
+        const text = choice === 'asis' ? fileContent : result.fixedText;
+        loadStructureNow(name, text);
+        if (choice === 'fix-save') saveFixedMolden(name, text);
+    });
+}
+
+function loadStructureNow(name, fileContent) {
+    try {
+        // Save current display mode
+        const currentDisplayMode = displayMode || 'default';
+        
+        const fileName = name.toLowerCase();
+        
+        // Check if it's an XYZ file and use custom loader
+        if (fileName.endsWith('.xyz')) {
+            // Don't automatically set shouldUseNumberedAtoms to true
+            // Instead, let loadXYZWithNumberedAtoms detect if numbered atoms are present
+            loadXYZWithNumberedAtoms(fileContent);
+        } else {
+            // Clear numbered atom names for non-XYZ files
+            clearOriginalAtomNames();
+            originalXYZContent = null;
+            shouldUseNumberedAtoms = false; // Non-XYZ files should not use numbered atoms
+            
+            // Clear database metadata since this is not a database load
+            window.databaseMetadata = null;
+            
+            // Use normal loading for other file types
+            Jmol.script(jmolApplet0, 'load inline "' + fileContent + '" filter "NOSORT"');
+            document.getElementById('status').innerHTML = 'File loaded successfully';
+            
+            // Refresh atom names to remove any numbered indices for non-XYZ files
+            setTimeout(() => {
+                refreshAtomNames();
+                console.log('handleFileSelect: Atom names refreshed for non-XYZ file');
+                
+                // Update MOL file data for JSME integration after file loading
+                try {
+                    lastMolFile = Jmol.evaluateVar(jmolApplet0, 'write("mol")').trim();
+                    debugLog('File', 'Updated lastMolFile after loading non-XYZ file');
+                } catch (molError) {
+                    console.error('Error updating MOL file data in handleFileSelect:', molError);
+                }
+            }, 100);
+        }
+        
+        // Restore display mode after loading with a delay
+        setTimeout(() => {
+            console.log('handleFileSelect: Restoring display mode:', currentDisplayMode);
+            setDisplayMode(currentDisplayMode);
+            
+            // Apply all JSmol preferences after loading
+            if (typeof applyJSmolPreferences === 'function') {
+                applyJSmolPreferences();
+                console.log('handleFileSelect: Applied JSmol preferences');
+            }
+        }, 300);
+        
+    } catch (err) {
+        setStatusText('Error loading file: ' + err.message);
     }
 }
 

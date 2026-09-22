@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Molden files are checked before loading. The g-xTB binary's molden writer (tblite) puts the valence electron count in the atomic-number column of `[Atoms]`, and JSmol trusts that column over the element label, so such files showed up as boron/beryllium/carbon with garbled bonds. A dialog now reports the problem and offers "Fix and load", "Fix, load and save…" (writes a `<name>-fixed.molden` copy through the save dialog) or "Load as is". The check also reports, without fixing, an MO coefficient count that does not match the basis size (the usual sign of a missing `[5D]` flag). Files given on the command line go through the same check.
+
+### Changed
+
+- ElemCo.jl and xtb calculations started from a terminal now run in the directory jlmol was started from, so exported files (`orbitals.molden` from an Export step, `xtbopt.xyz`, `xtbopt.log`, ...) and the generated `calculation.jl` / `coord.xyz` stay there. Previously every run used a temporary directory under the OS temp dir that was deleted when the run finished, so exports silently vanished. Launches without a terminal (desktop launcher, Finder, Start menu) keep the temporary directory. The output panel now prints which directory is used and whether it is deleted. The directory comes from `--workdir=PATH` (the `npm start` scripts pass the directory the command was typed in, also from WSL running the Windows binary) or, when started from a terminal, the current directory.
+- Image export and XYZ export in the desktop app now open a save dialog instead of dropping the file silently into the download folder. The dialog defaults to the launch directory when started from a terminal and to the download folder otherwise; the status line shows where the file was saved, or that the export was cancelled.
+- "Choose File" in the desktop app is replaced by an "Open File…" button with a native open dialog that starts in the launch directory when there is one (the browser file picker cannot be pointed at a directory, and its "No file chosen" label would stay stale). The loaded file's name is shown next to the button. Without a launch directory the OS chooses the folder as before. The browser build keeps the file input.
+
 ## [1.5.5] - 2026-09-07
 
 ### Fixed

@@ -149,3 +149,13 @@ function downloadImage(imageData, filename, format, transparent) {
     const transparencyNote = (format === 'png' && transparent) ? ' with transparent background' : '';
     setStatusText(`${format.toUpperCase()} image exported successfully${transparencyNote}`);
 }
+
+// Desktop app: exports go through a save dialog and main reports the
+// outcome; show the real path (or the cancel) instead of the guess above.
+if (window.jlmolNative && window.jlmolNative.onDownloadDone) {
+    window.jlmolNative.onDownloadDone((state, savedPath) => {
+        if (state === 'completed') setStatusText(`Saved ${savedPath}`);
+        else if (state === 'cancelled') setStatusText('Export cancelled');
+        else setStatusText(`Export failed (${state})`);
+    });
+}
