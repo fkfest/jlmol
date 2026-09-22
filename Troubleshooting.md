@@ -23,17 +23,7 @@ jlmol.exe --disable-hardware-acceleration
 - Update your graphics card drivers to the latest version
 - Consider switching between integrated and discrete graphics
 
-### Option 3: Run GPU Debug Tool
-
-For comprehensive system analysis:
-
-```bash
-npm run debug-gpu
-```
-
-This will generate a detailed report of your GPU capabilities and test different configurations.
-
-### Option 4: Run in Safe Mode
+### Option 3: Run in Safe Mode
 
 For debugging issues:
 
@@ -41,7 +31,7 @@ For debugging issues:
 npm run start-safe-debug
 ```
 
-### Option 5: Check System Resources
+### Option 4: Check System Resources
 
 - Close other graphics-intensive applications
 - Monitor memory usage (Task Manager)
@@ -114,12 +104,6 @@ jlmol supports loading structures directly from the PubChem database:
 - CID number does not exist
 
 ## Additional Support
-
-For more detailed troubleshooting information and platform-specific fixes, see:
-
-- [WINDOWS11-FIX-SUMMARY.md](WINDOWS11-FIX-SUMMARY.md) - Windows 11 specific solutions
-- [DISPLAY_MODE_FIX_COMPLETE.md](DISPLAY_MODE_FIX_COMPLETE.md) - Display mode button fixes
-- [ELEMCO_FIX_COMPLETE.md](ELEMCO_FIX_COMPLETE.md) - ElemCo.jl integration fixes
 
 If you encounter issues not covered here, please check the GitHub issues or create a new issue with details about your system and the specific problem.
 
