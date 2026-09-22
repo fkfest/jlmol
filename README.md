@@ -115,6 +115,8 @@ npm install
 npm start
 ```
 
+`npm start` passes the directory you typed it in to the app as `--workdir` (npm itself changes to the package root), so calculations run there and the export dialog defaults to it. Under WSL this also works when `electron` resolves to the Windows binary: the script passes `$WSL_DISTRO_NAME` and the path is mapped to `\\wsl.localhost\<distro>\...` (or `C:\...` for `/mnt/c/...`). For any other start, pass `--workdir=/abs/path` explicitly, or start the app from a terminal, in which case the current directory is used.
+
 The terminal output is kept quiet by default. A full log is always written to `jsmol.log` in the app's user-data directory. To echo the detailed log to the terminal, run with verbose logging:
 
 ```bash

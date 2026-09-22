@@ -154,17 +154,18 @@ const { spawn: spawnNative } = require('child_process');
 const workDirs = new Map();   // token -> absolute path under os.tmpdir()
 const procs = new Map();      // procId -> ChildProcess
 
-// The directory jlmol was started from, when started from a terminal. In that
-// case ElemCo.jl and xtb runs use it as their working directory, so exported
-// files (orbitals.molden, xtbopt.xyz, ...) land where the user is instead of
-// in a temp dir that is deleted after the run. A desktop launcher gives no
-// TTY (and usually cwd = $HOME or /), so those launches keep the temp dirs.
-// The launch dir is registered as a work-dir token like the temp dirs (same
-// path confinement for reads/writes) but is never removed.
+// The directory jlmol was started from, for command-line starts (see
+// launchdir.js for the sources: --workdir from the npm start scripts, or a
+// terminal on a standard stream). ElemCo.jl and xtb runs use it as their
+// working directory, so exported files (orbitals.molden, xtbopt.xyz, ...)
+// land where the user is instead of in a temp dir that is deleted after the
+// run, and the export save dialog defaults to it. Desktop-launcher starts
+// have none and keep the temp dirs. The launch dir is registered as a
+// work-dir token like the temp dirs (same path confinement for reads and
+// writes) but is never removed.
 const LAUNCH_DIR_TOKEN = 'launch-dir';
 function startedFromTerminal() {
-    // Any of the three standard streams on a terminal counts, so
-    // `jlmol < /dev/null` or a redirected stdout still qualifies. The
+    // Any of the three standard streams on a terminal counts. The
     // process.std* getters may throw for exotic handles (seen on Windows GUI
     // starts without a console); that is a "no terminal" answer, not a crash.
     for (const name of ['stdin', 'stdout', 'stderr']) {
@@ -172,19 +173,15 @@ function startedFromTerminal() {
     }
     return false;
 }
-function findLaunchDir() {
-    if (!startedFromTerminal()) return null;
-    // `npm start` (and npm run/exec) chdir to the package root before running
-    // the script; the directory the user typed the command in is INIT_CWD.
-    const init = process.env.INIT_CWD;
-    if (init && path.isAbsolute(init)) {
-        try { if (fs.statSync(init).isDirectory()) return init; } catch (_) { /* fall through */ }
-    }
-    return process.cwd();
-}
-const launchDir = findLaunchDir();
+const launchDirInfo = require('./launchdir').findLaunchDir({
+    argv: process.argv, env: process.env, platform: process.platform,
+    isTTY: startedFromTerminal,
+    isDir: (d) => { try { return fs.statSync(d).isDirectory(); } catch (_) { return false; } },
+    cwd: () => process.cwd(),
+});
+const launchDir = launchDirInfo.dir;
 if (launchDir) workDirs.set(LAUNCH_DIR_TOKEN, launchDir);
-log('Launch directory: ' + (launchDir || '(not started from a terminal)'));
+log(`Launch directory: ${launchDir || '(none)'} [${launchDirInfo.source}]`);
 
 function resolveInWorkDir(dirToken, name) {
     const dir = workDirs.get(dirToken);
