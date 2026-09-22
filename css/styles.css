@@ -1362,7 +1362,7 @@
         }
 
         /* ---- Update-available dialog (js/updater.js) ---- */
-        #updateOverlay {
+        #updateOverlay, #moldenCheckOverlay {
             position: fixed;
             top: 0;
             left: 0;
@@ -1375,7 +1375,7 @@
             z-index: 100000;
         }
 
-        #updateDialog {
+        #updateDialog, #moldenCheckDialog {
             background: white;
             border: 1px solid #ccc;
             border-radius: 8px;
@@ -1441,6 +1441,17 @@
 
         .update-releasepage-link:hover {
             text-decoration: underline;
+        }
+
+        .molden-check-issues {
+            margin: 8px 0 0;
+            padding-left: 20px;
+            font-size: 13px;
+            line-height: 1.4;
+            color: #333;
+        }
+        .molden-check-issues li {
+            margin-bottom: 6px;
         }
 
         .update-dialog-footer {

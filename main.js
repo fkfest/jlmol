@@ -571,6 +571,11 @@ function createWindow() {
                                 console.log('JSmol ready, loading molecule...');
                                 try {
                                     const content = \`${fileContent.replace(/\\/g, '\\\\').replace(/\$/g, '\\$').replace(/\`/g, '\\\`')}\`;
+                                    // Same path as Open File (molden check, XYZ loader, refresh).
+                                    if (typeof loadStructureContent === 'function') {
+                                        loadStructureContent(${JSON.stringify(path.basename(fileArg))}, content);
+                                        return;
+                                    }
                                     Jmol.script(jmolApplet0, 'set echo top left; echo "Loading molecule...";');
                                     setTimeout(() => {
                                         Jmol.script(jmolApplet0, 'load inline "' + content + '" filter "NOSORT";');

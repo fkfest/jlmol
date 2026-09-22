@@ -34,7 +34,26 @@ function handleFileSelect(evt) {
 }
 
 // Load a structure file's text into the viewer; the name picks the loader.
+// Molden files are checked first (see js/molden-check.js); when something is
+// wrong the user chooses between the corrected text and the original.
 function loadStructureContent(name, fileContent) {
+    if (!/\.molden$/i.test(name) || typeof checkMoldenFile !== 'function') {
+        loadStructureNow(name, fileContent);
+        return;
+    }
+    const result = checkMoldenFile(fileContent);
+    if (result.issues.length === 0) {
+        loadStructureNow(name, fileContent);
+        return;
+    }
+    showMoldenCheckDialog(name, result).then((choice) => {
+        const text = choice === 'asis' ? fileContent : result.fixedText;
+        loadStructureNow(name, text);
+        if (choice === 'fix-save') saveFixedMolden(name, text);
+    });
+}
+
+function loadStructureNow(name, fileContent) {
     try {
         // Save current display mode
         const currentDisplayMode = displayMode || 'default';
