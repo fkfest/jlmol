@@ -163,11 +163,26 @@ const procs = new Map();      // procId -> ChildProcess
 // path confinement for reads/writes) but is never removed.
 const LAUNCH_DIR_TOKEN = 'launch-dir';
 function startedFromTerminal() {
-    // process.stdin may throw for exotic handles (seen on Windows GUI starts
-    // without a console); that is a "no terminal" answer, not a crash.
-    try { return Boolean(process.stdin.isTTY); } catch (_) { return false; }
+    // Any of the three standard streams on a terminal counts, so
+    // `jlmol < /dev/null` or a redirected stdout still qualifies. The
+    // process.std* getters may throw for exotic handles (seen on Windows GUI
+    // starts without a console); that is a "no terminal" answer, not a crash.
+    for (const name of ['stdin', 'stdout', 'stderr']) {
+        try { if (process[name].isTTY) return true; } catch (_) { /* no terminal */ }
+    }
+    return false;
 }
-const launchDir = startedFromTerminal() ? process.cwd() : null;
+function findLaunchDir() {
+    if (!startedFromTerminal()) return null;
+    // `npm start` (and npm run/exec) chdir to the package root before running
+    // the script; the directory the user typed the command in is INIT_CWD.
+    const init = process.env.INIT_CWD;
+    if (init && path.isAbsolute(init)) {
+        try { if (fs.statSync(init).isDirectory()) return init; } catch (_) { /* fall through */ }
+    }
+    return process.cwd();
+}
+const launchDir = findLaunchDir();
 if (launchDir) workDirs.set(LAUNCH_DIR_TOKEN, launchDir);
 log('Launch directory: ' + (launchDir || '(not started from a terminal)'));
 
