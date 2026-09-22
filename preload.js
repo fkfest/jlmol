@@ -62,6 +62,10 @@ contextBridge.exposeInMainWorld('jlmolNative', {
     onDownloadDone: (cb) =>
         ipcRenderer.on('jlmol-download-done', (_event, state, savedPath) => cb(state, savedPath)),
 
+    // Native open dialog for "Choose File" (starts in the launch dir when
+    // there is one). Resolves to {name, content} or null when cancelled.
+    openStructureFile: () => ipcRenderer.invoke('jlmol-open-structure'),
+
     // --- processes --------------------------------------------------------
     // handlers: { data(kind, text), close(code), error(message) }
     spawn: async (command, args, options, handlers) => {

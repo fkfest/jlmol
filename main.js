@@ -1,4 +1,4 @@
-const { app, BrowserWindow, shell, ipcMain, protocol, session } = require('electron')
+const { app, BrowserWindow, shell, ipcMain, protocol, session, dialog } = require('electron')
 
 // --- smoke mode ------------------------------------------------------------
 // `electron . --smoke` boots the app, waits for the JSmol applet to reach
@@ -215,6 +215,27 @@ ipcMain.handle('jlmol-workdir-path', (_e, token) => {
 });
 ipcMain.handle('jlmol-launch-dir', () =>
     launchDir ? { token: LAUNCH_DIR_TOKEN, path: launchDir } : null);
+
+// "Choose File" in the desktop app: a native open dialog that starts in the
+// launch directory (like the export dialog); without one the OS picks its
+// usual folder. The chosen file is read here, so the renderer never sees a
+// path, only {name, content}. Returns null when cancelled.
+ipcMain.handle('jlmol-open-structure', async (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    const options = {
+        properties: ['openFile'],
+        filters: [
+            { name: 'Structure files', extensions: ['xyz', 'pdb', 'mol', 'cif', 'molden'] },
+            { name: 'All files', extensions: ['*'] },
+        ],
+    };
+    if (launchDir) options.defaultPath = launchDir;
+    const { canceled, filePaths } = await dialog.showOpenDialog(win, options);
+    if (canceled || filePaths.length === 0) return null;
+    const file = filePaths[0];
+    log(`Open dialog: ${file}`);
+    return { name: path.basename(file), content: fsNative.readFileSync(file, 'utf8') };
+});
 ipcMain.handle('jlmol-write-file', (_e, token, name, content) => {
     fsNative.writeFileSync(resolveInWorkDir(token, name), String(content));
 });
