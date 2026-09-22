@@ -1293,7 +1293,12 @@ async function runJuliaInElectron(juliaCode) {
         // For WSL, convert Windows path to WSL path
         let filePathForCommand = tempFile;
         if (isWSL) {
-            if (/^[A-Za-z]:/.test(tempFile)) {
+            const unc = /^\\\\(?:wsl\.localhost|wsl\$)\\[^\\]+(\\.*)$/.exec(tempFile);
+            if (unc) {
+                // \\wsl.localhost\<distro>\home\... is the distro's own tree
+                // (the launch dir when started from WSL): drop the share.
+                filePathForCommand = unc[1].replace(/\\/g, '/');
+            } else if (/^[A-Za-z]:/.test(tempFile)) {
                 const driveLetter = tempFile.charAt(0).toLowerCase();
                 filePathForCommand = tempFile.replace(/^[A-Za-z]:/, `/mnt/${driveLetter}`).replace(/\\/g, '/');
             } else {

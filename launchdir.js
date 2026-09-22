@@ -34,10 +34,14 @@ function findLaunchDir({ argv, env, platform, isTTY, isDir, cwd }) {
     const P = platform === 'win32' ? path.win32 : path.posix;
     const explicit = argValue(argv, 'workdir');
     if (explicit) {
-        const candidates = [explicit];
-        if (platform === 'win32' && explicit.startsWith('/')) {
-            candidates.push(...windowsCandidates(explicit, argValue(argv, 'wsl-distro') || env.WSL_DISTRO_NAME));
-        }
+        // On win32 a slash-rooted path is never usable as given: Node calls
+        // it absolute and stat() resolves it against the current drive (a UNC
+        // share when started from WSL, so it even exists), but the save
+        // dialog and child processes get "\home\..." and fall back to $HOME.
+        // Only the mapped spellings are tried.
+        const candidates = platform === 'win32' && explicit.startsWith('/')
+            ? windowsCandidates(explicit, argValue(argv, 'wsl-distro') || env.WSL_DISTRO_NAME)
+            : [explicit];
         for (const c of candidates) {
             if (P.isAbsolute(c) && isDir(c)) return { dir: c, source: '--workdir' };
         }
@@ -69,6 +73,11 @@ if (require.main === module) {
     assert.strictEqual(run({ argv: ['--workdir=/home/u/x', '--wsl-distro=Ubuntu'], platform: 'win32' }),
         '\\\\wsl.localhost\\Ubuntu\\home\\u\\x');
     assert.strictEqual(run({ argv: ['--workdir=/home/u/x'], platform: 'win32' }), null);   // no distro known
+    // Exists relative to the current drive (stat says yes) but must not be taken raw on win32.
+    assert.strictEqual(run({ argv: ['--workdir=/home/u/proj'], platform: 'win32' }), null);
+    assert.strictEqual(run({ argv: ['--workdir=/home/u/proj', '--wsl-distro=Ubuntu'], platform: 'win32',
+        isDir: (d) => dirs.has(d) || d === '\\\\wsl.localhost\\Ubuntu\\home\\u\\proj' }),
+        '\\\\wsl.localhost\\Ubuntu\\home\\u\\proj');
     assert.deepStrictEqual(windowsCandidates('/mnt/d', 'Deb'), ['D:\\', '\\\\wsl.localhost\\Deb\\mnt\\d', '\\\\wsl$\\Deb\\mnt\\d']);
     console.log('launchdir self-test ok');
 }
