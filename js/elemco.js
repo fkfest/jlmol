@@ -1234,12 +1234,16 @@ async function runJuliaInElectron(juliaCode) {
     const prefs = getPreferences();
     const juliaCommand = prefs.juliaCommand || 'julia';
 
+    // Started from a terminal: run in that directory, so @export_molden and
+    // friends write next to the user and nothing is deleted afterwards.
+    // Otherwise a temp work dir, removed after the run.
     let workDir = null;
+    let ownsWorkDir = false;
     function cleanupTempFile() {
-        if (workDir) {
+        if (workDir && ownsWorkDir) {
             native.removeWorkDir(workDir);   // main also reaps on quit
-            workDir = null;
         }
+        workDir = null;
     }
 
     try {
@@ -1273,8 +1277,14 @@ async function runJuliaInElectron(juliaCode) {
         const commandParts = parseCommand(juliaCommand.trim());
         const isWSL = commandParts[0].toLowerCase() === 'wsl';
 
-        // Julia code goes into a scoped work directory
-        workDir = await native.mkWorkDir('jlmol_julia_');
+        // Julia code goes into the work directory
+        const launch = await native.launchDir();
+        if (launch) {
+            workDir = launch.token;
+        } else {
+            workDir = await native.mkWorkDir('jlmol_julia_');
+            ownsWorkDir = true;
+        }
         const workDirPath = await native.workDirPath(workDir);
         await native.writeFile(workDir, 'calculation.jl', juliaCode);
         const sep = native.platform === 'win32' ? '\\' : '/';
@@ -1291,7 +1301,10 @@ async function runJuliaInElectron(juliaCode) {
             }
         }
 
-        outputTextarea.value = `=== JLMol Julia Calculation ===\nTimestamp: ${new Date().toISOString()}\nJulia command: ${juliaCommand}\nTemporary file: ${tempFile}\n${isWSL ? `WSL path: ${filePathForCommand}\n` : ''}Full command: ${juliaCommand} "${filePathForCommand}"\n\n--- Starting calculation ---\n`;
+        const workDirNote = ownsWorkDir
+            ? `Working directory (temporary, deleted after the run): ${workDirPath}`
+            : `Working directory (started from here; exported files stay here): ${workDirPath}`;
+        outputTextarea.value = `=== JLMol Julia Calculation ===\nTimestamp: ${new Date().toISOString()}\nJulia command: ${juliaCommand}\n${workDirNote}\nInput file: ${tempFile}\n${isWSL ? `WSL path: ${filePathForCommand}\n` : ''}Full command: ${juliaCommand} "${filePathForCommand}"\n\n--- Starting calculation ---\n`;
         setStatusText('Starting Julia process...');
 
         // Prepare command and arguments for version check
@@ -1375,8 +1388,11 @@ async function runJuliaInElectron(juliaCode) {
                 close: (code) => {
                     updateOutput();
                     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+                    const cleanupNote = ownsWorkDir
+                        ? '--- Cleanup: temporary work directory deleted ---'
+                        : `--- Files written by the calculation are in ${workDirPath} ---`;
                     cleanupTempFile();
-                    outputTextarea.value += `\n--- Cleanup: Temporary file deleted ---\n`;
+                    outputTextarea.value += `\n${cleanupNote}\n`;
                     if (code === 0) {
                         outputTextarea.value += `\n=== CALCULATION COMPLETED SUCCESSFULLY ===\nElapsed time: ${elapsed} seconds\nExit code: ${code}`;
                         setStatusText(`Julia calculation completed successfully (${elapsed}s)`);

@@ -5,8 +5,9 @@
 // narrow, auditable surface:
 //   - platform info (static strings),
 //   - openExternal (http/https only, validated in the main process),
-//   - work directories: created by main under the OS temp dir, addressed by
-//     opaque tokens; file reads/writes are confined to those directories,
+//   - work directories: created by main under the OS temp dir (or, when the
+//     app was started from a terminal, the directory it was started from),
+//     addressed by opaque tokens; file reads/writes are confined to them,
 //   - process runs: spawn with streamed stdout/stderr and kill, for the
 //     user-configured xtb and Julia commands.
 // Running user-configured commands is the app's purpose, so spawn is not
@@ -47,11 +48,15 @@ contextBridge.exposeInMainWorld('jlmolNative', {
         ipcRenderer.invoke('jlmol-write-file', dirToken, name, content),
     readFile: (dirToken, name) =>
         ipcRenderer.invoke('jlmol-read-file', dirToken, name),
+    removeFile: (dirToken, name) =>
+        ipcRenderer.invoke('jlmol-rm-file', dirToken, name),
     removeWorkDir: (dirToken) =>
         ipcRenderer.invoke('jlmol-rm-workdir', dirToken),
     workDirPath: (dirToken) =>
         ipcRenderer.invoke('jlmol-workdir-path', dirToken),
-
+    // {token, path} of the directory jlmol was started from (terminal starts
+    // only), or null. Calculations run there so their output files persist.
+    launchDir: () => ipcRenderer.invoke('jlmol-launch-dir'),
     // --- processes --------------------------------------------------------
     // handlers: { data(kind, text), close(code), error(message) }
     spawn: async (command, args, options, handlers) => {

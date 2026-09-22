@@ -291,6 +291,7 @@ Run [xtb](https://github.com/grimme-lab/xtb) g-xTB calculations on the current s
 - Set charge, number of unpaired electrons (`--uhf`), and extra xtb flags
 - Configurable xtb command (supports WSL) in Settings → xtb
 - Browser mode shows a message to install jlmol locally; a clear message is shown if xtb is not accessible
+- Working directory: when jlmol is started from a terminal, xtb runs in the directory it was started from, so `coord.xyz`, `xtbopt.xyz`, `xtbopt.log` and the other xtb output files stay there. Started from a desktop launcher, xtb runs in a temporary directory that is deleted after the run. The output panel prints which one is used.
 - Requires the g-xTB binary from [grimme-lab/g-xtb](https://github.com/grimme-lab/g-xtb). At the moment that is all you need — download it, extract it, and make sure the `xtb` binary in its `bin` folder is on your `PATH` (e.g. a symbolic link in `~/bin`) or set its full path in Settings → xtb. No separate xtb installation or parameter-file download is required.
 
 ## ElemCo.jl Integration
@@ -339,6 +340,8 @@ jlmol now includes an integrated calculation runner that can execute ElemCo.jl c
 2. **Configure Julia Command**: Set up your Julia executable path in Settings (see User Preferences below)
 3. **Run Calculation**: Click "Run Calculation" to execute the calculation
 4. **View Results**: Monitor progress and view calculation output in real-time
+
+When jlmol is started from a terminal, the calculation runs in the directory it was started from: `calculation.jl` and every file the calculation writes (e.g. `orbitals.molden` from an Export step) stay there. Started from a desktop launcher, it runs in a temporary directory that is deleted after the run. The output panel prints which one is used.
 
 #### WSL (Windows Subsystem for Linux) Support
 

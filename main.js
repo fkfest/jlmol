@@ -154,6 +154,23 @@ const { spawn: spawnNative } = require('child_process');
 const workDirs = new Map();   // token -> absolute path under os.tmpdir()
 const procs = new Map();      // procId -> ChildProcess
 
+// The directory jlmol was started from, when started from a terminal. In that
+// case ElemCo.jl and xtb runs use it as their working directory, so exported
+// files (orbitals.molden, xtbopt.xyz, ...) land where the user is instead of
+// in a temp dir that is deleted after the run. A desktop launcher gives no
+// TTY (and usually cwd = $HOME or /), so those launches keep the temp dirs.
+// The launch dir is registered as a work-dir token like the temp dirs (same
+// path confinement for reads/writes) but is never removed.
+const LAUNCH_DIR_TOKEN = 'launch-dir';
+function startedFromTerminal() {
+    // process.stdin may throw for exotic handles (seen on Windows GUI starts
+    // without a console); that is a "no terminal" answer, not a crash.
+    try { return Boolean(process.stdin.isTTY); } catch (_) { return false; }
+}
+const launchDir = startedFromTerminal() ? process.cwd() : null;
+if (launchDir) workDirs.set(LAUNCH_DIR_TOKEN, launchDir);
+log('Launch directory: ' + (launchDir || '(not started from a terminal)'));
+
 function resolveInWorkDir(dirToken, name) {
     const dir = workDirs.get(dirToken);
     if (!dir) throw new Error('unknown work directory');
@@ -184,6 +201,8 @@ ipcMain.handle('jlmol-workdir-path', (_e, token) => {
     if (!dir) throw new Error('unknown work directory');
     return dir;
 });
+ipcMain.handle('jlmol-launch-dir', () =>
+    launchDir ? { token: LAUNCH_DIR_TOKEN, path: launchDir } : null);
 ipcMain.handle('jlmol-write-file', (_e, token, name, content) => {
     fsNative.writeFileSync(resolveInWorkDir(token, name), String(content));
 });
@@ -192,7 +211,11 @@ ipcMain.handle('jlmol-read-file', (_e, token, name) => {
     if (!fsNative.existsSync(target)) return null;
     return fsNative.readFileSync(target, 'utf8');
 });
+ipcMain.handle('jlmol-rm-file', (_e, token, name) => {
+    fsNative.rmSync(resolveInWorkDir(token, name), { force: true });
+});
 ipcMain.handle('jlmol-rm-workdir', (_e, token) => {
+    if (token === LAUNCH_DIR_TOKEN) return;
     const dir = workDirs.get(token);
     if (!dir) return;
     workDirs.delete(token);
@@ -240,7 +263,8 @@ ipcMain.handle('jlmol-kill', (_e, procId) => {
 
 app.on('will-quit', () => {
     for (const child of procs.values()) { try { child.kill(); } catch (_) {} }
-    for (const dir of workDirs.values()) {
+    for (const [token, dir] of workDirs) {
+        if (token === LAUNCH_DIR_TOKEN) continue;
         try { fsNative.rmSync(dir, { recursive: true, force: true }); } catch (_) {}
     }
 });
@@ -255,7 +279,18 @@ function runBridgeProbe(win) {
             const back = await n.readFile(dir, 'x.txt');
             let escape = 'not caught';
             try { await n.readFile(dir, '../escape.txt'); } catch (e) { escape = 'caught'; }
+            await n.removeFile(dir, 'x.txt');
+            const gone = (await n.readFile(dir, 'x.txt')) === null ? 'rm ok' : 'rm bad';
             await n.removeWorkDir(dir);
+            // With a launch dir (terminal start) removeWorkDir must be a no-op
+            // on it; without one the bridge must answer null, not throw.
+            const launch = await n.launchDir();
+            let launchCheck = 'launch none';
+            if (launch) {
+                await n.removeWorkDir(launch.token);
+                launchCheck = (await n.workDirPath(launch.token)) === launch.path
+                    ? 'launch kept' : 'launch lost';
+            }
             const spawnResult = await new Promise((res) => {
                 let text = '';
                 n.spawn('echo', ['bridge-echo'], {}, {
@@ -266,9 +301,9 @@ function runBridgeProbe(win) {
                 });
             });
             return [back === 'roundtrip' ? 'file ok' : 'file bad',
-                    'escape ' + escape, spawnResult].join(' | ');
+                    'escape ' + escape, gone, launchCheck, spawnResult].join(' | ');
         })()`).then((result) => {
-            const ok = result === 'file ok | escape caught | spawn ok';
+            const ok = /^file ok \| escape caught \| rm ok \| launch (none|kept) \| spawn ok$/.test(result);
             console.log(ok ? 'BRIDGE OK' : `BRIDGE FAIL: ${result}`);
             app.exit(ok ? 0 : 1);
         }).catch((err) => {

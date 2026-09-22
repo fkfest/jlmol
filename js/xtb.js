@@ -144,9 +144,18 @@ async function runXtbInElectron(xyzData, mode) {
     const baseCommand = isWSL ? 'wsl' : commandParts[0];
     const cmdPrefixArgs = commandParts.slice(1); // e.g. ['xtb'] for "wsl xtb", or [] for "xtb"
 
-    // Dedicated working directory (xtb writes several output files into CWD)
-    const workDir = await native.mkWorkDir('jlmol_xtb_');
+    // Working directory (xtb writes several output files into CWD). Started
+    // from a terminal: that directory, so the files stay where the user is.
+    // Otherwise a dedicated temp dir, removed after the run.
+    const launch = await native.launchDir();
+    const workDir = launch ? launch.token : await native.mkWorkDir('jlmol_xtb_');
+    const ownsWorkDir = !launch;
     const workDirPath = await native.workDirPath(workDir);
+    if (!ownsWorkDir) {
+        // Success is detected from the produced xtbopt.xyz; a stale one from
+        // an earlier run in the same directory must not pass for a new one.
+        await native.removeFile(workDir, 'xtbopt.xyz');
+    }
     await native.writeFile(workDir, 'coord.xyz', xyzData);
 
     // Optionally freeze the non-selected atoms during optimization by writing
@@ -182,7 +191,7 @@ async function runXtbInElectron(xyzData, mode) {
     function cleanup() {
         if (cleanedUp) return;
         cleanedUp = true;
-        native.removeWorkDir(workDir);   // main also reaps all work dirs on quit
+        if (ownsWorkDir) native.removeWorkDir(workDir);   // main also reaps all work dirs on quit
     }
 
     // Build arguments. The geometry file is passed as a relative name; cwd is workDir.
@@ -191,7 +200,7 @@ async function runXtbInElectron(xyzData, mode) {
     if (extraFlags) calcArgs.push(...parseXtbCommand(extraFlags));
 
     const fullCmd = `${xtbCommand} coord.xyz${inputFileArgs.length ? ' --input xtb.inp' : ''} --gxtb${mode === 'opt' ? ' --opt' : ''} --chrg ${charge} --uhf ${uhf}${extraFlags ? ' ' + extraFlags : ''}`;
-    outputTextarea.value = `=== jlmol xtb (g-xTB) Calculation ===\nTimestamp: ${new Date().toISOString()}\nMode: ${mode === 'opt' ? 'Geometry optimization' : 'Single-point energy'}\nxtb command: ${xtbCommand}\nWorking directory: ${workDirPath}\nFull command: ${fullCmd}\n${freezeSummary ? '\n' + freezeSummary : ''}\n--- Checking xtb availability ---\n`;
+    outputTextarea.value = `=== jlmol xtb (g-xTB) Calculation ===\nTimestamp: ${new Date().toISOString()}\nMode: ${mode === 'opt' ? 'Geometry optimization' : 'Single-point energy'}\nxtb command: ${xtbCommand}\nWorking directory${ownsWorkDir ? ' (temporary, deleted after the run)' : ' (started from here; output files stay here)'}: ${workDirPath}\nFull command: ${fullCmd}\n${freezeSummary ? '\n' + freezeSummary : ''}\n--- Checking xtb availability ---\n`;
     setStatusText('Checking xtb...');
 
     // Availability check first
