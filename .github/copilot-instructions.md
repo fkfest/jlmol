@@ -13,11 +13,6 @@ jlmol is an Electron-based desktop application for molecular visualization built
   ```
   Takes ~5-25 seconds. Dependencies include electron, electron-builder, and various utilities.
 
-- Verify version management system:
-  ```bash
-  npm run check-version
-  ```
-  This ensures all files use dynamic version loading from package.json.
 
 ### Development and Testing
 - Run the application in development mode:
@@ -38,10 +33,6 @@ jlmol is an Electron-based desktop application for molecular visualization built
   npm run start-safe-debug
   ```
 
-- Debug GPU capabilities:
-  ```bash
-  npm run debug-gpu
-  ```
 
 ### Building
 - Build for Linux:
@@ -99,7 +90,7 @@ jlmol is an Electron-based desktop application for molecular visualization built
 
 ### Basic Molecular Viewer Testing
 1. Start the application: `npm start`
-2. Load a sample molecule from jsmol/data/ directory (drag and drop or file menu)
+2. Load a sample molecule (Caffeine/Buckyball buttons) or open a structure file
 3. Test rotation: Click and drag to rotate the molecule
 4. Test display modes: Switch between ball&stick, wireframe, spacefill
 5. Test spin animation: Enable/disable spin controls
@@ -138,16 +129,13 @@ jlmol is an Electron-based desktop application for molecular visualization built
 - `.github/workflows/release.yml` - Automated build and release pipeline
 
 ### Important Directories
-- `jsmol/` - JSmol molecular viewer library and sample data files
-- `jsmol/data/` - Sample molecular structure files (PDB, XYZ, CIF, etc.)
+- `jsmol/` - JSmol molecular viewer library (`jsmol/data/` holds only the two sample molecules)
 - `build/` - Application icons and build resources
 - `scripts/` - Utility scripts including `runremote` for remote Julia execution
-- `legacy/` - Legacy test files and older JSmol implementations
 - `dist/` - Build output directory (created after running build commands)
 
 ### Configuration Files
 - `.gitignore` - Git ignore patterns
-- `VERSION-MANAGEMENT.md` - Documentation for version management system
 - `Troubleshooting.md` - User troubleshooting guide
 - `CHANGELOG.md` - Project change history
 
@@ -156,7 +144,6 @@ jlmol is an Electron-based desktop application for molecular visualization built
 ### Version Management
 - Version is defined ONLY in package.json
 - All other files use dynamic version loading
-- Run `npm run check-version` to verify consistency
 - Never hardcode versions in HTML, JS, or other files
 
 ### Julia/ElemCo.jl Integration
@@ -168,8 +155,7 @@ jlmol is an Electron-based desktop application for molecular visualization built
 ### Troubleshooting Graphics Issues
 - Windows 11 users may need hardware acceleration disabled
 - Use `npm run start-safe` for GPU-related problems
-- Use `npm run debug-gpu` for comprehensive GPU analysis
-- Check WINDOWS11-FIX-SUMMARY.md for platform-specific solutions
+- See Troubleshooting.md for platform-specific solutions
 
 ### Database Integration
 - PubChem integration requires internet connection

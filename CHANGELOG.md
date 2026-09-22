@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Image export and XYZ export in the desktop app now open a save dialog instead of dropping the file silently into the download folder. The dialog defaults to the launch directory when started from a terminal and to the download folder otherwise; the status line shows where the file was saved, or that the export was cancelled.
 - "Choose File" in the desktop app is replaced by an "Open File…" button with a native open dialog that starts in the launch directory when there is one (the browser file picker cannot be pointed at a directory, and its "No file chosen" label would stay stale). The loaded file's name is shown next to the button. Without a launch directory the OS chooses the folder as before. The browser build keeps the file input.
 
+### Removed
+
+- Repository clutter that was never part of the app: the `legacy/` JSmol demo pages (292 files), JSmol's sample data in `jsmol/data/` except the two sample molecules the buttons load (39 MB, previously shipped in every installer), the unused `jsmol/js/JSmolJME.js`, the icon drafts `build/icon_benzene*.svg` and `build/icon_detailed.svg`, and the June 2025 leftovers `WINDOWS11-FIX-SUMMARY.md`, `VERSION-MANAGEMENT.md`, `build-version.js` (`npm run check-version`) and `debug-gpu.js` (`npm run debug-gpu`). `Troubleshooting.md` covers what those documents said.
+
 ## [1.5.5] - 2026-09-07
 
 ### Fixed
